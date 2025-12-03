@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Lock, User, ArrowRight, KeyRound, CheckCircle2, ChevronLeft, Sparkles, Eye, EyeOff } from 'lucide-react';
 import NeuronBackground from './NeuronBackground';
 import emailService from '../services/emailService';
+import liraLogo from '../assets/lira-logo.png';
 
 interface AuthScreenProps {
   onLoginSuccess: (stayLoggedIn?: boolean) => void;
@@ -350,14 +351,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess, isDarkMode, tog
             
             {/* Logo container with breath effect */}
             <div className="relative w-16 h-16 rounded-2xl overflow-hidden shadow-2xl animate-pulse hover:scale-110 transition-all duration-700 bg-white/10 backdrop-blur-sm border border-white/20">
-              <img 
-                src="/src/LiraOS-logo.png" 
-                alt="LiraOS Logo" 
-                className={`w-full h-full object-contain transition-all duration-500 ${
-                  isDarkMode 
-                    ? 'filter brightness-110 contrast-110' 
-                    : 'filter brightness-95 contrast-105 hue-rotate-12'
-                }`}
+              <img
+                src={liraLogo}
+                alt="LiraOS"
+                className="w-full h-full object-contain transition-all duration-500 filter brightness-110 contrast-110"
               />
               
               {/* Additional glow overlay */}

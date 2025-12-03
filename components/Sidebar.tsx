@@ -1,6 +1,7 @@
 import React from 'react';
 import { ViewMode } from '../types';
 import { MessageSquare, LayoutDashboard, Settings, Power, Leaf, ChevronLeft, ChevronRight } from 'lucide-react';
+import liraLogo from '../assets/lira-logo.png';
 
 interface SidebarProps {
   currentView: ViewMode;
@@ -43,14 +44,10 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isDarkMode
           
           {/* Logo container */}
           <div className="relative w-12 h-12 rounded-full overflow-hidden shadow-lg bg-white/10 backdrop-blur-sm border border-white/20 hover:scale-110 transition-all duration-500">
-            <img 
-              src="/src/LiraOS-logo.png" 
-              alt="LiraOS Logo" 
-              className={`w-full h-full object-contain transition-all duration-500 ${
-                isDarkMode 
-                  ? 'filter brightness-110 contrast-110' 
-                  : 'filter brightness-95 contrast-105 hue-rotate-12'
-              }`}
+            <img
+              src={liraLogo}
+              alt="LiraOS Logo"
+              className="w-full h-full object-contain transition-all duration-500 filter brightness-110 contrast-110"
             />
             
             {/* Breath effect overlay */}
