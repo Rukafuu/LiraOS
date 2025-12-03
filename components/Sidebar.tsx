@@ -1,7 +1,7 @@
 import React from 'react';
 import { ViewMode } from '../types';
 import { MessageSquare, LayoutDashboard, Settings, Power, Leaf, ChevronLeft, ChevronRight } from 'lucide-react';
-import liraLogo from '../assets/lira-logo.png';
+import liraLogo from '../src/assets/lira-logo.png';
 
 interface SidebarProps {
   currentView: ViewMode;

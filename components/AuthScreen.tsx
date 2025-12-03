@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Lock, User, ArrowRight, KeyRound, CheckCircle2, ChevronLeft, Sparkles, Eye, EyeOff } from 'lucide-react';
 import NeuronBackground from './NeuronBackground';
 import emailService from '../services/emailService';
-import liraLogo from '../assets/lira-logo.png';
+import liraLogo from '../src/assets/lira-logo.png';
 
 interface AuthScreenProps {
   onLoginSuccess: (stayLoggedIn?: boolean) => void;
