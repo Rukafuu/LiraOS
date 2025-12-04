@@ -2,6 +2,7 @@ import React, { memo } from 'react';
 import { User, Loader2, Copy, Check, Volume2, VolumeX, FileText } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Message } from '../types';
+import liraLogo from '../src/assets/lira-logo.png';
 
 interface MessageItemProps {
   message: Message;
@@ -39,12 +40,12 @@ const MessageItem = memo<MessageItemProps>(({
             <div className="absolute inset-0 bg-rose-400/20 dark:bg-rose-500/30 rounded-full blur-sm animate-pulse"></div>
             
             {/* Logo */}
-            <img 
-              src="/src/LiraOS-logo.png" 
-              alt="Lira" 
+            <img
+              src={liraLogo}
+              alt="Lira"
               className={`w-full h-full object-contain transition-all duration-300 ${
-                message.role === 'model' && message.isStreaming 
-                  ? 'animate-pulse' 
+                message.role === 'model' && message.isStreaming
+                  ? 'animate-pulse'
                   : ''
               } ${
                 'filter brightness-110 contrast-110'
