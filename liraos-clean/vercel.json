@@ -1,0 +1,19 @@
+{
+  "builds": [
+    {
+      "src": "liraos-frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/liraos-frontend/$1"
+    }
+  ],
+  "installCommand": "cd liraos-frontend && npm install",
+  "buildCommand": "cd liraos-frontend && npm run build"
+}
