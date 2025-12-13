@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --nagisa-bg: #fef9fb;
+    --nagisa-text: #2b2238;
+  }
+
+  .dark {
+    --nagisa-bg: #120f1a;
+    --nagisa-text: #f6edf9;
+  }
+
+  html,
+  body {
+    background-color: var(--nagisa-bg);
+    color: var(--nagisa-text);
+  }
+}
+
+@layer utilities {
+  .animate-pulse-soft {
+    animation: pulseSoft 1.5s ease-in-out infinite;
+  }
+
+  .animate-image-appear {
+    animation: imageAppear 0.6s ease-out forwards;
+  }
+
+  .animate-typing-dot {
+    animation: typingDot 1s ease-in-out infinite;
+  }
+}
+
+@keyframes pulseSoft {
+  0% { opacity: 0.6; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-1px); }
+  100% { opacity: 0.6; transform: translateY(0); }
+}
+
+@keyframes imageAppear {
+  0% { opacity: 0; transform: translateY(6px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes typingDot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.6; }
+  30% { transform: translateY(-3px); opacity: 1; }
+}
