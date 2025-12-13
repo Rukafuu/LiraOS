@@ -1,0 +1,28 @@
+{
+  "name": "liraos",
+  "version": "1.0.0",
+  "description": "Sistema de IA Conversacional LiraOS",
+  "private": true,
+  "workspaces": [
+    "liraos-frontend",
+    "liraos-backend"
+  ],
+  "scripts": {
+    "install:frontend": "cd liraos-frontend && npm install",
+    "install:backend": "cd liraos-backend && npm install",
+    "dev:frontend": "cd liraos-frontend && npm run dev",
+    "dev:backend": "cd liraos-backend && npm run dev",
+    "build:frontend": "cd liraos-frontend && npm run build",
+    "build:backend": "cd liraos-backend && npm run build"
+  },
+  "keywords": [
+    "ai",
+    "conversational-ai",
+    "voice-synthesis",
+    "react",
+    "nodejs",
+    "typescript"
+  ],
+  "author": "Rukafuu",
+  "license": "MIT"
+}
