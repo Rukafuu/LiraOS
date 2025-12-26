@@ -210,7 +210,7 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [unlockedThemes, setUnlockedThemes] = useState<LiraThemeId[]>(['lira-dark']);
   const [unlockedPersonas, setUnlockedPersonas] = useState<PersonaId[]>(['default']);
   const [activePersonaId, setActivePersonaId] = useState<PersonaId>('default');
-  const backendUrl = 'http://localhost:4000';
+  const backendUrl = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
 
   // Helper to map DB response structure to Frontend UserStats
   const mapBackendToFrontend = (data: any): UserStats => {
