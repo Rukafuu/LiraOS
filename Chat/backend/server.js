@@ -105,7 +105,9 @@ app.listen(PORT, '0.0.0.0', async () => {
   console.log(`✅ Server running on port ${PORT}`);
   
   // Jobs
-  cleanupExpiredBans();
+  // TODO: Migrate cleanupExpiredBans to support PostgreSQL
+  // cleanupExpiredBans();
+  
   
   // Discord Bot
   if (process.env.DISCORD_TOKEN) {
