@@ -1,0 +1,11 @@
+flask
+flask-cors
+mss
+numpy
+opencv-python
+pywin32
+Pillow
+psutil
+keyboard
+vgamepad
+requests

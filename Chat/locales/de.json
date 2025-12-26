@@ -1,0 +1,269 @@
+{
+  "landing": {
+    "title": "Ihr Intelligenter Arbeitsbereich",
+    "subtitle": "Erleben Sie die Zukunft der Produktivität mit LiraOS. Integrieren Sie Ihren Workflow mit fortschrittlicher KI.",
+    "demo_limit": "Demo-Modus: {{count}} Nachrichten verbleibend",
+    "login": "Anmelden",
+    "signup": "Registrieren",
+    "features": {
+        "memory": "Unendlicher Speicher",
+        "voice": "Echtzeit-Sprache",
+        "tools": "Systemwerkzeuge"
+    },
+    "hero_title_1": "Denken.",
+    "hero_title_2": "Schaffen.",
+    "hero_subtitle": "Ihr persönlicher Code-Assistent, integriert in Ihr Betriebssystem, Discord und Workflow.",
+    "login_system": "System Betreten",
+    "welcome_message": "Hallo! Ich bin Lira, Ihre operative Intelligenz. Was bauen wir heute? ✨",
+    "placeholder": "Nachricht senden...",
+    "demo_limit_reached": "Demo-Limit erreicht",
+    "messages_remaining": "{{count}} Nachrichten verbleibend"
+  },
+  "sidebar": {
+    "chat": "Chat",
+    "dashboard": "Dashboard",
+    "settings": "Einstellungen",
+    "store": "Shop",
+    "game": "Spiel",
+    "logout": "Abmelden",
+    "my_items": "MEINE ELEMENTE",
+    "conversations": "GESPRÄCHE",
+    "pro_plan": "Pro Plan",
+    "new_chat": "Neuer Chat",
+    "iris": "Lira Iris (Beta)",
+    "discord_hub": "Discord",
+    "shortcuts_title": "Tastaturkürzel (Cmd+/)",
+    "legal": "Rechtliches & Datenschutz"
+  },
+  "common": {
+    "search": "Suchen"
+  },
+  "settings": {
+      "title": "Einstellungen",
+      "language": "Sprache",
+      "select_language": "Schnittstellensprache wählen",
+      "logout": "Abmelden",
+      "pro_plan": "LiraOS Pro",
+      "tabs": {
+          "profile": "Profil",
+          "security": "Sicherheit",
+          "intelligence": "Intelligenz",
+          "shortcuts": "Tastaturkürzel",
+          "memories": "Erinnerungen",
+          "appearance": "Erscheinungsbild",
+          "help": "Hilfe"
+      },
+      "profile": {
+          "title": "Profil",
+          "identity": "Benutzeridentität",
+          "desc": "Verwalten Sie Ihr öffentliches Profil und Kontodetails.",
+          "display_name": "Anzeigename",
+          "save": "Speichern",
+          "level": "LEVEL",
+          "xp": "XP",
+          "preferences": "PRÄFERENZEN",
+          "notifications": "Benachrichtigungen",
+          "notifications_desc": "Warnungen und Updates erhalten",
+          "save_prefs": "Einstellungen speichern",
+          "toast_success": "Profil aktualisiert!",
+          "toast_avatar": "Avatar erfolgreich aktualisiert!"
+      },
+      "security": {
+          "title": "Sicherheit & Login",
+          "desc": "Aktualisieren Sie Ihr Passwort und verwalten Sie die Kontosicherheit.",
+          "current_pwd": "Aktuelles Passwort",
+          "new_pwd": "Neues Passwort",
+          "confirm_pwd": "Bestätigen",
+          "update_btn": "Passwort aktualisieren",
+          "two_fa_title": "Zwei-Faktor-Authentifizierung",
+          "two_fa_desc": "Verwaltet durch Organisationsrichtlinie.",
+          "status_mismatch": "Stimmt nicht überein",
+          "status_saved": "Gespeichert"
+      },
+      "intelligence": {
+          "title": "Neuronale Konfiguration",
+          "desc": "Feinabstimmung der kognitiven Parameter der KI.",
+          "model_arch": "Modellarchitektur",
+          "creativity": "Kreativität (Temperatur)",
+          "system_instructions": "Systemanweisungen",
+          "system_placeholder": "Du bist ein hilfreicher Assistent...",
+          "system_desc": "Definieren Sie Persönlichkeit und Verhalten der KI.",
+          "save_changes": "Änderungen speichern",
+          "precise": "Präzise",
+          "balanced": "Ausgewogen",
+          "creative": "Kreativ",
+          "flash_desc": "Superschnelle Antworten.",
+          "pro_desc": "Intelligentes Denken.",
+          "toast_saved": "Einstellungen gespeichert"
+      },
+      "memories": {
+          "title": "Speicherbank",
+          "desc": "Gespeicherten Kontext verwalten.",
+          "search_placeholder": "Erinnerungen suchen...",
+          "all_categories": "Alle Kategorien",
+          "all_priorities": "Alle Prioritäten",
+          "cat_profile": "Profil",
+          "cat_contact": "Kontakt",
+          "cat_location": "Standort",
+          "cat_birthday": "Geburtstag",
+          "cat_note": "Notiz",
+          "pri_high": "Hoch",
+          "pri_medium": "Mittel",
+          "pri_low": "Niedrig",
+          "no_memories": "Noch keine Erinnerungen gespeichert.",
+          "danger_zone": "Gefahrenzone",
+          "danger_desc": "Alle Erinnerungen und Chat-Sitzungen löschen.",
+          "clear_data": "Meine Daten löschen",
+          "export_data": "Meine Daten exportieren",
+          "import_data": "Meine Daten importieren"
+      },
+      "appearance": {
+          "themes_title": "Themen"
+      },
+      "shortcuts": {
+          "title": "Tastaturkürzel",
+          "desc": "Alle verfügbaren Tastaturkürzel für LiraOS anzeigen.",
+          "new_chat": "Neuer Chat",
+          "open_settings": "Einstellungen öffnen",
+          "toggle_sidebar": "Seitenleiste umschalten",
+          "focus_input": "Eingabe fokussieren",
+          "close_modals": "Modals schließen"
+      },
+      "help": {
+        "title": "Hilfe & Support",
+        "desc": "Finden Sie Ressourcen, verwalten Sie Ihr Abonnement und kontaktieren Sie uns.",
+        "subscription": "Abonnement verwalten",
+        "subscription_desc": "Rechnungen ansehen, Pläne ändern oder Zahlungsmethode aktualisieren.",
+        "manage_billing": "Abrechnung verwalten",
+        "patreon_desc": "Unterstützen Sie die Entwicklung und schalten Sie exklusive Funktionen auf Patreon frei.",
+        "upgrade_now": "Jetzt upgraden",
+        "feedback": "Feedback",
+        "feedback_desc": "Haben Sie einen Vorschlag oder einen Fehler gefunden? Lassen Sie es uns wissen!",
+        "send_feedback": "Feedback senden",
+        "legal": "RECHTLICHES",
+        "terms": "Nutzungsbedingungen",
+        "privacy": "Datenschutzrichtlinie",
+        "cookie_prefs": "Cookie-Einstellungen"
+      }
+  },
+  "dashboard": {
+    "title": "LiraOS Hub",
+    "edit_layout": "Layout bearbeiten",
+    "level": "Level",
+    "bond": "Neuronale Bindung",
+    "streak": "Serie",
+    "quests": {
+        "title": "Quests",
+        "active": "AKTIV",
+        "history": "VERLAUF",
+        "all_completed": "Alle aktiven Quests abgeschlossen!",
+        "claim": "BEANSPRUCHEN",
+        "no_history": "Noch kein Verlauf.",
+        "claimed": "Beansprucht",
+        "xp_reward": "+{{amount}} XP"
+    },
+    "ranking": {
+        "title": "Globales Ranking",
+        "you": "(Du)"
+    },
+    "trophies": {
+        "title": "Trophäen",
+        "unlocked": "Freigeschaltet: {{date}}"
+    }
+  },
+  "store": {
+    "title": "Lira Shop",
+    "subtitle": "Neue Erlebnisse freischalten",
+    "coins": "Münzen",
+    "tabs": {
+        "personas": "Persönlichkeiten",
+        "themes": "Themen"
+    },
+    "equip": "AUSRÜSTEN",
+    "active": "AKTIV",
+    "unlock": "FREISCHALTEN",
+    "apply": "ANWENDEN",
+    "unlock_persona": "Persönlichkeit freischalten",
+    "not_enough_coins": "Nicht genug Münzen",
+    "toast_unlocked": "{{name}} freigeschaltet!",
+    "toast_equipped": "Persönlichkeit aktualisiert",
+    "toast_applied": "Thema angewendet"
+  },
+  "discord": {
+    "title": "Lira mit Discord verbinden",
+    "desc": "Schalten Sie plattformübergreifenden Speicher, PC-Steuerung und Bildgenerierung auf Ihrem Server frei.",
+    "features": {
+        "bot": "Aktiver Bot",
+        "pc": "PC-Steuerung",
+        "web": "Web-Speicher",
+        "chat": "Chat-Sync"
+    },
+    "invite": "Auf Server einladen",
+    "invite_missing": "Einladen (Konfig fehlt)",
+    "dm": "Direktnachricht",
+    "dm_missing": "DN (ID fehlt)",
+    "offline": "Bot offline. Konsole prüfen.",
+    "dev_portal": "Suchen Sie das Entwicklerportal?"
+  },
+  "shortcuts": {
+    "title": "Tastaturkürzel",
+    "new_chat": "Neuer Chat",
+    "toggle_sidebar": "Seitenleiste umschalten",
+    "open_settings": "Einstellungen öffnen",
+    "show_shortcuts": "Kürzel anzeigen",
+    "close_modals": "Modals schließen",
+    "stop_gen": "Generierung stoppen",
+    "focus_input": "Eingabe fokussieren",
+    "edit_msg": "Letzte Nachricht bearbeiten",
+    "open_store": "Shop öffnen",
+    "open_dashboard": "Dashboard öffnen",
+    "toggle_model": "Modell umschalten",
+    "pro_tip": "PRO TIPP: Manche Geheimnisse sind offensichtlich versteckt.",
+    "konami": "Versuche"
+  },
+  "chat_input": {
+    "placeholder": "Fragen Sie Lira alles...",
+    "drop_files": "Dateien zum Anhängen ablegen",
+    "model": "MODELL",
+    "pro": "Pro",
+    "pro_desc": "Schnell & Fähig",
+    "premium": "Premium",
+    "premium_desc": "Tiefes Denken",
+    "deep_mode": "Tiefenmodus",
+    "voice_mode": "Sprachchat-Modus",
+    "voice_output": "SPRACHAUSGABE",
+    "read_aloud": "Vorlesen",
+    "attach_tooltip": "Anhänge hinzufügen",
+    "toast_voice_enabled": "Sprachausgabe aktiviert",
+    "toast_voice_disabled": "Sprachausgabe deaktiviert",
+    "toast_attached": "{{count}} Datei(en) angehängt"
+  },
+  "message_item": {
+    "you": "Du",
+    "copy": "Kopieren",
+    "copied": "Kopiert",
+    "regenerate": "Regenerieren",
+    "edit": "Bearbeiten",
+    "save_memory": "In Speicher sichern",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "toast_copied": "Nachricht in die Zwischenablage kopiert",
+    "toast_code_copied": "Code kopiert",
+    "copy_code": "Kopieren"
+  },
+  "chat_header": {
+    "thinking": "Lira denkt nach...",
+    "online": "Lira Online",
+    "start_call": "Sprachanruf starten",
+    "stop_generation": "Generierung stoppen",
+    "logout": "Abmelden",
+    "status_on": "AN",
+    "status_off": "AUS",
+    "status_chk": "PRÜF"
+  },
+  "footer": {
+      "disclaimer_text": "Lira lernt noch und kann Fehler machen. Bitte überprüfen Sie wichtige Informationen.",
+      "important_info": "Wichtige Informationen",
+      "cookies": "Cookie-Einstellungen"
+  }
+}

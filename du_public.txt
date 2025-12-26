@@ -1,0 +1,6 @@
+--- DISK USAGE FOR: C:\Users\conta\Documents\Lira\Chat\public ---
+[DIR] assets: 227.67 MB
+[FILE] terms.html: 0.00 MB
+[FILE] privacy.html: 0.00 MB
+[FILE] favicon.svg: 0.00 MB
+------------------

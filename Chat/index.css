@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Premium Theme Variables */
+:root {
+  --lira-bg: #09090b; /* Zinc-950 equivalent for deep depth */
+  --lira-surface: #121215;
+  --lira-card: rgba(255, 255, 255, 0.03);
+  --lira-border: rgba(255, 255, 255, 0.08);
+
+  /* More sophisticated, less neon accents */
+  --lira-primary: #f472b6; /* Softer Pink */
+  --lira-secondary: #38bdf8; /* Sky Blue */
+  --lira-accent: #a78bfa; /* Soft Purple */
+  --lira-dim: #71717a; /* Zinc-500 */
+
+  --lira-primary-rgb: 244, 114, 182;
+  --lira-secondary-rgb: 56, 189, 248;
+}
+
+/* Refined Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+body {
+  background-color: var(--lira-bg);
+  color: #e4e4e7; /* Zinc-200 */
+  overflow: hidden;
+  transition: background-color 0.5s ease;
+}
+
+/* Subtle noise texture */
+.bg-noise {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 50;
+  opacity: 0.02;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
+}
+
+.cursor-blink {
+  display: inline-block;
+  width: 6px;
+  height: 16px;
+  background-color: var(--lira-secondary);
+  margin-left: 2px;
+  border-radius: 1px;
+  vertical-align: middle;
+  animation: blink 1s step-end infinite;
+}
+
+/* Utilities for glass panels */
+.glass {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--lira-border);
+}
+
+/* EASTER EGG ANIMATIONS */
+
+/* Barrel Roll */
+@keyframes barrelRoll {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.do-a-barrel-roll {
+  animation: barrelRoll 2s ease-in-out;
+}
+
+/* Matrix Mode */
+.matrix-mode {
+  filter: sepia(100%) hue-rotate(50deg) saturate(300%) contrast(1.2);
+}
+.matrix-mode * {
+  font-family: "JetBrains Mono", monospace !important;
+}
+
+/* God Mode (Konami Code) */
+@keyframes rainbowHue {
+  0% {
+    filter: hue-rotate(0deg);
+  }
+  100% {
+    filter: hue-rotate(360deg);
+  }
+}
+
+.god-mode {
+  animation: rainbowHue 5s infinite linear;
+}

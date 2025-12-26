@@ -1,0 +1,10 @@
+
+(Arquivo de ajuda para debug)
+
+Se o Python estiver rodando mas não clicar:
+1. Verifique se o osu! roda como Administrador. Se sim, o script Python também precisa ser Admin.
+2. O modo "Fullscreen" bloqueia inputs. Use "Borderles".
+
+Se a Lira não acionar o Python:
+1. Veja se o `isOwner` está true no log do backend.
+2. Veja se o Gemini chamou a ferramenta `game_control`.

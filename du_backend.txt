@@ -1,0 +1,22 @@
+--- DISK USAGE FOR: C:\Users\conta\Documents\Lira\Chat\backend ---
+[DIR] tts: 9318.12 MB
+[DIR] rvc: 5865.25 MB
+[DIR] ocr: 413.22 MB
+[DIR] node_modules: 164.78 MB
+[DIR] songs: 17.19 MB
+[DIR] python: 0.56 MB
+[FILE] package-lock.json: 0.12 MB
+[DIR] services: 0.10 MB
+[DIR] routes: 0.09 MB
+[DIR] __pycache__: 0.09 MB
+[DIR] docs: 0.06 MB
+[DIR] logs: 0.03 MB
+[DIR] utils: 0.01 MB
+[FILE] codeAnalysis.js: 0.01 MB
+[FILE] intelligentMemory.js: 0.01 MB
+[FILE] osu_debug.jpg: 0.01 MB
+[FILE] authStore.js: 0.01 MB
+[FILE] projectTools.js: 0.01 MB
+[FILE] check_config.py: 0.01 MB
+[FILE] mcp-server.js: 0.01 MB
+------------------

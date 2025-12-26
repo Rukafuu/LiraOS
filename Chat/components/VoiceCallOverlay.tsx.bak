@@ -1,0 +1,413 @@
+
+import React, { useEffect, useRef, useState } from 'react';
+import { LiraCore } from '../lib/lira-avatar/liraCore';
+import { X, PhoneOff, Settings, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { liraVoice, PREMIUM_VOICES } from '../services/lira_voice';
+import { AudioService } from '../services/avatarAudioService';
+
+// Add this to index.html manually if needed, or assume it's loaded as part of App.tsx init
+// But actually index.html needs the scripts.
+
+interface VoiceCallOverlayProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSendMessage: (text: string, attachments: []) => void;
+  userName: string;
+  avatarUrl: string;
+  currentResponse?: string;
+}
+
+type CallState = 'listening' | 'thinking' | 'speaking' | 'error';
+
+export const VoiceCallOverlay: React.FC<VoiceCallOverlayProps> = ({ 
+  isOpen, 
+  onClose, 
+  onSendMessage,
+  userName,
+  currentResponse
+}) => {
+  const [callState, setCallState] = useState<CallState>('listening');
+  const callStateRef = useRef<CallState>('listening');
+  
+  // Lira Avatar & Audio
+  const liraRef = useRef<LiraCore | null>(null);
+  const audioServiceRef = useRef<AudioService>(new AudioService());
+  const requestRef = useRef<number | undefined>(undefined);
+  const [modelLoaded, setModelLoaded] = useState(false);
+  const [modelError, setModelError] = useState<string | null>(null);
+
+  // Settings
+  const [showSettings, setShowSettings] = useState(false);
+  const [selectedVoiceId, setSelectedVoiceId] = useState(localStorage.getItem('lira_premium_voice_id') || PREMIUM_VOICES[0].id);
+  const [localVoices, setLocalVoices] = useState<any[]>([]);
+  
+  // Microphone Settings
+  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedAudioDeviceId, setSelectedAudioDeviceId] = useState<string>(localStorage.getItem('lira_audio_input_id') || 'default');
+  
+  // Speech Recognition
+  const recognitionRef = useRef<any>(null);
+
+  // Load Settings Data
+  useEffect(() => {
+    if (showSettings) {
+        setTimeout(() => {
+            const locals = liraVoice.getLocalVoices();
+            setLocalVoices(locals);
+        }, 500);
+
+        navigator.mediaDevices.enumerateDevices().then(devices => {
+            const inputs = devices.filter(d => d.kind === 'audioinput');
+            setAudioDevices(inputs);
+        });
+    }
+  }, [showSettings]);
+
+  // Init Lira Avatar
+  useEffect(() => {
+     if (isOpen) {
+         const initAvatar = async () => {
+             try {
+                // Ensure container is present
+                if (!document.getElementById('lira-container-overlay')) return;
+                
+                // Initialize Core
+                const lira = new LiraCore('lira-container-overlay');
+                liraRef.current = lira;
+
+                // Load Model
+                // Strategy: 
+                // 1. Try Local Model (Allium - User Specified)
+                // 2. Try Haru (Standard Test)
+                // 3. Try Hiyori (Fallback)
+                
+                // Clean path (From extracted zip)
+                const localPath = '/assets/model/ariu/ariu.model3.json';
+                const haruPath = 'https://cdn.jsdelivr.net/gh/guansss/pixi-live2d-display/test/assets/haru/haru_greeter_t03.model3.json';
+
+                const tryLoad = async (url: string): Promise<boolean> => {
+                    try {
+                        console.log(`[LiraAvatar] Loading: ${url}`);
+                        await lira.loadModel(url);
+                        return true;
+                    } catch (e) {
+                         console.warn(`[LiraAvatar] Failed: ${url}`, e);
+                         return false;
+                    }
+                };
+
+                let success = await tryLoad(localPath);
+                if (!success) success = await tryLoad(haruPath);
+
+                if (!success) {
+                    throw new Error("Failed to load any Avatar model.");
+                }
+
+                setModelLoaded(true);
+                
+                // Start Loop
+                startAnimationLoop();
+                window.addEventListener('mousemove', handleMouseMove);
+
+                // Start Audio for Lip Sync
+                try {
+                   await audioServiceRef.current.startMicrophone();
+                } catch (e) { console.error("LipSync Mic failed", e); }
+
+             } catch (err: any) {
+                 console.error("Avatar Init Error", err);
+                 setModelError(err.message);
+             }
+         };
+         
+         // Small delay for DOM
+         setTimeout(initAvatar, 100);
+
+         // Start Speech Recognition Logic as well
+         startCallLogic();
+
+         return () => {
+             stopCallLogic();
+             if (requestRef.current) cancelAnimationFrame(requestRef.current);
+             window.removeEventListener('mousemove', handleMouseMove);
+             audioServiceRef.current.stop();
+             liraRef.current?.destroy();
+         };
+     }
+  }, [isOpen]);
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (liraRef.current) {
+      liraRef.current.lookAt(e.clientX, e.clientY);
+    }
+  };
+
+  const startAnimationLoop = () => {
+    const loop = () => {
+      // Prioritize TTS audio if speaking, otherwise Microphone (for mimicking user or silence)
+      // Actually, for "Assistant Speaking", we ideally want to analyze the system output audio.
+      // But standard Web Audio API cannot capture system output easily without extension.
+      // 
+      // Workaround: 
+      // If state is 'speaking', we can simulate mouth movement using a detailed randomizer or
+      // if we had the TTS audio buffer. 
+      // 
+      // For now, let's use the microphone for Lip Sync (User speaking) and 
+      // simulated movement for AI Speaking.
+      
+      if (liraRef.current) {
+         if (callStateRef.current === 'speaking') {
+             // AI Speaking - Use LiraVoice Audio Analysis (Real Lip Sync)
+             const analyser = liraVoice.getAnalyser();
+             if (analyser && liraVoice.isSpeaking()) {
+                 const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                 analyser.getByteFrequencyData(dataArray);
+                 
+                 let sum = 0;
+                 // Focus on talk frequencies
+                 for (let i = 0; i < dataArray.length; i++) { sum += dataArray[i]; }
+                 const average = sum / dataArray.length;
+                 
+                 // sensitivity boost: Speech usually sits around 20-50 in freq data
+                 const volume = Math.min(1.2, (average / 45)); 
+                 liraRef.current.updateMouth(volume);
+             } else if (liraVoice.isSpeaking()) {
+                 // Fallback for SpeechSynthesis (Simulated movement)
+                 const simulatedVolume = 0.2 + (Math.sin(Date.now() / 50) + 1) * 0.4;
+                 liraRef.current.updateMouth(simulatedVolume);
+             } else {
+                 liraRef.current.updateMouth(0);
+             } 
+
+         } else {
+             // User Speaking (Lip Sync to Mic)
+             if (audioServiceRef.current.isListening()) {
+                 const volume = audioServiceRef.current.getVolume();
+                 const appliedVolume = volume > 0.05 ? volume : 0;
+                 liraRef.current.updateMouth(appliedVolume);
+             }
+         }
+      }
+      requestRef.current = requestAnimationFrame(loop);
+    };
+    loop();
+  };
+
+  // --- Call Logic ---
+
+  useEffect(() => { callStateRef.current = callState; }, [callState]);
+
+  const startCallLogic = () => {
+      console.log('[VoiceCall] Starting...');
+      localStorage.setItem('lira_voice_enabled', 'true');
+      localStorage.setItem('lira_force_premium_voice', 'true');
+
+      const unsub = liraVoice.subscribe({
+        onStart: () => {
+          setCallState('speaking');
+          stopRecognition();
+          // Trigger expression if possible
+          liraRef.current?.setExpression('f04'); // Happy/Active
+        },
+        onEnd: () => {
+          setCallState('listening');
+          startRecognition();
+          liraRef.current?.setExpression('f01'); // Neutral
+        }
+      });
+
+      startRecognition();
+  };
+
+  const stopCallLogic = () => {
+      stopRecognition();
+      liraVoice.stop();
+  };
+
+  const startRecognition = () => {
+    if (!('webkitSpeechRecognition' in window)) return;
+    try {
+      if (recognitionRef.current) recognitionRef.current.abort();
+      
+      // @ts-ignore
+      const recognition = new window.webkitSpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'pt-BR';
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+         if (callStateRef.current !== 'speaking') setCallState('listening');
+      };
+
+      recognition.onresult = (event: any) => {
+        const text = event.results[0][0].transcript;
+        if (text.trim()) {
+           setCallState('thinking');
+           stopRecognition();
+           onSendMessage(text, []);
+        }
+      };
+
+      recognition.onend = () => {
+         if (callStateRef.current === 'listening' && !showSettings) {
+             setTimeout(() => {
+                 try { if (callStateRef.current === 'listening') startRecognition(); } catch (e) {}
+             }, 300);
+         }
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (e) { console.error(e); }
+  };
+
+  const stopRecognition = () => {
+    if (recognitionRef.current) {
+        recognitionRef.current.abort();
+        recognitionRef.current = null;
+    }
+  };
+
+  const handleHangup = () => {
+    onClose();
+  };
+
+  const handleVoiceChange = (id: string) => {
+      setSelectedVoiceId(id);
+      localStorage.setItem('lira_premium_voice_id', id);
+      localStorage.setItem('lira_force_premium_voice', 'true');
+  };
+
+  const handleLocalVoiceChange = (name: string) => {
+      setSelectedVoiceId(name);
+      localStorage.setItem('lira_force_premium_voice', 'false');
+      liraVoice.setLocalVoice(name);
+  };
+  
+  const handleAudioDeviceChange = (deviceId: string) => {
+      setSelectedAudioDeviceId(deviceId);
+      localStorage.setItem('lira_audio_input_id', deviceId);
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div 
+      onClick={() => liraVoice.resumeAudioContext()}
+      className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center font-sans text-white animate-fade-in text-center overflow-hidden"
+    >
+       
+       {/* Background */}
+       <div className="absolute inset-0 bg-gradient-to-b from-[#1a1a1a] to-black opacity-80" />
+       
+       {/* Lira Avatar Container */}
+       <div id="lira-container-overlay" className="absolute inset-0 w-full h-full z-0 flex items-end justify-center pointer-events-none" />
+
+       {/* Loading/Error States */}
+       {!modelLoaded && !modelError && (
+           <div className="absolute z-50 text-white/50 animate-pulse">Initializing Visual Core...</div>
+       )}
+       {modelError && (
+           <div className="absolute z-50 text-red-400 bg-red-900/20 px-4 py-2 rounded-lg border border-red-500/30">
+               Visual Core Error: {modelError} <br/>
+               <span className="text-xs">Using audio-only mode.</span>
+           </div>
+       )}
+
+       {/* Top Bar */}
+       <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center z-10">
+          <div className="flex items-center gap-2">
+             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+             <span className="text-sm font-medium tracking-wide text-white/60">LIVE CALL</span>
+          </div>
+          <div className="flex gap-2">
+             <button 
+                onClick={() => setShowSettings(!showSettings)}
+                className={`p-2 rounded-full transition-colors ${showSettings ? 'bg-white/20 text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+             >
+                <Settings size={20} />
+             </button>
+             <button onClick={handleHangup} className="p-2 rounded-full bg-white/10 hover:bg-white/20">
+                <X size={20} />
+             </button>
+          </div>
+       </div>
+
+       {/* Status & Transcript Overlay */}
+       <div className="relative z-20 flex flex-col items-center justify-between h-full w-full py-20 pointer-events-none">
+           <div /> {/* Spacer */}
+           
+           <div className="flex flex-col items-center gap-4 w-full max-w-4xl px-8">
+               {/* User Speech Highlight */}
+               {callState === 'thinking' && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-black/50 backdrop-blur-md px-6 py-3 rounded-full border border-white/10">
+                      <span className="text-white/80 italic">Processing input...</span>
+                  </motion.div>
+               )}
+
+               {/* AI Response Text */}
+               {callState === 'speaking' && currentResponse && (
+                  <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-black/40 backdrop-blur-md p-6 rounded-2xl border border-white/5 shadow-2xl">
+                      <p className="text-2xl md:text-3xl font-light text-white leading-relaxed text-shadow-sm">
+                          {currentResponse}
+                      </p>
+                  </motion.div>
+               )}
+           </div>
+
+           {/* Bottom Controls */}
+           <div className="pointer-events-auto flex items-center gap-6 mb-8">
+              <button 
+                onClick={handleHangup}
+                className="w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center shadow-lg hover:scale-105 transition-all"
+              >
+                 <PhoneOff size={28} />
+              </button>
+           </div>
+       </div>
+
+       {/* Settings Modal (Reused) */}
+       <AnimatePresence>
+       {showSettings && (
+         <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="absolute top-20 right-6 w-64 glass-panel border border-white/10 rounded-2xl p-4 z-50 bg-[#121214] shadow-2xl text-left"
+         >
+             <div className="text-xs uppercase text-gray-500 font-bold mb-3">AI Voices</div>
+             <div className="space-y-1 max-h-[150px] overflow-y-auto no-scrollbar mb-4">
+                {PREMIUM_VOICES.map(v => (
+                   <button
+                     key={v.id}
+                     onClick={() => handleVoiceChange(v.id)}
+                     className={`w-full flex items-center justify-between p-2 rounded-lg text-sm transition-all ${selectedVoiceId === v.id ? 'bg-lira-pink/20 text-lira-pink border border-lira-pink/30' : 'hover:bg-white/5 text-gray-400'}`}
+                   >
+                      <span>{v.name}</span>
+                      {selectedVoiceId === v.id && <Check size={14} />}
+                   </button>
+                ))}
+             </div>
+             
+             {/* Microphones Section */}
+             <div className="text-xs uppercase text-gray-500 font-bold mb-3 border-t border-white/10 pt-3">Microphone</div>
+             <div className="space-y-1 mb-4">
+                {audioDevices.map((device, i) => (
+                   <button
+                     key={device.deviceId || i}
+                     onClick={() => handleAudioDeviceChange(device.deviceId)}
+                     className={`w-full flex items-center justify-between p-2 rounded-lg text-sm text-left transition-all ${selectedAudioDeviceId === device.deviceId ? 'bg-lira-pink/20 text-lira-pink border border-lira-pink/30' : 'hover:bg-white/5 text-gray-400'}`}
+                   >
+                      <span className="truncate pr-2">{device.label || `Mic ${i+1}`}</span>
+                      {selectedAudioDeviceId === device.deviceId && <Check size={14} />}
+                   </button>
+                ))}
+             </div>
+         </motion.div>
+       )}
+       </AnimatePresence>
+    </div>
+  );
+};
