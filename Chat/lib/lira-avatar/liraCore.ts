@@ -1,0 +1,384 @@
+import { PixiApp, Live2DModelType } from './types';
+
+// ☢️ MODO GIGA-NUCLEAR: MONKEY-PATCH NO INIT (V4)
+if (typeof window !== 'undefined') {
+    const applyGigaFix = () => {
+        // @ts-ignore
+        const PIXI = window.PIXI;
+        // @ts-ignore
+        const live2d = PIXI?.live2d;
+
+        if (PIXI && live2d && live2d.Live2DModel) {
+            try {
+                const Live2DModel = live2d.Live2DModel as any;
+                
+                // 1. Garantir Ticker Global
+                if (!PIXI.Ticker) PIXI.Ticker = { shared: { add: () => {}, remove: () => {}, elapsedMS: 0 } };
+                if (!PIXI.Ticker.shared) PIXI.Ticker.shared = { add: () => {}, remove: () => {}, elapsedMS: 0 };
+                
+                const safeTicker = PIXI.Ticker.shared;
+
+                // 2. Patch no Prototype para interceptar o 'this.ticker'
+                Live2DModel.prototype.ticker = safeTicker;
+
+                // 3. MONKEY-PATCH NO INIT (O CORAÇÃO DO ERRO)
+                const originalInit = Live2DModel.prototype.init;
+                Live2DModel.prototype.init = function(options: any) {
+                    this.ticker = safeTicker; // Força antes de qualquer coisa
+                    if (originalInit) {
+                        return originalInit.call(this, options);
+                    }
+                };
+
+                // 4. Bloquear 'autoUpdate' para não tentar remover/adicionar via setter bugado
+                Object.defineProperty(Live2DModel.prototype, 'autoUpdate', {
+                    get: () => false,
+                    set: () => {}, // Ignora tentativas do plugin de se auto-gerenciar
+                    configurable: true
+                });
+
+                console.log("[LiraCore] Giga-Nuclear Fix applied to Prototype & Init.");
+                return true;
+            } catch (e) {
+                console.warn("[LiraCore] Giga-Nuclear Fix failed:", e);
+            }
+        }
+        return false;
+    };
+
+    if (!applyGigaFix()) {
+        const itv = setInterval(() => { if (applyGigaFix()) clearInterval(itv); }, 100);
+        setTimeout(() => clearInterval(itv), 5000);
+    }
+}
+
+export class LiraCore {
+    private app: PixiApp;
+    private model: Live2DModelType | null = null;
+    private canvas: HTMLCanvasElement;
+    private container: HTMLElement;
+    
+    // Idle Brain State
+    private timePassed: number = 0;
+    private idleTimer: number = 0;
+    private isZoomingIn: boolean = false;
+    private originalScale: number = 1;
+    private originalY: number = 0;
+
+    private tickerFn: (() => void) | null = null;
+
+    constructor(containerId: string) {
+        this.container = document.getElementById(containerId) as HTMLElement;
+        if (!this.container) throw new Error(`Container ${containerId} not found`);
+
+        // Check if PIXI is loaded
+        // @ts-ignore
+        if (!window.PIXI) {
+            console.error('Window.PIXI is undefined');
+            throw new Error('PIXI not found on window. Please ensure PixiJS is loaded.');
+        }
+
+        // @ts-ignore
+        if (typeof window.PIXI.Application !== 'function') {
+             console.error('Window.PIXI.Application is not a function:', window.PIXI);
+             throw new Error('PIXI.Application is not a constructor. Check PixiJS version.');
+        }
+
+        // Create Canvas element
+        this.canvas = document.createElement('canvas');
+        this.canvas.id = 'lira-canvas';
+        this.container.appendChild(this.canvas);
+
+        // Initialize Pixi Application (v6 Syntax)
+        // @ts-ignore
+        this.app = new window.PIXI.Application({
+            view: this.canvas,
+            autoStart: true,
+            backgroundAlpha: 0,
+            resizeTo: this.container,
+            antialias: true,
+            autoDensity: true,
+            resolution: window.devicePixelRatio || 1
+        });
+
+        // Handle resize
+        const resizeObserver = new ResizeObserver(() => this.handleResize());
+        resizeObserver.observe(this.container);
+        
+        setTimeout(() => this.handleResize(), 100);
+    }
+
+    /**
+     * Initializes the Live2D environment.
+     * Must be called before loading a model.
+     */
+    private initLive2D() {
+        // @ts-ignore
+        const live2d = window.PIXI.live2d;
+        if (!live2d) {
+            console.warn('PIXI.live2d namespace missing. pixi-live2d-display might not be loaded correctly.');
+            return false;
+        }
+
+        // @ts-ignore
+        const Live2DModel = live2d.Live2DModel;
+        if (!Live2DModel) {
+             console.warn('Live2DModel class missing from PIXI.live2d.');
+             return false;
+        }
+
+        // Register ticker explicitly with the shared ticker
+        // This fixes the "cannot read properties of undefined (reading 'add')" error
+        try {
+            // @ts-ignore
+            const Live2DModel = window.PIXI.live2d.Live2DModel;
+            // @ts-ignore
+            const Ticker = window.PIXI.Ticker;
+
+            if (Ticker && Ticker.shared) {
+                Live2DModel.registerTicker(Ticker.shared);
+            } else {
+                 // Fallback to app ticker if shared is somehow missing
+                 Live2DModel.registerTicker(this.app.ticker);
+            }
+        } catch (e) {
+            console.warn("Failed to register Ticker for Live2DModel.", e);
+        }
+
+        return true;
+    }
+
+
+    /**
+     * Loads the Live2D model from the specified path.
+     */
+    async loadModel(modelPath: string): Promise<void> {
+        try {
+            if (!this.initLive2D()) {
+                throw new Error("Live2D Environment could not be initialized.");
+            }
+
+            // @ts-ignore
+            const Live2DModel = window.PIXI.live2d.Live2DModel;
+
+            console.log(`[LiraCore] Loading model from: ${modelPath}`);
+
+            // @ts-ignore
+            const currentTicker = window.PIXI?.Ticker?.shared || window.PIXI?.Ticker;
+
+            this.model = await Live2DModel.from(modelPath, {
+                autoInteract: false,
+                autoUpdate: false, 
+                ticker: currentTicker, 
+                onError: (e: any) => console.error("Model internal load error:", e)
+            });
+
+            if (this.model) {
+                this.app.stage.addChild(this.model);
+                
+                // Define the ticker function
+                this.tickerFn = () => {
+                    // 🚑 VACINA ANTI-ZUMBI
+                    if (!this.app || !this.app.renderer || !this.model) return;
+
+                    try {
+                        const deltaMS = this.app.ticker.elapsedMS;
+                        this.model.update(deltaMS);
+                        
+                        this.timePassed += deltaMS / 1000;
+                        this.idleTimer += deltaMS;
+
+                        const centerY = this.originalY || (this.app.screen.height / 2);
+                        this.model.y = centerY + Math.sin(this.timePassed * 2) * 5; 
+
+                        if (this.idleTimer > 10000) { 
+                            this.idleTimer = 0;
+                            if (Math.random() > 0.5) {
+                                this.isZoomingIn = !this.isZoomingIn;
+                            }
+                        }
+
+                        const targetScale = this.isZoomingIn ? this.originalScale * 1.3 : this.originalScale;
+                        this.model.scale.x += (targetScale - this.model.scale.x) * 0.05;
+                        this.model.scale.y = this.model.scale.x;
+
+                    } catch (err) {
+                        // Suppress update errors during destruction
+                    }
+                };
+
+                // Add to ticker
+                this.app.ticker.add(this.tickerFn);
+
+                // Center and scale the model
+                this.handleResize();
+
+                // Setup interaction
+                try {
+                    // @ts-ignore
+                    this.model.interactive = true; 
+                    this.model.on('hit', (hitAreas) => {
+                        if (hitAreas.includes('Body')) {
+                            this.model?.motion('TapBody');
+                        }
+                    });
+                } catch (e) {}
+            }
+        } catch (error) {
+            console.error(`[LiraCore] Fatal Load Error for ${modelPath}:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Resizes and centers the model on the screen.
+     */
+    private handleResize() {
+        if (!this.model || !this.app || !this.app.screen) return;
+
+        // Reset scale to 1 to get accurate base dimensions for calculation
+        const currentScale = this.model.scale.x;
+        this.model.scale.set(1);
+
+        const screenW = this.app.screen.width;
+        const screenH = this.app.screen.height;
+
+        // --- LÓGICA DE ESCALA RESPONSIVA (PC & MOBILE) ---
+        // 1. Define os limites da tela (80% da área visível)
+        const targetWidth = screenW * 0.8;
+        const targetHeight = screenH * 0.8;
+
+        // 2. Calcula qual seria a escala necessária para caber na largura e na altura
+        // model.width/height at scale 1 represents unscaled dimensions
+        const scaleBasedOnWidth = targetWidth / this.model.width;
+        const scaleBasedOnHeight = targetHeight / this.model.height;
+
+        // 3. Escolhe a MENOR escala entre as duas.
+        // Isso garante que ela nunca estoure nem verticalmente, nem horizontalmente.
+        let finalScale = Math.min(scaleBasedOnWidth, scaleBasedOnHeight);
+
+        // (Opcional) Limite máximo para ela não ficar gigante em telas 4K
+        // finalScale = Math.min(finalScale, 1.5); 
+
+        this.model.scale.set(finalScale);
+        
+        // 4. Centraliza
+        this.model.x = screenW / 2;
+        this.model.y = screenH / 2; // Ponto central da tela
+        this.model.anchor.set(0.5, 0.5); // Ponto de ancoragem no umbigo da Lira
+
+        // Update original state for Idle Brain
+        this.originalScale = finalScale;
+        this.originalY = this.model.y;
+
+        console.log(`✅ Lira redimensionada para caber em 80% da tela. Scale: ${finalScale.toFixed(4)}`);
+    }
+
+    /**
+     * Updates the mouth opening based on audio volume (Lip Sync).
+     * @param volume 0.0 to 1.0
+     */
+    updateMouth(volume: number) {
+        if (this.model && this.model.internalModel && this.model.internalModel.coreModel) {
+            // ParamMouthOpenY is the standard ID for mouth opening
+            // Some models use ParamMouthOpen
+            const core = this.model.internalModel.coreModel;
+            
+            // Try both common parameter IDs
+            try {
+                core.setParameterValueById('ParamMouthOpenY', volume);
+            } catch (e) {}
+            
+            try {
+                core.setParameterValueById('ParamMouthOpen', volume);
+            } catch (e) {}
+        }
+    }
+
+    /**
+     * Makes the model look at the specific coordinates.
+     */
+    lookAt(x: number, y: number) {
+        if (this.model && this.model.internalModel && this.model.internalModel.focusController) {
+            // Live2D focus coordinates are typically -1 to 1 relative to center
+            const targetX = (x / this.app.screen.width) * 2 - 1;
+            const targetY = (y / this.app.screen.height) * 2 - 1;
+            
+            this.model.internalModel.focusController.focus(targetX, -targetY); // Invert Y for Live2D
+        }
+    }
+
+    /**
+     * Sets a specific expression.
+     */
+    setExpression(expressionName: string) {
+        if (this.model) {
+            this.model.expression(expressionName);
+        }
+    }
+
+
+    /**
+     * Set a specific model parameter (e.g. ParamMouthOpenY, Param, etc)
+     */
+    setParameter(paramId: string, value: number) {
+        if (this.model && this.model.internalModel && this.model.internalModel.coreModel) {
+            try {
+                this.model.internalModel.coreModel.setParameterValueById(paramId, value);
+            } catch (e) {
+                console.warn(`[LiraCore] Failed to set parameter ${paramId}:`, e);
+            }
+        }
+    }
+
+    /**
+     * Captures a snapshot of the current canvas state.
+     * Tips: Call this immediately after an update if possible or ensure autoRender is active.
+     */
+    takeSnapshot(format: string = 'image/png', quality: number = 0.9): string | null {
+        if (!this.app || !this.app.renderer) return null;
+        
+        try {
+            // Force a render if not auto-updating to ensure the frame is fresh
+            // @ts-ignore
+            this.app.renderer.render(this.app.stage); 
+            return this.canvas.toDataURL(format, quality);
+        } catch (e) {
+            console.error("[LiraCore] Snapshot failed:", e);
+            return null;
+        }
+    }
+
+
+    destroy() {
+        console.log("[LiraCore] Destroying instance...");
+        
+        // 1. Remove Ticker FIRST to stop update loop
+        if (this.app && this.tickerFn) {
+            this.app.ticker.remove(this.tickerFn);
+            this.tickerFn = null;
+        }
+
+        // 2. Destroy Model
+        if (this.model) {
+            try {
+                // @ts-ignore
+                this.model.destroy({ children: true, baseTexture: true, texture: true });
+            } catch (e) {}
+            this.model = null;
+        }
+
+        // 3. Destroy App
+        if (this.app) {
+            try {
+                this.app.destroy(true, { children: true, texture: true, baseTexture: true });
+            } catch (e) {}
+            // @ts-ignore
+            this.app = null;
+        }
+
+        if (this.canvas) {
+          this.canvas.remove();
+        }
+    }
+}
