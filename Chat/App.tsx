@@ -886,6 +886,7 @@ const LiraAppContent = () => {
                 <LoginModal
                     isOpen={isLoginOpen}
                     onClose={() => setIsLoginOpen(false)}
+                    backendUrl={API_BASE_URL}
                     onLoggedIn={() => {
                         const u = getCurrentUser();
                         if (u) {
