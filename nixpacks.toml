@@ -1,0 +1,11 @@
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+cmds = ["cd Chat/backend && npm install"]
+
+[phases.build]
+cmds = ["echo 'No build needed'"]
+
+[start]
+cmd = "cd Chat/backend && npm start"
