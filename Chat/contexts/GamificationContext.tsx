@@ -558,35 +558,42 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const buyTheme = (themeId: LiraThemeId, cost: number): boolean => {
     if (stats.coins >= cost && !unlockedThemes.includes(themeId)) {
-      setStats(prev => ({ ...prev, coins: prev.coins - cost }));
-      setUnlockedThemes(prev => {
-        const next = [...prev, themeId];
-        
-        // Save to backend
-        const u = getCurrentUser();
-        const userId = u?.id;
-        if (userId) {
-          fetch(`${backendUrl}/api/gamification/purchase`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-            body: JSON.stringify({ userId, type: 'theme', itemId: themeId, cost })
-          }).then(async r => {
-            if (r.ok) {
-              const data = await r.json();
-              setStats(mapBackendToFrontend(data));
-              if (Array.isArray(data?.unlockedThemes)) setUnlockedThemes(data.unlockedThemes);
-            } else {
-              const error = await r.json().catch(() => ({ error: 'Unknown error' }));
-              console.error('[Gamification] Theme purchase failed:', r.status, error);
-            }
-          }).catch(err => console.error('[Gamification] Failed to save theme purchase:', err));
-        }
-        
-        checkAchievement('change_theme'); // First theme buy
-        if (next.length >= 3) checkAchievement('unlock_theme', next.length);
-        if (next.length >= 10) checkAchievement('unlock_all_themes'); // approximate
-        return next;
-      });
+      // Save to backend FIRST
+      const u = getCurrentUser();
+      const userId = u?.id;
+      if (userId) {
+        fetch(`${backendUrl}/api/gamification/purchase`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify({ userId, type: 'theme', itemId: themeId, cost })
+        }).then(async r => {
+          if (r.ok) {
+            const data = await r.json();
+            setStats(mapBackendToFrontend(data));
+            if (Array.isArray(data?.unlockedThemes)) setUnlockedThemes(data.unlockedThemes);
+            checkAchievement('change_theme');
+            if (data.unlockedThemes?.length >= 3) checkAchievement('unlock_theme', data.unlockedThemes.length);
+            if (data.unlockedThemes?.length >= 10) checkAchievement('unlock_all_themes');
+          } else {
+            const error = await r.json().catch(() => ({ error: 'Unknown error' }));
+            console.error('[Gamification] Theme purchase failed:', r.status, error);
+            addToast(`Failed to purchase theme: ${error.error}`, 'error');
+          }
+        }).catch(err => {
+          console.error('[Gamification] Failed to save theme purchase:', err);
+          addToast('Failed to purchase theme', 'error');
+        });
+      } else {
+        // Fallback for non-logged users (local only)
+        setStats(prev => ({ ...prev, coins: prev.coins - cost }));
+        setUnlockedThemes(prev => {
+          const next = [...prev, themeId];
+          checkAchievement('change_theme');
+          if (next.length >= 3) checkAchievement('unlock_theme', next.length);
+          if (next.length >= 10) checkAchievement('unlock_all_themes');
+          return next;
+        });
+      }
       return true;
     }
     return false;
@@ -594,34 +601,40 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const buyPersona = (personaId: PersonaId, cost: number): boolean => {
     if (stats.coins >= cost && !unlockedPersonas.includes(personaId)) {
-      setStats(prev => ({ ...prev, coins: prev.coins - cost }));
-      setUnlockedPersonas(prev => {
-        const next = [...prev, personaId];
-        
-        // Save to backend
-        const u = getCurrentUser();
-        const userId = u?.id;
-        if (userId) {
-          fetch(`${backendUrl}/api/gamification/purchase`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-            body: JSON.stringify({ userId, type: 'persona', itemId: personaId, cost })
-          }).then(async r => {
-            if (r.ok) {
-              const data = await r.json();
-              setStats(mapBackendToFrontend(data));
-              if (Array.isArray(data?.unlockedPersonas)) setUnlockedPersonas(data.unlockedPersonas);
-            } else {
-              const error = await r.json().catch(() => ({ error: 'Unknown error' }));
-              console.error('[Gamification] Persona purchase failed:', r.status, error);
-            }
-          }).catch(err => console.error('[Gamification] Failed to save persona purchase:', err));
-        }
-        
-        checkAchievement('unlock_persona', next.length);
-        if (next.length === ALL_PERSONAS.length) checkAchievement('unlock_all_personas');
-        return next;
-      });
+      // Save to backend FIRST
+      const u = getCurrentUser();
+      const userId = u?.id;
+      if (userId) {
+        fetch(`${backendUrl}/api/gamification/purchase`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify({ userId, type: 'persona', itemId: personaId, cost })
+        }).then(async r => {
+          if (r.ok) {
+            const data = await r.json();
+            setStats(mapBackendToFrontend(data));
+            if (Array.isArray(data?.unlockedPersonas)) setUnlockedPersonas(data.unlockedPersonas);
+            checkAchievement('unlock_persona', data.unlockedPersonas?.length || 0);
+            if (data.unlockedPersonas?.length === ALL_PERSONAS.length) checkAchievement('unlock_all_personas');
+          } else {
+            const error = await r.json().catch(() => ({ error: 'Unknown error' }));
+            console.error('[Gamification] Persona purchase failed:', r.status, error);
+            addToast(`Failed to purchase persona: ${error.error}`, 'error');
+          }
+        }).catch(err => {
+          console.error('[Gamification] Failed to save persona purchase:', err);
+          addToast('Failed to purchase persona', 'error');
+        });
+      } else {
+        // Fallback for non-logged users (local only)
+        setStats(prev => ({ ...prev, coins: prev.coins - cost }));
+        setUnlockedPersonas(prev => {
+          const next = [...prev, personaId];
+          checkAchievement('unlock_persona', next.length);
+          if (next.length === ALL_PERSONAS.length) checkAchievement('unlock_all_personas');
+          return next;
+        });
+      }
       return true;
     }
     return false;
