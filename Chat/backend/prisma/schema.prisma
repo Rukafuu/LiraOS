@@ -1,0 +1,175 @@
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String    @id
+  email         String    @unique
+  username      String
+  passwordHash  String    @map("password_hash")
+  passwordSalt  String?   @map("password_salt")
+  avatar        String?
+  createdAt     BigInt    @map("created_at")
+  lastLogin     BigInt?   @default(0) @map("last_login")
+  loginCount    Int?      @default(0) @map("login_count")
+  preferences   Json?
+  warnings      Int?      @default(0)
+  isBanned      Int?      @default(0) @map("is_banned")
+  plan          String?   @default("free")
+  discordId     String?   @unique
+
+  @@map("users")
+}
+
+model Session {
+  id        String @id
+  userId    String
+  title     String
+  personaId String?
+  createdAt BigInt
+  updatedAt BigInt
+  messages  Json
+
+  @@map("sessions")
+}
+
+model Memory {
+  id         String @id
+  userId     String?
+  content    String
+  category   String
+  priority   String
+  createdAt  BigInt
+  tags       Json
+  importance Int?    @default(1)
+  embedding  String?
+
+  @@map("memories")
+}
+
+model RefreshToken {
+  token     String  @id
+  userId    String?
+  createdAt BigInt?
+  expiresAt BigInt?
+  revoked   Int?    @default(0)
+
+  @@map("refresh_tokens")
+}
+
+model RecoverCode {
+  email     String?
+  code      String?
+  expiresAt BigInt?
+  used      Int?    @default(0)
+
+  @@unique([email, code], name: "email_code")
+  @@map("recover_codes")
+}
+
+model Gamification {
+  userId           String  @id
+  xp               Int?    @default(0)
+  coins            Int?    @default(100)
+  level            Int?    @default(1)
+  stats            Json?
+  unlockedThemes   Json?
+  unlockedPersonas Json?
+  achievements     Json?
+  activePersonaId  String?
+  updatedAt        BigInt?
+
+  @@map("gamification")
+}
+
+model Feedback {
+  id        String  @id
+  userId    String?
+  feedback  String?
+  type      String?
+  rating    Int?
+  context   Json?
+  status    String? @default("new")
+  createdAt BigInt?
+
+  @@map("feedback")
+}
+
+model Knowledge {
+  id        String  @id
+  userId    String?
+  name      String?
+  type      String?
+  language  String?
+  size      Int?
+  content   String?
+  createdAt BigInt?
+
+  @@map("knowledge")
+}
+
+model Infraction {
+  id        Int     @id @default(autoincrement())
+  userId    String?
+  level     String?
+  category  String?
+  reason    String?
+  timestamp BigInt?
+
+  @@map("infractions")
+}
+
+model Ban {
+  userId      String  @id
+  status      String?
+  until       BigInt?
+  reason      String?
+  lastUpdated BigInt?
+
+  @@map("bans")
+}
+
+model AuditLog {
+  id          Int     @id @default(autoincrement())
+  eventId     String?
+  userId      String?
+  actionTaken String?
+  category    String?
+  contentHash String?
+  excerpt     String?
+  timestamp   BigInt?
+
+  @@map("audit_logs")
+}
+
+model Appeal {
+  id        String  @id
+  userId    String?
+  message   String?
+  status    String? @default("pending")
+  adminNote String?
+  createdAt BigInt?
+  updatedAt BigInt?
+
+  @@map("appeals")
+}
+
+model IrisVideo {
+  id           String  @id
+  userId       String?
+  videoUrl     String?
+  thumbnailUrl String?
+  prompt       String?
+  model        String?
+  aspectRatio  String?
+  resolution   String?
+  createdAt    BigInt?
+
+  @@map("iris_videos")
+}

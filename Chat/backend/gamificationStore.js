@@ -1,15 +1,24 @@
-import db from './db/index.js';
+import prisma from './prismaClient.js';
 
-export const getState = (userId) => {
+// Helper for BigInt fields
+const toInt = (n) => Number(n); 
+
+export const getState = async (userId) => {
   try {
-    const row = db.prepare('SELECT * FROM gamification WHERE userId = ?').get(userId);
+    const row = await prisma.gamification.findUnique({
+      where: { userId }
+    });
     if (!row) return null;
     return {
       ...row,
-      stats: JSON.parse(row.stats || '{}'),
-      unlockedThemes: JSON.parse(row.unlockedThemes || '[]'),
-      unlockedPersonas: JSON.parse(row.unlockedPersonas || '[]'),
-      achievements: JSON.parse(row.achievements || '[]')
+      xp: row.xp || 0,
+      coins: row.coins || 0,
+      level: row.level || 1,
+      stats: row.stats || {}, // Prisma handles Json
+      unlockedThemes: row.unlockedThemes || [],
+      unlockedPersonas: row.unlockedPersonas || [],
+      achievements: row.achievements || [],
+      updatedAt: toInt(row.updatedAt)
     };
   } catch (e) {
     console.error('Gamification Get Error:', e);
@@ -17,49 +26,46 @@ export const getState = (userId) => {
   }
 };
 
-export const saveState = (userId, data) => {
+export const saveState = async (userId, data) => {
   try {
-    const existing = getState(userId);
+    const existing = await getState(userId);
     const now = Date.now();
     
-    const newState = {
-      userId,
+    // Construct data
+    const upsertData = {
       xp: data.xp !== undefined ? data.xp : (existing?.xp || 0),
       coins: data.coins !== undefined ? data.coins : (existing?.coins || 0),
       level: data.level !== undefined ? data.level : (existing?.level || 1),
-      stats: JSON.stringify(data.stats || existing?.stats || {}),
-      unlockedThemes: JSON.stringify(data.unlockedThemes || existing?.unlockedThemes || []),
-      unlockedPersonas: JSON.stringify(data.unlockedPersonas || existing?.unlockedPersonas || []),
-      achievements: JSON.stringify(data.achievements || existing?.achievements || []),
+      stats: data.stats || existing?.stats || {},
+      unlockedThemes: data.unlockedThemes || existing?.unlockedThemes || [],
+      unlockedPersonas: data.unlockedPersonas || existing?.unlockedPersonas || [],
+      achievements: data.achievements || existing?.achievements || [],
       activePersonaId: data.activePersonaId || existing?.activePersonaId || 'default',
       updatedAt: now
     };
 
-    const stmt = db.prepare(`
-      INSERT INTO gamification (userId, xp, coins, level, stats, unlockedThemes, unlockedPersonas, achievements, activePersonaId, updatedAt)
-      VALUES (@userId, @xp, @coins, @level, @stats, @unlockedThemes, @unlockedPersonas, @achievements, @activePersonaId, @updatedAt)
-      ON CONFLICT(userId) DO UPDATE SET
-        xp = @xp,
-        coins = @coins,
-        level = @level,
-        stats = @stats,
-        unlockedThemes = @unlockedThemes,
-        unlockedPersonas = @unlockedPersonas,
-        achievements = @achievements,
-        activePersonaId = @activePersonaId,
-        updatedAt = @updatedAt
-    `);
+    const row = await prisma.gamification.upsert({
+      where: { userId },
+      update: upsertData,
+      create: {
+        userId,
+        ...upsertData
+      }
+    });
     
-    stmt.run(newState);
-    return getState(userId);
+    // Return formatted
+    return {
+      ...row,
+      updatedAt: toInt(row.updatedAt)
+    };
   } catch (e) {
     console.error('Gamification Save Error:', e);
     throw e;
   }
 };
 
-export const getOrCreateDefault = (userId) => {
-  const existing = getState(userId);
+export const getOrCreateDefault = async (userId) => {
+  const existing = await getState(userId);
   if (existing) return existing;
   
   const def = {
@@ -72,39 +78,58 @@ export const getOrCreateDefault = (userId) => {
     unlockedPersonas: [],
     activePersonaId: 'default'
   };
-  saveState(userId, def);
+  // saveState handles upsert, so effectively creates it
+  await saveState(userId, def);
   return def;
 };
 
-export const award = (userId, rewards) => {
-  const state = getOrCreateDefault(userId);
+export const award = async (userId, rewards) => {
+  const state = await getOrCreateDefault(userId);
   let { xp, coins } = state;
   
   if (rewards.xp) xp += rewards.xp;
   if (rewards.coins) coins += rewards.coins;
   
-  // Simple level up logic: level = 1 + floor(sqrt(xp)/10) or similar
-  // Let's stick to simple: level up every 1000 XP
   const level = 1 + Math.floor(xp / 1000);
   
   const updates = {
-    ...state,
     xp,
     coins,
     level
   };
   
-  return saveState(userId, updates);
+  return await saveState(userId, updates);
 };
 
-export const getLeaderboard = () => {
+export const getLeaderboard = async () => {
   try {
-    // Top 10 by XP (Excluding Admins/God Mode users with Level >= 50)
-    const rows = db.prepare('SELECT userId, xp, level, avatar, username FROM gamification JOIN users ON gamification.userId = users.id WHERE gamification.level < 50 ORDER BY xp DESC LIMIT 10').all();
-    return rows;
+    // Manual join to avoid schema dependency for now
+    const topGamers = await prisma.gamification.findMany({
+      where: { level: { lt: 50 } },
+      orderBy: { xp: 'desc' },
+      take: 10
+    });
+    
+    // Fetch users
+    const results = [];
+    for (const g of topGamers) {
+      const user = await prisma.user.findUnique({
+        where: { id: g.userId },
+        select: { username: true, avatar: true }
+      });
+      if (user) {
+        results.push({
+          userId: g.userId,
+          xp: g.xp,
+          level: g.level,
+          username: user.username,
+          avatar: user.avatar
+        });
+      }
+    }
+    return results;
   } catch (e) {
-    // If join fails (maybe user deleted?), fallback to just gamification
-    const rows = db.prepare('SELECT userId, xp, level FROM gamification WHERE level < 50 ORDER BY xp DESC LIMIT 10').all();
-    return rows;
+    console.error('getLeaderboard error', e);
+    return [];
   }
 };

@@ -1,23 +1,23 @@
-import db from './db/index.js';
+import prisma from './prismaClient.js';
+
+// Helper
+const toInt = (n) => Number(n);
 
 export async function getSessions(userId) {
   try {
-    let query = 'SELECT * FROM sessions';
-    const params = [];
+    const sessions = await prisma.session.findMany({
+      where: userId ? { userId } : {},
+      orderBy: { updatedAt: 'desc' }
+    });
     
-    if (userId) {
-      query += ' WHERE userId = ?';
-      params.push(userId);
-    }
-    
-    query += ' ORDER BY updatedAt DESC';
-    
-    const stmt = db.prepare(query);
-    const rows = stmt.all(...params);
-    
-    return rows.map(row => ({
-      ...row,
-      messages: row.messages ? JSON.parse(row.messages) : []
+    return sessions.map(row => ({
+      id: row.id,
+      userId: row.userId,
+      title: row.title,
+      personaId: row.personaId,
+      createdAt: toInt(row.createdAt),
+      updatedAt: toInt(row.updatedAt),
+      messages: row.messages || [] // Prisma handles Json
     }));
   } catch (e) {
     console.error('getSessions error:', e);
@@ -29,25 +29,33 @@ export async function upsertSession(session) {
   if (!session.id) return null;
   
   const { id, userId, title, personaId, createdAt, updatedAt, messages } = session;
-  const msgsJson = JSON.stringify(messages || []);
+  const now = Date.now();
   
   try {
-    const existing = db.prepare('SELECT id FROM sessions WHERE id = ?').get(id);
+    // Using upsert
+    // Note: userId is required in create, but might be optional in session object?
+    // Assuming session object has all fields.
+    // createdAt defaulting to now if missing.
     
-    if (existing) {
-      const stmt = db.prepare(`
-        UPDATE sessions 
-        SET title = ?, personaId = ?, updatedAt = ?, messages = ?
-        WHERE id = ?
-      `);
-      stmt.run(title, personaId, updatedAt || Date.now(), msgsJson, id);
-    } else {
-      const stmt = db.prepare(`
-        INSERT INTO sessions (id, userId, title, personaId, createdAt, updatedAt, messages)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-      `);
-      stmt.run(id, userId, title, personaId, createdAt || Date.now(), updatedAt || Date.now(), msgsJson);
-    }
+    await prisma.session.upsert({
+      where: { id },
+      update: {
+        title,
+        personaId,
+        updatedAt: updatedAt || now,
+        messages: messages || []
+      },
+      create: {
+        id,
+        userId: userId || 'unknown', // Should fallback or fail? User usually exists.
+        title: title || 'New Chat',
+        personaId,
+        createdAt: createdAt || now,
+        updatedAt: updatedAt || now,
+        messages: messages || []
+      }
+    });
+
     return session;
   } catch (e) {
     console.error('upsertSession error:', e);
@@ -57,20 +65,22 @@ export async function upsertSession(session) {
 
 export async function deleteSession(id) {
   try {
-    const stmt = db.prepare('DELETE FROM sessions WHERE id = ?');
-    const info = stmt.run(id);
-    return info.changes > 0;
+    await prisma.session.delete({
+      where: { id }
+    });
+    return true;
   } catch (e) {
-    console.error('deleteSession error:', e);
+    // If not found, prisma throws P2025.
     return false;
   }
 }
 
 export async function deleteSessionsByUser(userId) {
   try {
-    const stmt = db.prepare('DELETE FROM sessions WHERE userId = ?');
-    const info = stmt.run(userId);
-    return info.changes > 0;
+    const info = await prisma.session.deleteMany({
+      where: { userId }
+    });
+    return info.count > 0;
   } catch (e) {
     console.error('deleteSessionsByUser error:', e);
     return false;
@@ -79,9 +89,11 @@ export async function deleteSessionsByUser(userId) {
 
 export async function updateSessionTitle(id, title) {
   try {
-    const stmt = db.prepare('UPDATE sessions SET title = ? WHERE id = ?');
-    const info = stmt.run(title, id);
-    return info.changes > 0;
+    await prisma.session.update({
+      where: { id },
+      data: { title }
+    });
+    return true;
   } catch (e) {
     console.error('updateSessionTitle error:', e);
     return false;
@@ -90,10 +102,19 @@ export async function updateSessionTitle(id, title) {
 
 export async function getSessionById(id) {
   try {
-    const stmt = db.prepare('SELECT * FROM sessions WHERE id = ?');
-    const row = stmt.get(id);
+    const row = await prisma.session.findUnique({
+      where: { id }
+    });
     if (!row) return null;
-    return { ...row, messages: row.messages ? JSON.parse(row.messages) : [] };
+    return {
+      id: row.id,
+      userId: row.userId,
+      title: row.title,
+      personaId: row.personaId,
+      createdAt: toInt(row.createdAt),
+      updatedAt: toInt(row.updatedAt),
+      messages: row.messages || []
+    };
   } catch (e) {
     console.error('getSessionById error:', e);
     return null;

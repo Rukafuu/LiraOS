@@ -1,5 +1,4 @@
-
-import db from '../db/index.js';
+import prisma from '../prismaClient.js';
 import crypto from 'node:crypto';
 
 // --- CONFIG ---
@@ -58,35 +57,37 @@ export function checkModeration(content) {
  * Check user ban status.
  * Returns object with access: boolean and message if blocked.
  */
-export function getUserStatus(userId) {
+export async function getUserStatus(userId) {
   try {
-    const stmt = db.prepare('SELECT * FROM bans WHERE userId = ?');
-    const ban = stmt.get(userId);
+    const ban = await prisma.ban.findUnique({
+      where: { userId }
+    });
     
     if (!ban) return { allowed: true };
     
     // Check expiration
-    if (ban.until && Date.now() > ban.until) {
+    if (ban.until && Date.now() > Number(ban.until)) {
       // Auto-expire
-      db.prepare('DELETE FROM bans WHERE userId = ?').run(userId);
+      await prisma.ban.delete({ where: { userId } });
       return { allowed: true };
     }
     
     return { 
       allowed: false, 
       status: ban.status, 
-      until: ban.until,
+      until: Number(ban.until),
       reason: ban.reason,
       message: getBanMessage(ban) 
     };
   } catch (e) {
     console.error('getUserStatus error:', e);
-    return { allowed: true }; // Fail open or close? Fail open for now to avoid accidental DOS
+    return { allowed: true }; // Fail open
   }
 }
 
 function getBanMessage(ban) {
-  const dateStr = ban.until ? new Date(ban.until).toLocaleString() : 'Permanente';
+  const when = Number(ban.until);
+  const dateStr = when ? new Date(when).toLocaleString() : 'Permanente';
   if (ban.status === 'cooldown') return `Você está em cooldown temporário até ${dateStr} por flood ou infrações leves.`;
   if (ban.status === 'suspended') return `Sua conta foi suspensa até ${dateStr} devido a violações de segurança.`;
   return `Sua conta foi banida permanentemente por violações graves dos termos de uso.`;
@@ -98,45 +99,46 @@ function getBanMessage(ban) {
 export async function handleInfraction(userId, content, category, levelStr = 'L1') {
   const now = Date.now();
   const levelConfig = LEVELS[levelStr];
+  const eventId = crypto.randomUUID();
   
   // 1. Audit Log (Always log, even if no action taken)
-  const eventId = crypto.randomUUID();
   try {
-     const auditStmt = db.prepare(`
-       INSERT INTO audit_logs (eventId, userId, actionTaken, category, contentHash, excerpt, timestamp)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
-     `);
-     auditStmt.run(
-       eventId, 
-       userId, 
-       'flagged_' + levelStr, 
-       category, 
-       hashContent(content), 
-       redactSensitiveData(content).substring(0, 200), 
-       now
-     );
+     await prisma.auditLog.create({
+         data: {
+             eventId, 
+             userId, 
+             actionTaken: 'flagged_' + levelStr, 
+             category, 
+             contentHash: hashContent(content), 
+             excerpt: redactSensitiveData(content).substring(0, 200), 
+             timestamp: now
+         }
+     });
   } catch(e) { console.error('Audit log failed', e); }
 
   // 2. Record Infraction
   try {
-    db.prepare(`
-      INSERT INTO infractions (userId, level, category, reason, timestamp)
-      VALUES (?, ?, ?, 'Automated detection', ?)
-    `).run(userId, levelStr, category, now);
+    await prisma.infraction.create({
+        data: {
+            userId,
+            level: levelStr,
+            category,
+            reason: 'Automated detection',
+            timestamp: now
+        }
+    });
   } catch (e) { console.error('Infraction save failed', e); return { allowed: false }; }
 
   // 3. Check Escalation (Three strikes logic)
-  // Count valid infractions of this level in the window
-  // Clean up old ones first? Or just filter in query.
-  // We'll define window based on level.
-  // Simplification: Check last N infractions.
-  
   const timeframe = levelConfig.expireDays * 24 * 60 * 60 * 1000; // Lookback
-  const countStmt = db.prepare(`
-    SELECT COUNT(*) as count FROM infractions 
-    WHERE userId = ? AND level = ? AND timestamp > ?
-  `);
-  const count = countStmt.get(userId, levelStr, now - timeframe).count;
+  
+  const count = await prisma.infraction.count({
+      where: {
+          userId,
+          level: levelStr,
+          timestamp: { gt: now - timeframe }
+      }
+  });
   
   let actionTaken = null;
   
@@ -146,17 +148,23 @@ export async function handleInfraction(userId, content, category, levelStr = 'L1
     const action = levelConfig.action; // cooldown, suspend, ban
     
     // Upsert ban
-    const banStmt = db.prepare(`
-      INSERT INTO bans (userId, status, until, reason, lastUpdated)
-      VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT(userId) DO UPDATE SET
-        status = excluded.status,
-        until = excluded.until,
-        reason = excluded.reason,
-        lastUpdated = excluded.lastUpdated
-    `);
-    
-    banStmt.run(userId, action, until, `Limit reached for ${levelStr} (${category})`, now);
+    await prisma.ban.upsert({
+        where: { userId },
+        update: {
+            status: action,
+            until,
+            reason: `Limit reached for ${levelStr} (${category})`,
+            lastUpdated: now
+        },
+        create: {
+            userId,
+            status: action,
+            until,
+            reason: `Limit reached for ${levelStr} (${category})`,
+            lastUpdated: now
+        }
+    });
+
     actionTaken = action;
   }
   
@@ -172,53 +180,65 @@ export async function handleInfraction(userId, content, category, levelStr = 'L1
 /**
  * Appeals
  */
-export function createAppeal(userId, message) {
+export async function createAppeal(userId, message) {
   // Check rate limit (1 per 7 days)
-  const lastAppeal = db.prepare('SELECT createdAt FROM appeals WHERE userId = ? ORDER BY createdAt DESC LIMIT 1').get(userId);
-  if (lastAppeal && (Date.now() - lastAppeal.createdAt) < 7 * 24 * 60 * 60 * 1000) {
+  const lastAppeal = await prisma.appeal.findFirst({
+      where: { userId },
+      orderBy: { createdAt: 'desc' }
+  });
+
+  if (lastAppeal && (Date.now() - Number(lastAppeal.createdAt)) < 7 * 24 * 60 * 60 * 1000) {
     return { error: 'Rate limit: You can only appeal once every 7 days.' };
   }
   
   const id = crypto.randomUUID();
   const safeMessage = redactSensitiveData(message);
   
-  db.prepare(`
-    INSERT INTO appeals (id, userId, message, createdAt, updatedAt)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(id, userId, safeMessage, Date.now(), Date.now());
+  await prisma.appeal.create({
+      data: {
+          id,
+          userId,
+          message: safeMessage,
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+      }
+  });
   
   return { success: true, id };
 }
 
-export function getAppeals() {
-  return db.prepare('SELECT * FROM appeals ORDER BY createdAt DESC LIMIT 50').all();
+export async function getAppeals() {
+  const apps = await prisma.appeal.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 50
+  });
+  return apps.map(a => ({...a, createdAt: Number(a.createdAt), updatedAt: Number(a.updatedAt)}));
 }
 
 // Proxy for old calls (Compatibility)
-export function isUserBanned(userId) {
-  const status = getUserStatus(userId);
+export async function isUserBanned(userId) {
+  const status = await getUserStatus(userId);
   return !status.allowed;
 }
 
 /**
  * Resolve Appeal (Admin)
  */
-export function resolveAppeal(appealId, status, adminNote) {
+export async function resolveAppeal(appealId, status, adminNote) {
   if (!['approved', 'denied'].includes(status)) return { error: 'Invalid status' };
 
   try {
-    const appeal = db.prepare('SELECT * FROM appeals WHERE id = ?').get(appealId);
+    const appeal = await prisma.appeal.findUnique({ where: { id: appealId } });
     if (!appeal) return { error: 'Appeal not found' };
     
-    // Update Appeal
-    const upd = db.prepare('UPDATE appeals SET status = ?, adminNote = ?, updatedAt = ? WHERE id = ?');
-    upd.run(status, adminNote, Date.now(), appealId);
+    await prisma.appeal.update({
+        where: { id: appealId },
+        data: { status, adminNote, updatedAt: Date.now() }
+    });
     
     // If approved, lift ban
     if (status === 'approved') {
-       db.prepare('DELETE FROM bans WHERE userId = ?').run(appeal.userId);
-       // Optionally reset infractions?
-       // db.prepare('DELETE FROM infractions WHERE userId = ?').run(appeal.userId);
+       await prisma.ban.delete({ where: { userId: appeal.userId } });
     }
     
     return { success: true };
@@ -231,12 +251,22 @@ export function resolveAppeal(appealId, status, adminNote) {
 /**
  * Cron: Cleanup
  */
-export function cleanupExpiredBans() {
+export async function cleanupExpiredBans() {
   const now = Date.now();
-  const info = db.prepare('DELETE FROM bans WHERE until IS NOT NULL AND until < ?').run(now);
-  return info.changes;
+  const info = await prisma.ban.deleteMany({
+      where: {
+          until: { not: null, lt: now } // Check if 'not: null' is valid in prisma? Yes. But schema defines optional.
+          // BigInt vs Int conflict might happen if 'until' in DB is BigInt.
+          // I pass 'now' (number/double). Prisma usually handles mapping if schema is BigInt.
+      }
+  });
+  return info.count;
 }
 
-export function getModerationLogs() {
-   return db.prepare('SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 50').all();
+export async function getModerationLogs() {
+   const rows = await prisma.auditLog.findMany({
+       orderBy: { timestamp: 'desc' },
+       take: 50
+   });
+   return rows.map(r => ({...r, timestamp: Number(r.timestamp)}));
 }

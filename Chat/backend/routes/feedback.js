@@ -1,5 +1,5 @@
 import express from 'express';
-import logger from '../utils/logger.js'; // Assuming this exists, if not I should check.
+import logger from '../utils/logger.js'; 
 import { getSystemInfo } from '../utils/logger.js'; 
 import { addFeedback, getFeedback } from '../feedbackStore.js';
 import { requireAuth } from '../middlewares/authMiddleware.js';
@@ -9,10 +9,10 @@ const router = express.Router();
 router.use(requireAuth);
 
 // Get all feedback (admin only in future)
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     // TODO: Add admin check
-    const feedbacks = getFeedback();
+    const feedbacks = await getFeedback();
     res.json(feedbacks);
   } catch (e) {
     console.error('Failed to read feedback:', e);
@@ -41,7 +41,7 @@ router.post('/', async (req, res) => {
         system: typeof getSystemInfo === 'function' ? getSystemInfo() : {}
     };
 
-    const entry = addFeedback(userId, feedback, type, rating, enrichedContext);
+    const entry = await addFeedback(userId, feedback, type, rating, enrichedContext);
 
     res.json({ 
       success: true, 

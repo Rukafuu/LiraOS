@@ -25,17 +25,14 @@ router.post(['/init', '/init-new'], async (req, res) => {
     return res.status(400).json({ error: 'missing_email' });
   }
   
-  const user = getUserByEmail(email);
+  const user = await getUserByEmail(email);
   if (!user) {
     console.log(`[Recovery] Email not found in database: ${email}`);
-    // List all users for debugging (Note: 'db' object is not available in this scope)
-    // const allUsers = db.prepare('SELECT email FROM users').all();
-    // console.log(`[Recovery] Available emails in DB:`, allUsers.map(u => u.email));
     return res.status(404).json({ error: 'email_not_found' });
   }
   
   console.log(`[Recovery] User found: ${user.email} (ID: ${user.id})`);
-  const { code } = createRecoverCode(user.email);
+  const { code } = await createRecoverCode(user.email);
   
   // If no SMTP configured, return code in response for DEV purposes
   if (!SMTP_HOST || !SMTP_USER) {
@@ -79,10 +76,10 @@ router.post('/complete', async (req, res) => {
   const { email, code, newPassword } = req.body || {};
   if (!email || !code || !newPassword) return res.status(400).json({ error: 'missing_fields' });
   
-  const user = getUserByEmail(email);
+  const user = await getUserByEmail(email);
   if (!user) return res.status(404).json({ error: 'user_not_found' });
 
-  if (consumeRecoverCode(user.email, code)) {
+  if (await consumeRecoverCode(user.email, code)) {
     await setPassword(user.email, newPassword);
     console.log(`[Recovery] Password reset success for ${email}`);
     res.json({ success: true });

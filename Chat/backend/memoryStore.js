@@ -1,23 +1,18 @@
-import db from './db/index.js';
+import prisma from './prismaClient.js';
+
+const toInt = (n) => Number(n);
 
 export async function getMemories(userId) {
   try {
-    let query = 'SELECT * FROM memories';
-    const params = [];
-    
-    if (userId) {
-      query += ' WHERE userId = ?';
-      params.push(userId);
-    }
-    
-    query += ' ORDER BY createdAt DESC';
-    
-    const stmt = db.prepare(query);
-    const rows = stmt.all(...params);
+    const rows = await prisma.memory.findMany({
+        where: userId ? { userId } : {},
+        orderBy: { createdAt: 'desc' }
+    });
     
     return rows.map(row => ({
       ...row,
-      tags: row.tags ? JSON.parse(row.tags) : []
+      tags: row.tags || [],
+      createdAt: toInt(row.createdAt)
     }));
   } catch (e) {
     console.error('getMemories error:', e);
@@ -30,12 +25,18 @@ export async function addMemory(content, tags = [], category = 'note', priority 
   const createdAt = Date.now();
   
   try {
-    const stmt = db.prepare(`
-      INSERT INTO memories (id, userId, content, category, priority, createdAt, tags)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `);
-    
-    stmt.run(id, userId, content, category, priority, createdAt, JSON.stringify(tags));
+    await prisma.memory.create({
+        data: {
+            id,
+            userId,
+            content,
+            category,
+            priority,
+            createdAt,
+            tags: tags,
+            importance: 1
+        }
+    });
     
     return {
       id,
@@ -54,10 +55,11 @@ export async function addMemory(content, tags = [], category = 'note', priority 
 
 export async function getMemoryById(id) {
   try {
-    const stmt = db.prepare('SELECT * FROM memories WHERE id = ?');
-    const row = stmt.get(id);
+    const row = await prisma.memory.findUnique({
+        where: { id }
+    });
     if (!row) return null;
-    return { ...row, tags: row.tags ? JSON.parse(row.tags) : [] };
+    return { ...row, tags: row.tags || [], createdAt: toInt(row.createdAt) };
   } catch (e) {
     return null;
   }
@@ -69,9 +71,8 @@ export async function deleteMemory(id, requesterUserId = null) {
       const mem = await getMemoryById(id);
       if (!mem || mem.userId !== requesterUserId) return false;
     }
-    const stmt = db.prepare('DELETE FROM memories WHERE id = ?');
-    const info = stmt.run(id);
-    return info.changes > 0;
+    await prisma.memory.delete({ where: { id } });
+    return true;
   } catch (e) {
     console.error('deleteMemory error:', e);
     return false;
@@ -80,9 +81,8 @@ export async function deleteMemory(id, requesterUserId = null) {
 
 export async function deleteMemoriesByUser(userId) {
   try {
-    const stmt = db.prepare('DELETE FROM memories WHERE userId = ?');
-    const info = stmt.run(userId);
-    return info.changes > 0;
+    const info = await prisma.memory.deleteMany({ where: { userId } });
+    return info.count > 0;
   } catch (e) {
     console.error('deleteMemoriesByUser error:', e);
     return false;

@@ -192,7 +192,7 @@ router.post('/stream', async (req, res) => {
     const userId = req.userId; // Use authenticated user ID if needed for logging/limits
     
     // 0. Security Check: Is User Banned?
-    const userStatus = getUserStatus(userId);
+    const userStatus = await getUserStatus(userId);
     if (!userStatus.allowed) {
       console.log(`[SECURITY] 🚫 Blocked request from banned user: ${userId}`);
       return res.status(403).json({ error: 'account_banned', message: userStatus.message, until: userStatus.until });
@@ -428,7 +428,7 @@ Ação > Conversa. Se você pode fazer algo com uma ferramenta, USE A FERRAMENTA
               functionResult = await projectTools.getProjectStructure(functionCall.args.maxDepth || 3);
               break;
             case 'get_user_stats':
-               const stats = getState(userId);
+               const stats = await getState(userId);
                functionResult = stats ? { xp: stats.xp, coins: stats.coins, level: stats.level } : { error: "Stats not found" };
                break;
             case 'execute_system_command':
@@ -508,7 +508,7 @@ Ação > Conversa. Se você pode fazer algo com uma ferramenta, USE A FERRAMENTA
        const temporalContext = getTemporalContext(localDateTime);
        
        // Calculate Tier dynamically
-       const user = getUserById(userId);
+       const user = await getUserById(userId);
        // Admin gets everything (Sirius). Premium plans get Sirius. Free gets Observer.
        const userTier = (isAdmin(userId) || (user && user.plan !== 'free')) ? 'Sirius' : 'Observer'; 
        

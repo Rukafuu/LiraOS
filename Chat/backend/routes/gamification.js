@@ -6,41 +6,42 @@ const router = express.Router();
 
 router.use(requireAuth);
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
     const userId = req.userId;
-    const state = getState(userId) || getOrCreateDefault(userId);
+    // getOrCreateDefault already calls saveState internally if needed
+    const state = (await getState(userId)) || (await getOrCreateDefault(userId));
     res.json(state);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const userId = req.userId;
     const { stats, unlockedThemes, unlockedPersonas, activePersonaId } = req.body || {};
-    const updated = saveState(userId, { stats, unlockedThemes, unlockedPersonas, activePersonaId });
+    const updated = await saveState(userId, { stats, unlockedThemes, unlockedPersonas, activePersonaId });
     res.json(updated);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-router.post('/award', (req, res) => {
+router.post('/award', async (req, res) => {
   try {
     const userId = req.userId;
     const { xp = 0, coins = 0, bond = 0, messageInc = 0 } = req.body || {};
-    const updated = award(userId, { xp, coins, bond, messageInc });
+    const updated = await award(userId, { xp, coins, bond, messageInc });
     res.json(updated);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-router.get('/leaderboard', (req, res) => {
+router.get('/leaderboard', async (req, res) => {
   try {
-    const list = getLeaderboard();
+    const list = await getLeaderboard();
     res.json(list);
   } catch (e) {
     res.status(500).json({ error: e.message });

@@ -241,7 +241,7 @@ class DiscordService {
                 memoryUserId = 'owner_main';
             } else {
                 // For non-owners, check if they have a linked account and valid plan
-                let linkedUser = getUserByDiscordId(message.author.id);
+                let linkedUser = await getUserByDiscordId(message.author.id);
                 
                 // --- FREE ACCESS MODE ENABLED (USER REQUEST) ---
                 /*
@@ -272,7 +272,7 @@ class DiscordService {
 
             // Gamification: Award XP/Coins for activity
             // Rate limit could be added here later
-            award(memoryUserId, { xp: 5, coins: 1 });
+            await award(memoryUserId, { xp: 5, coins: 1 });
 
             const userMessage = message.content.replace(/<@!?[0-9]+>/g, '').trim();
 
@@ -351,7 +351,7 @@ class DiscordService {
             return;
         }
 
-        const user = getUserByEmail(email);
+        const user = await getUserByEmail(email);
         if (!user) {
             await message.reply('❌ E-mail não encontrado no sistema LiraOS. Crie uma conta no site primeiro.');
             return;
@@ -430,26 +430,26 @@ class DiscordService {
         }
 
         // Code is valid! Link the account.
-        const user = getUserByEmail(pending.email); // Fetch again to be safe
+        const user = await getUserByEmail(pending.email); // Fetch again to be safe
         if (!user) {
              await message.reply('❌ Usuário não encontrado.');
              return;
         }
 
-        updateUser(user.id, { discordId: message.author.id });
+        await updateUser(user.id, { discordId: message.author.id });
         this.pendingLinks.delete(message.author.id);
 
         await message.reply(`✅ **Sucesso!** A conta **${user.username}** foi vinculada ao seu Discord.\nAgora você pode conversar comigo! 🎉`);
     }
 
     async handleProfileCommand(message) {
-        let user = getUserByDiscordId(message.author.id);
+        let user = await getUserByDiscordId(message.author.id);
         if (!user) {
              await message.reply('🔒 Você precisa vincular sua conta LiraOS primeiro. Use `.link seu@email.com`.');
              return;
         }
 
-        const stats = getOrCreateDefault(user.id);
+        const stats = await getOrCreateDefault(user.id);
         
         const planThemeMap = {
             'vega': 'Vega Nebula 🌌',

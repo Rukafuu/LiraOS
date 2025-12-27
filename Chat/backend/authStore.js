@@ -1,88 +1,79 @@
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
-import db from './db/index.js';
+import prisma from './prismaClient.js';
+
+// Helper to sanitize and format user object
+function mapUser(user) {
+  if (!user) return null;
+  return {
+    id: user.id,
+    email: user.email,
+    username: user.username,
+    passwordHash: user.passwordHash,
+    passwordSalt: user.passwordSalt || '',
+    avatar: user.avatar,
+    createdAt: Number(user.createdAt),
+    lastLogin: Number(user.lastLogin || 0),
+    loginCount: user.loginCount || 0,
+    preferences: user.preferences || {},
+    plan: user.plan || 'free',
+    discordId: user.discordId
+  };
+}
 
 async function hashPassword(password) {
-  // Bcrypt generates its own salt and includes it in the hash string
   const hash = await bcrypt.hash(password, 10);
   return { salt: null, hash };
 }
 
-export function getUserByEmail(email) {
+export async function getUserByEmail(email) {
   try {
-    const stmt = db.prepare('SELECT * FROM users WHERE lower(email) = lower(?)');
-    const user = stmt.get(email || '');
-    if (!user) return null;
-    
-    // Adapt to match expected object structure
-    return {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      passwordHash: user.password_hash,
-      passwordSalt: user.password_salt,
-      avatar: user.avatar,
-      createdAt: user.created_at,
-      lastLogin: user.last_login,
-      loginCount: user.login_count,
-      preferences: user.preferences ? JSON.parse(user.preferences) : {},
-      plan: user.plan || 'free',
-      discordId: user.discordId
-    };
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase() }
+    });
+    return mapUser(user);
   } catch (e) {
     console.error('getUserByEmail error:', e);
     return null;
   }
 }
 
-export function getUserByDiscordId(discordId) {
-    try {
-      const stmt = db.prepare('SELECT * FROM users WHERE discordId = ?');
-      const user = stmt.get(discordId || '');
-      if (!user) return null;
-      
-      return {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        // ... include other fields if needed for auth check
-        plan: user.plan || 'free',
-        discordId: user.discordId
-      };
-    } catch (e) {
-      console.error('getUserByDiscordId error:', e);
-      return null;
-    }
+export async function getUserByDiscordId(discordId) {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { discordId: discordId }
+    });
+    return mapUser(user);
+  } catch (e) {
+    console.error('getUserByDiscordId error:', e);
+    return null;
+  }
 }
 
 export async function createUser(email, username, password) {
-  if (getUserByEmail(email)) return null;
-  
-  // Async hash (non-blocking)
+  const existing = await getUserByEmail(email);
+  if (existing) return null;
+
   const { hash } = await hashPassword(password);
   const id = `usr_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
   const now = Date.now();
-  
+
   try {
-    const stmt = db.prepare(`
-      INSERT INTO users (id, email, username, password_hash, password_salt, created_at, last_login, login_count, preferences, plan)
-      VALUES (?, ?, ?, ?, ?, ?, 0, 0, '{}', 'free')
-    `);
-    
-    // Salt is now null/empty for bcrypt users
-    stmt.run(id, email.toLowerCase(), username, hash, '', now);
-    
-    return {
-      id,
-      email: email.toLowerCase(),
-      username,
-      passwordHash: hash,
-      passwordSalt: '',
-      createdAt: now,
-      lastLogin: 0,
-      loginCount: 0,
-      plan: 'free'
-    };
+    const user = await prisma.user.create({
+      data: {
+        id,
+        email: email.toLowerCase(),
+        username,
+        passwordHash: hash,
+        passwordSalt: '',
+        createdAt: now,
+        lastLogin: 0,
+        loginCount: 0,
+        preferences: {},
+        plan: 'free'
+      }
+    });
+    return mapUser(user);
   } catch (e) {
     console.error('createUser error:', e);
     return null;
@@ -98,88 +89,50 @@ export async function verifyPassword(user, password) {
   }
 }
 
-export function updateLoginStats(email) {
+export async function updateLoginStats(email) {
   try {
-    const user = getUserByEmail(email);
-    if (!user) return null;
-    
-    const now = Date.now();
-    const stmt = db.prepare(`
-      UPDATE users 
-      SET last_login = ?, login_count = login_count + 1 
-      WHERE lower(email) = lower(?)
-    `);
-    stmt.run(now, email);
-    
-    return getUserByEmail(email);
+    const user = await prisma.user.update({
+      where: { email: email.toLowerCase() },
+      data: {
+        lastLogin: Date.now(),
+        loginCount: { increment: 1 }
+      }
+    });
+    return mapUser(user);
   } catch (e) {
     console.error('updateLoginStats error:', e);
     return null;
   }
 }
 
-export function getUserById(userId) {
+export async function getUserById(userId) {
   try {
-    const stmt = db.prepare('SELECT * FROM users WHERE id = ?');
-    const user = stmt.get(userId);
-    if (!user) return null;
-    
-    return {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      passwordHash: user.password_hash,
-      passwordSalt: user.password_salt,
-      avatar: user.avatar,
-      createdAt: user.created_at,
-      lastLogin: user.last_login,
-      loginCount: user.login_count,
-      preferences: user.preferences ? JSON.parse(user.preferences) : {},
-      plan: user.plan || 'free',
-      discordId: user.discordId
-    };
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+    return mapUser(user);
   } catch (e) {
     console.error('getUserById error:', e);
     return null;
   }
 }
 
-export function updateUser(userId, updates) {
+export async function updateUser(userId, updates) {
   try {
-    const user = getUserById(userId);
-    if (!user) return null;
-    
-    const fields = [];
-    const values = [];
-    
-    if (updates.username !== undefined) {
-      fields.push('username = ?');
-      values.push(updates.username);
-    }
-    if (updates.avatar !== undefined) {
-      fields.push('avatar = ?');
-      values.push(updates.avatar);
-    }
-    if (updates.preferences !== undefined) {
-      fields.push('preferences = ?');
-      values.push(JSON.stringify(updates.preferences));
-    }
-    if (updates.plan !== undefined) {
-      fields.push('plan = ?');
-      values.push(updates.plan);
-    }
-    if (updates.discordId !== undefined) {
-      fields.push('discordId = ?');
-      values.push(updates.discordId);
-    }
-    
-    if (fields.length === 0) return user;
-    
-    values.push(userId);
-    const stmt = db.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`);
-    stmt.run(...values);
-    
-    return getUserById(userId);
+    const data = {};
+    if (updates.username !== undefined) data.username = updates.username;
+    if (updates.avatar !== undefined) data.avatar = updates.avatar;
+    if (updates.preferences !== undefined) data.preferences = updates.preferences;
+    if (updates.plan !== undefined) data.plan = updates.plan;
+    if (updates.discordId !== undefined) data.discordId = updates.discordId;
+
+    if (Object.keys(data).length === 0) return getUserById(userId);
+
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data
+    });
+    return mapUser(user);
   } catch (e) {
     console.error('updateUser error:', e);
     return null;
@@ -189,17 +142,21 @@ export function updateUser(userId, updates) {
 // Refresh Tokens
 const refreshTokens = new Map();
 
-export function issueRefreshToken(userId) {
+export async function issueRefreshToken(userId) {
   const token = `rt_${crypto.randomBytes(32).toString('hex')}`;
   const expiresAt = Date.now() + 30 * 24 * 3600 * 1000; // 30 days
   refreshTokens.set(token, { userId, expiresAt });
-  
+
   try {
-    const stmt = db.prepare(`
-      INSERT INTO refresh_tokens (token, userId, createdAt, expiresAt, revoked)
-      VALUES (?, ?, ?, ?, 0)
-    `);
-    stmt.run(token, userId, Date.now(), expiresAt);
+    await prisma.refreshToken.create({
+      data: {
+        token,
+        userId,
+        createdAt: Date.now(),
+        expiresAt,
+        revoked: 0
+      }
+    });
   } catch (e) {
     console.error('issueRefreshToken DB error:', e);
   }
@@ -207,23 +164,31 @@ export function issueRefreshToken(userId) {
   return { token, expiresAt };
 }
 
-export function verifyRefreshToken(token) {
+export async function verifyRefreshToken(token) {
   try {
-    const stmt = db.prepare('SELECT * FROM refresh_tokens WHERE token = ? AND revoked = 0');
-    const rt = stmt.get(token);
+    const rt = await prisma.refreshToken.findFirst({
+        where: { 
+            token,
+            revoked: 0
+        }
+    });
+
     if (!rt) return null;
-    if (Date.now() > rt.expiresAt) return null;
-    return { userId: rt.userId, expiresAt: rt.expiresAt };
+    if (Date.now() > Number(rt.expiresAt)) return null;
+    
+    return { userId: rt.userId, expiresAt: Number(rt.expiresAt) };
   } catch (e) {
     console.error('verifyRefreshToken error:', e);
     return null;
   }
 }
 
-export function revokeRefreshToken(token) {
+export async function revokeRefreshToken(token) {
   try {
-    const stmt = db.prepare('UPDATE refresh_tokens SET revoked = 1 WHERE token = ?');
-    stmt.run(token);
+    await prisma.refreshToken.update({
+        where: { token },
+        data: { revoked: 1 }
+    });
     refreshTokens.delete(token);
     return true;
   } catch (e) {
@@ -233,16 +198,19 @@ export function revokeRefreshToken(token) {
 }
 
 // Password Recovery
-export function createRecoverCode(email) {
+export async function createRecoverCode(email) {
   const code = crypto.randomBytes(3).toString('hex').toUpperCase();
   const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
   
   try {
-    const stmt = db.prepare(`
-      INSERT INTO recover_codes (email, code, expiresAt, used)
-      VALUES (?, ?, ?, 0)
-    `);
-    stmt.run(email.toLowerCase(), code, expiresAt);
+    await prisma.recoverCode.create({
+        data: {
+            email: email.toLowerCase(),
+            code,
+            expiresAt,
+            used: 0
+        }
+    });
     return { code, expiresAt };
   } catch (e) {
     console.error('createRecoverCode error:', e);
@@ -250,16 +218,30 @@ export function createRecoverCode(email) {
   }
 }
 
-export function consumeRecoverCode(email, code) {
+export async function consumeRecoverCode(email, code) {
   try {
-    const stmt = db.prepare('SELECT * FROM recover_codes WHERE lower(email) = lower(?) AND code = ? ORDER BY expiresAt DESC LIMIT 1');
-    const rc = stmt.get(email, code);
+    const rc = await prisma.recoverCode.findFirst({
+        where: {
+            email: { equals: email, mode: 'insensitive' },
+            code
+        },
+        orderBy: {
+            expiresAt: 'desc'
+        }
+    });
+
     if (!rc) return false;
     if (rc.used) return false;
-    if (Date.now() > rc.expiresAt) return false;
+    if (Date.now() > Number(rc.expiresAt)) return false;
     
-    const upd = db.prepare('UPDATE recover_codes SET used = 1 WHERE email = ? AND code = ?');
-    upd.run(email.toLowerCase(), code);
+    await prisma.recoverCode.updateMany({
+        where: {
+            email: { equals: email, mode: 'insensitive' },
+            code, // assume code matches
+            expiresAt: rc.expiresAt
+        },
+        data: { used: 1 }
+    });
     
     return true;
   } catch (e) {
@@ -268,19 +250,18 @@ export function consumeRecoverCode(email, code) {
   }
 }
 
-// Admin check
 const ADMIN_USER_ID = 'usr_1766449245238_96a75426fe68';
-
 export function isAdmin(userId) {
   return userId === ADMIN_USER_ID;
 }
 
-// Set new password
 export async function setPassword(email, newPassword) {
   try {
     const { hash } = await hashPassword(newPassword);
-    const stmt = db.prepare('UPDATE users SET password_hash = ? WHERE lower(email) = lower(?)');
-    stmt.run(hash, email);
+    await prisma.user.update({
+        where: { email: email.toLowerCase() },
+        data: { passwordHash: hash }
+    });
     return true;
   } catch (e) {
     console.error('setPassword error:', e);
