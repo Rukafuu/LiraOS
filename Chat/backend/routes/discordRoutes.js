@@ -15,7 +15,7 @@ router.get('/status', (req, res) => {
         enabled: isReady, // simplified status
         isConnected: isReady,
         applicationId: appId || null,
-        inviteUrl: appId ? `https://discord.com/api/oauth2/authorize?client_id=${appId}&permissions=8&scope=bot` : null,
+        inviteUrl: appId ? `https://discord.com/api/oauth2/authorize?client_id=${appId}&permissions=8&scope=bot%20applications.commands` : null,
         ownerId: ownerId || null
     });
 });
@@ -23,8 +23,9 @@ router.get('/status', (req, res) => {
 router.post('/config', async (req, res) => {
     const { token, applicationId } = req.body;
     
-    if (!token || !applicationId) {
-        return res.status(400).json({ error: 'Token and Application ID are required' });
+    // Allow partial updates
+    if (!token && !applicationId) {
+        return res.status(400).json({ error: 'Token or Application ID are required' });
     }
 
     const success = await discordService.setConfig(token, applicationId);

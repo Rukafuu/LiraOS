@@ -149,7 +149,7 @@ export const DiscordModal: React.FC<DiscordModalProps> = ({ isOpen, onClose }) =
                         )}
                         <button 
                             onClick={handleSaveConfig}
-                            disabled={!editToken || !editAppId || saving}
+                            disabled={(!editToken && !config?.enabled) || !editAppId || saving}
                             className="flex-1 py-3 bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold rounded-xl transition-colors disabled:opacity-50 flex justify-center"
                         >
                             {saving ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Connect Bot'}

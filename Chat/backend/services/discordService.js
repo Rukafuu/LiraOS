@@ -132,12 +132,23 @@ class DiscordService {
 
     async setConfig(token, appId) {
         try {
-            const config = { token, appId };
+            // Load existing config to merge
+            let currentConfig = {};
+            try {
+                if (fs.existsSync(CONFIG_PATH)) {
+                    currentConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
+                }
+            } catch (e) {}
+
+            const newToken = token || currentConfig.token || DISCORD_TOKEN;
+            const newAppId = appId || currentConfig.appId || DISCORD_APP_ID;
+
+            const config = { token: newToken, appId: newAppId };
             fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
             
             // Update in-memory
-            DISCORD_TOKEN = token;
-            DISCORD_APP_ID = appId;
+            DISCORD_TOKEN = newToken;
+            DISCORD_APP_ID = newAppId;
 
             // Restart
             if (this.client.isReady()) {
