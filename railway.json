@@ -1,11 +1,9 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS",
-    "buildCommand": "cd Chat/backend && npm install"
+    "builder": "DOCKERFILE"
   },
   "deploy": {
-    "startCommand": "cd Chat/backend && npm start",
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }
