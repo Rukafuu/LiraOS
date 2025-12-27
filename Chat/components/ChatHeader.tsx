@@ -21,8 +21,8 @@ interface ChatHeaderProps {
   avatarUrl?: string;
   onLogout?: () => void;
   onStartVoiceCall?: () => void;
-  isAutoTTS?: boolean;
-  onToggleAutoTTS?: () => void;
+  voiceEnabled?: boolean;
+  onToggleVoice?: () => void;
   isExhausted?: boolean;
   fatigue?: number;
 }
@@ -37,8 +37,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onStop,
   onLogout,
   onStartVoiceCall,
-  isAutoTTS,
-  onToggleAutoTTS,
+  voiceEnabled,
+  onToggleVoice,
   isExhausted,
   fatigue
 }) => {
@@ -127,13 +127,13 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         </div>
 
           <div className="flex items-center gap-2">
-            {onToggleAutoTTS && (
+            {onToggleVoice && (
               <button
-                onClick={onToggleAutoTTS}
-                className={`p-2.5 rounded-xl transition-all ${isAutoTTS ? 'text-green-400 bg-green-400/10' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                title={isAutoTTS ? "Disable Auto-TTS" : "Enable Auto-TTS"}
+                onClick={onToggleVoice}
+                className={`p-2.5 rounded-xl transition-all ${voiceEnabled ? 'text-green-400 bg-green-400/10' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                title={voiceEnabled ? "Disable Read Aloud" : "Enable Read Aloud"}
               >
-                {isAutoTTS ? <Volume2 size={20} /> : <VolumeX size={20} />}
+                {voiceEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
               </button>
             )}
           {onStartVoiceCall && (

@@ -83,13 +83,19 @@ const LiraAppContent = () => {
   const [isReturningUser, setIsReturningUser] = useState(false);
   const [dynamicPersona, setDynamicPersona] = useState(false); // Fix for missing state
   
-  // Auto TTS
-  const [isAutoTTS, setIsAutoTTS] = useState(() => {
+  const [isVoiceEnabled, setIsVoiceEnabled] = useState(() => {
      if (typeof window !== 'undefined') {
-       return localStorage.getItem('lira_auto_tts') === 'true';
+       return localStorage.getItem('lira_voice_enabled') === 'true';
      }
      return false;
   });
+
+  const handleToggleVoice = () => {
+      const newVal = !isVoiceEnabled;
+      setIsVoiceEnabled(newVal);
+      localStorage.setItem('lira_voice_enabled', String(newVal));
+      addToast(newVal ? 'Read Aloud Enabled 🔊' : 'Read Aloud Disabled 🔇', 'info');
+  };
 
   const { stats, addXp, increaseBond, setUsername, activePersonaId, setActivePersonaId, unlockedPersonas, personas, addCoins } = useGamification();
   const { addToast } = useToast();
@@ -704,7 +710,7 @@ const LiraAppContent = () => {
           }
           
           // Auto TTS Trigger (only if NOT in a voice call, as overlay handles that)
-          if (isAutoTTS && accumulatedResponse && !abortCtrl.signal.aborted && !isVoiceActive) {
+          if (isVoiceEnabled && accumulatedResponse && !abortCtrl.signal.aborted && !isVoiceActive) {
                // Determine voice (reuse logic)
                const voiceId = localStorage.getItem('lira_premium_voice_id') || 'xtts-local';
                const isPremium = voiceId !== 'google-pt-BR';
@@ -980,13 +986,8 @@ const LiraAppContent = () => {
             setIsLoginOpen(false);
           }}
           onStartVoiceCall={() => setIsVoiceActive(true)}
-          isAutoTTS={isAutoTTS}
-          onToggleAutoTTS={() => {
-             const newVal = !isAutoTTS;
-             setIsAutoTTS(newVal);
-             localStorage.setItem('lira_auto_tts', String(newVal));
-             addToast(newVal ? 'Auto TTS Enabled' : 'Auto TTS Disabled', 'info');
-          }}
+          voiceEnabled={isVoiceEnabled}
+          onToggleVoice={handleToggleVoice}
           isExhausted={moodState.mood === 'exausta'}
           fatigue={moodState.fatigue}
         />
@@ -1032,6 +1033,8 @@ const LiraAppContent = () => {
             onToggleDeepMode={handleToggleDeepMode}
             onOpenLegal={() => setIsLegalModalOpen(true)}
             onOpenCookies={() => setIsLegalModalOpen(true)}
+            voiceEnabled={isVoiceEnabled} 
+            onToggleVoice={handleToggleVoice}
           />
         </div>
       </div>

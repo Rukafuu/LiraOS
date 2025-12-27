@@ -19,6 +19,8 @@ interface ChatInputProps {
   onToggleDeepMode?: () => void;
   onOpenLegal?: () => void;
   onOpenCookies?: () => void;
+  voiceEnabled?: boolean;
+  onToggleVoice?: () => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({ 
@@ -31,7 +33,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   isDeepMode = false,
   onToggleDeepMode,
   onOpenLegal,
-  onOpenCookies
+  onOpenCookies,
+  voiceEnabled = false,
+  onToggleVoice
 }) => {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -45,16 +49,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const { t } = useTranslation();
   
   // Voice Settings
-  const [voiceEnabled, setVoiceEnabled] = useState(() => localStorage.getItem('lira_voice_enabled') === 'true');
+  // Voice enabled state is now controlled by parent (App.tsx)
   const [autoSendVoice, setAutoSendVoice] = useState(() => localStorage.getItem('lira_auto_send_voice') !== 'false'); // Default true
   const [selectedVoiceId, setSelectedVoiceId] = useState(localStorage.getItem('lira_premium_voice_id') || PREMIUM_VOICES[0].id);
-
-  const toggleVoice = () => {
-    const newVal = !voiceEnabled;
-    setVoiceEnabled(newVal);
-    localStorage.setItem('lira_voice_enabled', String(newVal));
-    addToast(newVal ? t('chat_input.toast_voice_enabled') : t('chat_input.toast_voice_disabled'), 'info');
-  };
 
   const toggleAutoSend = () => {
     const newVal = !autoSendVoice;
@@ -368,7 +365,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                        {/* Voice Settings */}
                        <div className="border-t border-white/5 pt-2">
                           <div className="text-[10px] uppercase text-gray-500 font-bold px-1 mb-1">{t('chat_input.voice_output')}</div>
-                          <div className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer" onClick={toggleVoice}>
+                          <div className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer" onClick={onToggleVoice}>
                              <div className="flex items-center gap-2 text-sm text-gray-300">
                                 {voiceEnabled ? <Volume2 size={14} className="text-lira-pink" /> : <VolumeX size={14} className="text-gray-500" />}
                                 <span>{t('chat_input.read_aloud')}</span>
