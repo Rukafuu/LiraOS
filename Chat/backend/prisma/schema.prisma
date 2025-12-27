@@ -1,7 +1,6 @@
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -64,8 +63,8 @@ model RefreshToken {
 }
 
 model RecoverCode {
-  email     String?
-  code      String?
+  email     String
+  code      String
   expiresAt BigInt?
   used      Int?    @default(0)
 
