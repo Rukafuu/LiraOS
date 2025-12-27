@@ -76,7 +76,10 @@ Chat/dist/
 Chat/public/*.zip
 Chat/public/*.mp4
 Chat/public/*.avi
-Chat/public/assets/
+# Block large video files in model directories
+Chat/public/assets/**/*.mp4
+Chat/public/assets/**/*.avi
+Chat/public/assets/**/*.mov
 
 # Lira Specific
 /Chat/backend/tts/
