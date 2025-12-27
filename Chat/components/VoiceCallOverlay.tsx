@@ -287,11 +287,6 @@ export const VoiceCallOverlay: React.FC<VoiceCallOverlayProps> = ({
                  }
 
                  setModelLoaded(true);
-                 
-                 // 🚫 Remove Watermark (Param=1 hides it based on expression1)
-                 setTimeout(() => {
-                    liraRef.current?.setParameter('Param', 1);
-                 }, 500);
 
                  startAnimationLoop();
                  window.addEventListener('mousemove', handleMouseMove);

@@ -94,8 +94,7 @@ export class LiraCore {
         this.app = new window.PIXI.Application({
             view: this.canvas,
             autoStart: true,
-            backgroundColor: 0xFFFFFF, // White background for debugging
-            backgroundAlpha: 1,
+            backgroundAlpha: 0, // Transparent background
             resizeTo: this.container,
             antialias: true,
             autoDensity: true,
@@ -183,6 +182,14 @@ export class LiraCore {
                     // @ts-ignore
                     this.model.blendMode = window.PIXI.BLEND_MODES.NORMAL;
                     console.log('[LiraCore] Blend mode set to NORMAL');
+                }
+                
+                // 🚫 Remove Watermark Immediately
+                try {
+                    this.setParameter('Param', 1);
+                    console.log('[LiraCore] Watermark removed');
+                } catch (e) {
+                    console.warn('[LiraCore] Failed to remove watermark:', e);
                 }
                 
                 // Debug: Check if textures loaded
@@ -295,17 +302,25 @@ export class LiraCore {
      */
     updateMouth(volume: number) {
         if (this.model && this.model.internalModel && this.model.internalModel.coreModel) {
-            // ParamMouthOpenY is the standard ID for mouth opening
-            // Some models use ParamMouthOpen
             const core = this.model.internalModel.coreModel;
             
-            // Try both common parameter IDs
+            // Debug: Log every 30 frames (~500ms at 60fps)
+            if (Math.random() < 0.016) {
+                console.log('[LiraCore] Lip Sync - Volume:', volume.toFixed(3));
+            }
+            
+            // Try all possible mouth parameters
             try {
                 core.setParameterValueById('ParamMouthOpenY', volume);
             } catch (e) {}
             
             try {
                 core.setParameterValueById('ParamMouthOpen', volume);
+            } catch (e) {}
+            
+            try {
+                // From model3.json LipSync group
+                core.setParameterValueById('ParamMouthForm', volume);
             } catch (e) {}
         }
     }

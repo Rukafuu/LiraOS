@@ -36,8 +36,6 @@ export const PhotoBooth: React.FC<PhotoBoothProps> = ({ messages }) => {
             const core = new LiraCore(containerId);
             await core.loadModel('/assets/model/lira/youling.model3.json');
             
-            // Remove watermark immediately
-            try { core.setParameter('Param', 1); } catch {}
             
             if (mounted) {
                 liraRef.current = core;
