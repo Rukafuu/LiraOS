@@ -333,6 +333,13 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           } // End if (r.ok)
         } catch { } // End main fetch try
 
+      /* 
+       * 🛑 DEBUG CODE REMOVED
+       * Use proper DB-based admin roles instead of forcing client-side level 50.
+       * This was causing infinite loops: loadData -> force level 50 -> useEffect -> loadData
+       */
+       
+      /*
       // 👑 ADMIN FORCE UNLOCK (Runs for ALL logged in users, regardless of API status)
         const ALL_THEMES: LiraThemeId[] = ['lira-dark', 'lira-aurora', 'lira-ice', 'lira-nature', 'lira-desert', 'lira-halloween', 'lira-xmas', 'lira-carnival', 'lira-cyberleaf', 'lira-obsidian', 'lira-royal', 'lira-singularity'];
         
@@ -358,6 +365,7 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         if (!isAlreadyAdmin) {
             addToast('👑 Admin Access Granted', 'success');
         }
+      */
 
       } else {
         const savedStats = localStorage.getItem('lira_stats');
