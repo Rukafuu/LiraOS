@@ -879,6 +879,7 @@ const LiraAppContent = () => {
   }, [selectedModel, isDeepMode, isSidebarOpen, currentTheme.id]);
 
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [legalSection, setLegalSection] = useState<'terms' | 'privacy' | 'cookies'>('terms');
   const [isIrisOpen, setIsIrisOpen] = useState(false);
   const [isDiscordOpen, setIsDiscordOpen] = useState(false);
   
@@ -930,7 +931,7 @@ const LiraAppContent = () => {
       <div className={`absolute inset-0 bg-gradient-to-b ${glowClassName} blur-[120px] pointer-events-none z-0 transition-all duration-1000`} />
       
       {showOnboarding && <OnboardingTour onComplete={handleOnboardingComplete} />}
-      <LegalModal isOpen={isLegalModalOpen} onClose={() => setIsLegalModalOpen(false)} />
+      <LegalModal isOpen={isLegalModalOpen} onClose={() => setIsLegalModalOpen(false)} initialSection={legalSection} />
       <IrisModal isOpen={isIrisOpen} onClose={() => setIsIrisOpen(false)} />
       <DiscordModal isOpen={isDiscordOpen} onClose={() => setIsDiscordOpen(false)} />
 
@@ -1078,6 +1079,10 @@ const LiraAppContent = () => {
           setIsLoggedIn(false);
           setIsSettingsOpen(false);
           addToast('Logged out', 'success');
+        }}
+        onOpenLegal={(section) => {
+          setLegalSection(section);
+          setIsLegalModalOpen(true);
         }}
         onExportUserData={() => {
           const currentUser = getCurrentUser();
