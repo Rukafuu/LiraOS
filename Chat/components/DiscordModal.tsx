@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { X, MessageSquare, Bot, Globe, Shield, ExternalLink, Settings } from 'lucide-react';
+import { X, MessageSquare, Bot, Globe, Shield, ExternalLink, Settings, Link } from 'lucide-react';
 
 interface DiscordModalProps {
   isOpen: boolean;
@@ -14,6 +14,7 @@ interface DiscordConfig {
   inviteUrl: string | null;
   applicationId: string | null;
   canManage?: boolean;
+  isLinked?: boolean;
 }
 
 const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
@@ -76,6 +77,26 @@ export const DiscordModal: React.FC<DiscordModalProps> = ({ isOpen, onClose }) =
       } catch (e) { console.error(e); }
       setSaving(false);
   };
+
+  const handleLinkAccount = async () => {
+      const headers = { 
+          'Content-Type': 'application/json', 
+           'Authorization': `Bearer ${localStorage.getItem('lira_token') || localStorage.getItem('lira_session') ? JSON.parse(localStorage.getItem('lira_session')!).token : ''}`
+      };
+      try {
+          const res = await fetch(`${API_BASE_URL}/api/discord/auth`, { headers });
+          const data = await res.json();
+          if (data.url) {
+              window.open(data.url, '_blank', 'width=500,height=800');
+          } else {
+              alert('Erro ao iniciar vínculo. Verifique a configuração do servidor.');
+          }
+      } catch (e) {
+          console.error(e);
+      }
+  };
+
+  const isLinked = config?.isLinked || false;
 
   if (!isOpen) return null;
 
@@ -218,19 +239,37 @@ export const DiscordModal: React.FC<DiscordModalProps> = ({ isOpen, onClose }) =
 
                      {/* Buttons */}
                      {config?.inviteUrl ? (
-                         <a 
-                            href={config.inviteUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="block w-full"
-                         >
-                            <button className="w-full py-3 px-4 bg-[#5865F2] hover:bg-[#4752C4] text-white font-semibold rounded-xl transition-all shadow-[0_4px_14px_0_rgba(88,101,242,0.39)] hover:shadow-[0_6px_20px_rgba(88,101,242,0.23)] flex items-center justify-center gap-2">
-                                <Bot size={20} />
-                                {t('discord.invite')}
-                            </button>
-                         </a>
+                         <div className="space-y-3">
+                            <a 
+                                href={config.inviteUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="block w-full"
+                             >
+                                <button className="w-full py-3 px-4 bg-[#5865F2] hover:bg-[#4752C4] text-white font-semibold rounded-xl transition-all shadow-[0_4px_14px_0_rgba(88,101,242,0.39)] hover:shadow-[0_6px_20px_rgba(88,101,242,0.23)] flex items-center justify-center gap-2">
+                                    <Bot size={20} />
+                                    {t('discord.invite')} (Adicionar Bot)
+                                </button>
+                             </a>
+
+                             {/* Link Account Button */}
+                             {!isLinked ? (
+                                <button 
+                                    onClick={handleLinkAccount}
+                                    className="w-full py-3 px-4 bg-[#2B2D31] hover:bg-[#35373C] text-white font-medium rounded-xl transition-all border border-white/10 flex items-center justify-center gap-2"
+                                >
+                                    <Link size={18} className="text-gray-400" />
+                                    Vincular Minha Conta Discord
+                                </button> 
+                             ) : (
+                                <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/20 text-center">
+                                    <div className="text-sm text-green-400 font-bold mb-1">Conta Vinculada! ✅</div>
+                                    <div className="text-xs text-gray-400">Você já pode usar os recursos premium no chat do bot.</div>
+                                </div>
+                             )}
+                         </div>
                      ) : (
-                         <button disabled className="w-full py-3 px-4 bg-white/5 text-gray-500 font-semibold rounded-xl flex items-center justify-center gap-2 cursor-not-allowed border border-white/5" title="Set DISCORD_CLIENT_ID in .env">
+                         <button disabled className="w-full py-3 px-4 bg-white/5 text-gray-500 font-semibold rounded-xl flex items-center justify-center gap-2 cursor-not-allowed border border-white/5" title="Bot not configured yet">
                              <Bot size={20} />
                              {t('discord.invite_missing')}
                          </button>

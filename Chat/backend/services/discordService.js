@@ -44,6 +44,8 @@ try {
         const localConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
         if (localConfig.token) DISCORD_TOKEN = localConfig.token;
         if (localConfig.appId) DISCORD_APP_ID = localConfig.appId;
+        // Secret usually stays in ENV, but allow override if needed
+        if (localConfig.clientSecret) process.env.DISCORD_CLIENT_SECRET = localConfig.clientSecret;
     }
 } catch (e) { console.error('Failed to load discord config json', e); }
 
