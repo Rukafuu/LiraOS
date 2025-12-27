@@ -192,11 +192,43 @@ export class LiraCore {
                     console.warn('[LiraCore] Failed to remove watermark:', e);
                 }
                 
-                // Debug: Check if textures loaded
+                // 🔍 Debug: Verify textures loaded
                 console.log('[LiraCore] Model added to stage');
                 console.log('[LiraCore] Model width:', this.model.width, 'height:', this.model.height);
+                
                 // @ts-ignore
-                console.log('[LiraCore] Textures:', this.model.internalModel?.textures?.length || 'unknown');
+                const textures = this.model.internalModel?.textures;
+                if (textures && Array.isArray(textures)) {
+                    console.log('[LiraCore] Textures count:', textures.length);
+                    textures.forEach((tex: any, i: number) => {
+                        if (tex && tex.baseTexture) {
+                            console.log(`[LiraCore] Texture ${i}:`, {
+                                valid: tex.valid,
+                                width: tex.baseTexture.width,
+                                height: tex.baseTexture.height,
+                                hasResource: !!tex.baseTexture.resource,
+                                url: tex.baseTexture.resource?.url || 'unknown'
+                            });
+                            
+                            // Check if texture failed to load
+                            if (!tex.valid || tex.baseTexture.width === 0) {
+                                console.error(`[LiraCore] ❌ Texture ${i} FAILED TO LOAD!`);
+                            }
+                        }
+                    });
+                } else {
+                    console.warn('[LiraCore] ⚠️ No textures found in model!');
+                }
+                
+                // 🎨 Try to force texture update
+                // @ts-ignore
+                if (this.model.internalModel?.coreModel) {
+                    try {
+                        // @ts-ignore
+                        this.model.internalModel.coreModel.update();
+                        console.log('[LiraCore] Core model updated');
+                    } catch (e) {}
+                }
                 
                 // Define the ticker function
                 this.tickerFn = () => {
