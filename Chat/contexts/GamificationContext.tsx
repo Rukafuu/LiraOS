@@ -575,6 +575,9 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               const data = await r.json();
               setStats(mapBackendToFrontend(data));
               if (Array.isArray(data?.unlockedThemes)) setUnlockedThemes(data.unlockedThemes);
+            } else {
+              const error = await r.json().catch(() => ({ error: 'Unknown error' }));
+              console.error('[Gamification] Theme purchase failed:', r.status, error);
             }
           }).catch(err => console.error('[Gamification] Failed to save theme purchase:', err));
         }
@@ -608,6 +611,9 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               const data = await r.json();
               setStats(mapBackendToFrontend(data));
               if (Array.isArray(data?.unlockedPersonas)) setUnlockedPersonas(data.unlockedPersonas);
+            } else {
+              const error = await r.json().catch(() => ({ error: 'Unknown error' }));
+              console.error('[Gamification] Persona purchase failed:', r.status, error);
             }
           }).catch(err => console.error('[Gamification] Failed to save persona purchase:', err));
         }
