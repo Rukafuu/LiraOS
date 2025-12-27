@@ -24,4 +24,5 @@ ENV PORT=4000
 EXPOSE 4000
 
 # Start command
-CMD ["npm", "start"]
+# Start command with DB push
+CMD npx prisma db push && npm start
