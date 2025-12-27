@@ -561,6 +561,24 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setStats(prev => ({ ...prev, coins: prev.coins - cost }));
       setUnlockedThemes(prev => {
         const next = [...prev, themeId];
+        
+        // Save to backend
+        const u = getCurrentUser();
+        const userId = u?.id;
+        if (userId) {
+          fetch(`${backendUrl}/api/gamification/purchase`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+            body: JSON.stringify({ userId, type: 'theme', itemId: themeId, cost })
+          }).then(async r => {
+            if (r.ok) {
+              const data = await r.json();
+              setStats(mapBackendToFrontend(data));
+              if (Array.isArray(data?.unlockedThemes)) setUnlockedThemes(data.unlockedThemes);
+            }
+          }).catch(err => console.error('[Gamification] Failed to save theme purchase:', err));
+        }
+        
         checkAchievement('change_theme'); // First theme buy
         if (next.length >= 3) checkAchievement('unlock_theme', next.length);
         if (next.length >= 10) checkAchievement('unlock_all_themes'); // approximate
@@ -576,6 +594,24 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       setStats(prev => ({ ...prev, coins: prev.coins - cost }));
       setUnlockedPersonas(prev => {
         const next = [...prev, personaId];
+        
+        // Save to backend
+        const u = getCurrentUser();
+        const userId = u?.id;
+        if (userId) {
+          fetch(`${backendUrl}/api/gamification/purchase`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+            body: JSON.stringify({ userId, type: 'persona', itemId: personaId, cost })
+          }).then(async r => {
+            if (r.ok) {
+              const data = await r.json();
+              setStats(mapBackendToFrontend(data));
+              if (Array.isArray(data?.unlockedPersonas)) setUnlockedPersonas(data.unlockedPersonas);
+            }
+          }).catch(err => console.error('[Gamification] Failed to save persona purchase:', err));
+        }
+        
         checkAchievement('unlock_persona', next.length);
         if (next.length === ALL_PERSONAS.length) checkAchievement('unlock_all_personas');
         return next;
@@ -645,6 +681,8 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, [achievements, addToast]); 
 
   const checkAchievement = (actionType: string, value?: any) => {
+    let achievementWasUnlocked = false;
+    
     setAchievements(prev => {
       const updates = prev.map(a => ({ ...a })); // shallow copy
       let hasUpdates = false;
@@ -655,6 +693,7 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         if (idx !== -1 && !updates[idx].unlockedAt) {
           updates[idx].unlockedAt = now;
           hasUpdates = true;
+          achievementWasUnlocked = true;
         }
       };
 
@@ -737,6 +776,25 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
       return hasUpdates ? updates : prev;
     });
+    
+    // Save achievements to backend if there were updates
+    if (achievementWasUnlocked) {
+      const u = getCurrentUser();
+      const userId = u?.id;
+      if (userId) {
+        // Get the updated achievements after setState completes
+        setTimeout(() => {
+          setAchievements(currentAchievements => {
+            fetch(`${backendUrl}/api/gamification/achievements`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+              body: JSON.stringify({ userId, achievements: currentAchievements })
+            }).catch(err => console.error('[Gamification] Failed to save achievements:', err));
+            return currentAchievements;
+          });
+        }, 100);
+      }
+    }
   };
 
   return (
