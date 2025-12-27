@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { X, MessageSquare, Bot, Globe, Shield, ExternalLink } from 'lucide-react';
+import { X, MessageSquare, Bot, Globe, Shield, ExternalLink, Settings } from 'lucide-react';
 
 interface DiscordModalProps {
   isOpen: boolean;
@@ -13,6 +13,7 @@ interface DiscordConfig {
   isConnected: boolean;
   inviteUrl: string | null;
   applicationId: string | null;
+  canManage?: boolean;
 }
 
 const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
@@ -32,7 +33,7 @@ export const DiscordModal: React.FC<DiscordModalProps> = ({ isOpen, onClose }) =
       const headers = {
          'Content-Type': 'application/json',
          // Add auth header if needed, assuming getAuthHeaders() logic is available or public
-         'Authorization': `Bearer ${localStorage.getItem('lira_token') || ''}`
+         'Authorization': `Bearer ${localStorage.getItem('lira_token') || localStorage.getItem('lira_session') ? JSON.parse(localStorage.getItem('lira_session')!).token : ''}`
       };
 
       fetch(`${API_BASE_URL}/api/discord/status`, { headers })
@@ -40,7 +41,8 @@ export const DiscordModal: React.FC<DiscordModalProps> = ({ isOpen, onClose }) =
         .then(data => {
             setConfig(data);
             setLoading(false);
-            if (!data.enabled) {
+            // ONLY show config automatically if user is admin AND it's not enabled
+            if (!data.enabled && data.canManage) {
                 setShowConfig(true);
             }
             if (data.applicationId) setEditAppId(data.applicationId);
@@ -54,7 +56,10 @@ export const DiscordModal: React.FC<DiscordModalProps> = ({ isOpen, onClose }) =
 
   const handleSaveConfig = async () => {
       setSaving(true);
-      const headers = { 'Content-Type': 'application/json' };
+      const headers = { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('lira_token') || localStorage.getItem('lira_session') ? JSON.parse(localStorage.getItem('lira_session')!).token : ''}`
+      };
       try {
           const res = await fetch(`${API_BASE_URL}/api/discord/config`, {
               method: 'POST',
@@ -114,8 +119,15 @@ export const DiscordModal: React.FC<DiscordModalProps> = ({ isOpen, onClose }) =
                 <div className="flex justify-center p-8">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#5865F2]"></div>
                 </div>
-            ) : showConfig ? (
+            ) : showConfig && config?.canManage ? (
                 <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4">
+                    <div className="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-lg flex items-start gap-3">
+                        <Shield className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" />
+                        <div className="text-xs text-yellow-200">
+                             <strong>Área Admin:</strong> Configure o Bot Token e Application ID para ativar a integração global. Usuários comuns não verão isso.
+                        </div>
+                    </div>
+
                     <div className="space-y-2">
                         <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Bot Token</label>
                         <input 
@@ -156,6 +168,21 @@ export const DiscordModal: React.FC<DiscordModalProps> = ({ isOpen, onClose }) =
                         </button>
                     </div>
                 </div>
+            ) : !config?.enabled ? (
+                 <div className="flex flex-col items-center justify-center p-6 bg-white/5 border border-white/5 rounded-xl text-center space-y-3">
+                     <Bot className="w-12 h-12 text-gray-600 mb-2" />
+                     <h3 className="text-white font-medium">Integração Indisponível</h3>
+                     <p className="text-sm text-gray-500">O sistema Discord ainda não foi configurado pelo administrador.</p>
+                     
+                     {config?.canManage && (
+                         <button 
+                            onClick={() => setShowConfig(true)}
+                            className="mt-4 px-4 py-2 bg-[#5865F2]/20 text-[#5865F2] hover:bg-[#5865F2]/30 rounded-lg text-xs font-bold transition-colors flex items-center gap-2"
+                         >
+                            <Settings size={14} /> Configurar Agora
+                         </button>
+                     )}
+                 </div>
             ) : (
                 <div className="space-y-4">
                     {/* Status Banner */}
