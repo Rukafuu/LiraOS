@@ -168,13 +168,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <MessageSquare size={14} className="text-[#5865F2]" />
                     <span className="group-hover:text-[#5865F2] transition-colors">{t('sidebar.discord_hub')}</span>
                 </button>
-                <button 
-                    onClick={onOpenGamer}
-                    className="w-full text-left flex items-center space-x-2 px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all group"
-                >
-                    <Gamepad2 size={14} className="text-emerald-500" />
-                    <span className="group-hover:text-emerald-500 transition-colors">Gamer Mode</span>
-                </button>
                 <div className="relative group pt-2 pb-1">
                     <Search size={12} className="absolute left-3 top-1/2 -translate-y-[2px] text-gray-500 pointer-events-none" />
                     <input

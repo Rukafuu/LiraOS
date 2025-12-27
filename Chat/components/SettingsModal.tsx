@@ -17,11 +17,12 @@ interface SettingsModalProps {
   onLogout?: () => void;
   onExportUserData?: () => void;
   onImportUserData?: (data: any) => void;
+  onOpenLegal?: (section: 'terms' | 'privacy' | 'cookies') => void;
 }
 
 type Tab = 'profile' | 'security' | 'intelligence' | 'shortcuts' | 'memories' | 'appearance' | 'help';
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, memories = [], onDeleteMemory, onClearUserData, onLogout, onExportUserData, onImportUserData }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, memories = [], onDeleteMemory, onClearUserData, onLogout, onExportUserData, onImportUserData, onOpenLegal }) => {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
   const [search, setSearch] = useState('');
@@ -847,18 +848,18 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                         <div className="mt-8 pt-8 border-t border-white/5 space-y-4">
                             <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('settings.help.legal')}</h4>
                             <div className="flex flex-col gap-2">
-                                <a href="/terms" target="_blank" className="text-sm text-gray-300 hover:text-white transition-colors flex items-center justify-between p-3 bg-[#18181b] rounded-lg border border-white/5 hover:border-white/10">
+                                <button onClick={() => onOpenLegal && onOpenLegal('terms')} className="text-sm text-gray-300 hover:text-white transition-colors flex items-center justify-between p-3 bg-[#18181b] rounded-lg border border-white/5 hover:border-white/10">
                                     <span>{t('settings.help.terms')}</span>
                                     <ExternalLink size={14} className="text-gray-500" />
-                                </a>
-                                <a href="/privacy" target="_blank" className="text-sm text-gray-300 hover:text-white transition-colors flex items-center justify-between p-3 bg-[#18181b] rounded-lg border border-white/5 hover:border-white/10">
+                                </button>
+                                <button onClick={() => onOpenLegal && onOpenLegal('privacy')} className="text-sm text-gray-300 hover:text-white transition-colors flex items-center justify-between p-3 bg-[#18181b] rounded-lg border border-white/5 hover:border-white/10">
                                     <span>{t('settings.help.privacy')}</span>
                                     <ExternalLink size={14} className="text-gray-500" />
-                                </a>
-                                <div className="text-sm text-gray-300 flex items-center justify-between p-3 bg-[#18181b] rounded-lg border border-white/5 hover:border-white/10 cursor-pointer">
+                                </button>
+                                <button onClick={() => onOpenLegal && onOpenLegal('cookies')} className="text-sm text-gray-300 hover:text-white transition-colors flex items-center justify-between p-3 bg-[#18181b] rounded-lg border border-white/5 hover:border-white/10">
                                     <span>{t('settings.help.cookie_prefs')}</span>
                                     <Settings size={14} className="text-gray-500" />
-                                </div>
+                                </button>
                             </div>
                         </div>
                      </div>
