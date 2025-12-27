@@ -25,4 +25,4 @@ EXPOSE 4000
 
 # Start command
 # Start command with DB push
-CMD npx prisma db push && npm start
+CMD npx prisma db push --accept-data-loss && npm start
