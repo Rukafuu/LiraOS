@@ -217,6 +217,8 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     // data is { xp, coins, level, stats: { ... } }
     // frontend wants { currentXp, coins, level, ...stats }
     const innerStats = typeof data.stats === 'string' ? JSON.parse(data.stats) : (data.stats || {});
+    
+    // Prioritize root-level fields (from DB columns) over nested stats
     return {
       ...INITIAL_STATS,
       ...innerStats,
@@ -569,6 +571,7 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }).then(async r => {
           if (r.ok) {
             const data = await r.json();
+            console.log('[Gamification] Theme purchase SUCCESS - Backend returned:', data);
             setStats(mapBackendToFrontend(data));
             if (Array.isArray(data?.unlockedThemes)) setUnlockedThemes(data.unlockedThemes);
             checkAchievement('change_theme');
