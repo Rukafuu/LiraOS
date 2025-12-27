@@ -22,6 +22,17 @@ export const PhotoBooth: React.FC<PhotoBoothProps> = ({ messages }) => {
     const init = async () => {
         try {
             console.log("[PhotoBooth] Initializing Background Studio...");
+            
+            // 🛡️ GPU GATE: Check if device can handle Live2D
+            const { gpuGate } = await import('../utils/gpuGate');
+            const gateResult = await gpuGate();
+            
+            if (!gateResult.ok) {
+                console.warn("[PhotoBooth] GPU Gate blocked Live2D:", gateResult.reason);
+                console.warn("[PhotoBooth] Selfies disabled on this device.");
+                return; // Skip initialization
+            }
+            
             const core = new LiraCore(containerId);
             await core.loadModel('/assets/model/lira/youling.model3.json');
             

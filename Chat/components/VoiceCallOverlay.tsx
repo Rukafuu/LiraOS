@@ -91,6 +91,8 @@ export const VoiceCallOverlay: React.FC<VoiceCallOverlayProps> = ({
 
   const [userStream, setUserStream] = useState<MediaStream | undefined>(undefined);
   const [needsAudioUnlock, setNeedsAudioUnlock] = useState(false);
+  const [gpuBlocked, setGpuBlocked] = useState(false);
+  const [gpuReason, setGpuReason] = useState<string>('');
 
   // Check audio state on mount
   useEffect(() => {
@@ -245,6 +247,21 @@ export const VoiceCallOverlay: React.FC<VoiceCallOverlayProps> = ({
               if (!mounted) return;
 
               try {
+                 // 🛡️ GPU GATE: Check if device can handle Live2D
+                 const { gpuGate } = await import('../utils/gpuGate');
+                 const gateResult = await gpuGate();
+                 
+                 console.log('[GPU Gate]', gateResult);
+                 
+                 if (!gateResult.ok) {
+                     console.warn('[GPU Gate] Live2D blocked:', gateResult.reason);
+                     setGpuBlocked(true);
+                     setGpuReason(gateResult.reason);
+                     setModelLoaded(true); // Mark as "loaded" to hide spinner
+                     return; // Skip Live2D initialization
+                 }
+
+                 // GPU is capable - proceed with Live2D
                  liraRef.current = new LiraCore('lira-container-overlay');
                  const modelPath = '/assets/model/lira/youling.model3.json';
                  
@@ -506,6 +523,56 @@ export const VoiceCallOverlay: React.FC<VoiceCallOverlayProps> = ({
         
         {/* Lira Avatar Container */}
         <div id="lira-container-overlay" className="absolute inset-0 w-full h-full z-0 pointer-events-none" />
+
+        {/* GPU Blocked Fallback - Lightweight Mode */}
+        {gpuBlocked && (
+            <div className="absolute inset-0 w-full h-full z-0 flex items-center justify-center pointer-events-none">
+                <div className="flex flex-col items-center gap-6 max-w-md px-8">
+                    {/* Static Avatar Placeholder */}
+                    <div className="relative">
+                        <div className="w-48 h-48 rounded-full bg-gradient-to-br from-lira-pink/20 to-blue-500/20 backdrop-blur-xl border-2 border-white/10 flex items-center justify-center overflow-hidden shadow-2xl">
+                            <img 
+                                src="/assets/lira-avatar.png" 
+                                alt="Lira" 
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                    // Fallback to emoji if image not found
+                                    e.currentTarget.style.display = 'none';
+                                    e.currentTarget.parentElement!.innerHTML = '<div class="text-8xl">🎭</div>';
+                                }}
+                            />
+                        </div>
+                        {/* Pulsing Ring */}
+                        <div className="absolute inset-0 rounded-full border-4 border-lira-pink/30 animate-ping" style={{ animationDuration: '3s' }} />
+                    </div>
+
+                    {/* Friendly Message */}
+                    <div className="text-center space-y-3">
+                        <h3 className="text-lg font-bold text-white/90">
+                            Modo Leve Ativado
+                        </h3>
+                        <p className="text-sm text-white/60 leading-relaxed">
+                            Para garantir uma experiência fluida neste dispositivo, o modelo 3D foi desabilitado.
+                        </p>
+                        <p className="text-xs text-white/40 font-mono">
+                            {gpuReason}
+                        </p>
+                        
+                        {/* Optional: Manual Override Button */}
+                        <button
+                            onClick={() => {
+                                const { enableLive2DOverride } = require('../utils/gpuGate');
+                                enableLive2DOverride();
+                                window.location.reload();
+                            }}
+                            className="mt-4 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs text-white/70 hover:text-white transition-all pointer-events-auto"
+                        >
+                            ⚠️ Forçar Ativação (Pode Travar)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
 
         {/* Global UI Overlays */}
         <div className="relative z-10 w-full h-full flex flex-col pointer-events-none">
