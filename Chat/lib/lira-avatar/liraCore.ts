@@ -176,57 +176,26 @@ export class LiraCore {
             if (this.model) {
                 this.app.stage.addChild(this.model);
                 
-                // 🎨 Force NORMAL blend mode (fix for black silhouette)
+                // 🎨 Force NORMAL blend mode
                 // @ts-ignore
                 if (this.model.internalModel) {
                     // @ts-ignore
                     this.model.blendMode = window.PIXI.BLEND_MODES.NORMAL;
-                    console.log('[LiraCore] Blend mode set to NORMAL');
                 }
                 
                 // 🚫 Remove Watermark Immediately
                 try {
                     this.setParameter('Param', 1);
-                    console.log('[LiraCore] Watermark removed');
                 } catch (e) {
                     console.warn('[LiraCore] Failed to remove watermark:', e);
                 }
                 
-                // 🔍 Debug: Verify textures loaded
-                console.log('[LiraCore] Model added to stage');
-                console.log('[LiraCore] Model width:', this.model.width, 'height:', this.model.height);
-                
-                // @ts-ignore
-                const textures = this.model.internalModel?.textures;
-                if (textures && Array.isArray(textures)) {
-                    console.log('[LiraCore] Textures count:', textures.length);
-                    textures.forEach((tex: any, i: number) => {
-                        if (tex && tex.baseTexture) {
-                            console.log(`[LiraCore] Texture ${i}:`, {
-                                valid: tex.valid,
-                                width: tex.baseTexture.width,
-                                height: tex.baseTexture.height,
-                                hasResource: !!tex.baseTexture.resource,
-                                url: tex.baseTexture.resource?.url || 'unknown'
-                            });
-                            
-                            // Check if texture failed to load
-                            if (!tex.valid || tex.baseTexture.width === 0) {
-                                console.error(`[LiraCore] ❌ Texture ${i} FAILED TO LOAD!`);
-                            }
-                        }
-                    });
-                } else {
-                    console.warn('[LiraCore] ⚠️ No textures found in model!');
-                }
-                
-                // 🎨 Try to force texture update
+                // 🎨 Force texture update (fixes black silhouette on some GPUs)
                 // @ts-ignore
                 if (this.model.internalModel?.coreModel) {
                     try {
                         // @ts-ignore
                         this.model.internalModel.coreModel.update();
-                        console.log('[LiraCore] Core model updated');
                     } catch (e) {}
                 }
                 
@@ -335,11 +304,6 @@ export class LiraCore {
     updateMouth(volume: number) {
         if (this.model && this.model.internalModel && this.model.internalModel.coreModel) {
             const core = this.model.internalModel.coreModel;
-            
-            // Debug: Log every 30 frames (~500ms at 60fps)
-            if (Math.random() < 0.016) {
-                console.log('[LiraCore] Lip Sync - Volume:', volume.toFixed(3));
-            }
             
             // Try all possible mouth parameters
             try {

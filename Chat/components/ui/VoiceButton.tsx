@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Loader } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -10,11 +10,22 @@ interface VoiceButtonProps {
 export const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscript }) => {
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(true);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     if (!('webkitSpeechRecognition' in window)) {
       setSupported(false);
     }
+    
+    // Cleanup on unmount
+    return () => {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch (e) {}
+        recognitionRef.current = null;
+      }
+    };
   }, []);
 
   const toggleListening = () => {
@@ -43,17 +54,24 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscript }) => {
         const transcript = event.results[0][0].transcript;
         onTranscript(transcript);
         setListening(false);
+        recognitionRef.current = null;
       };
 
       recognition.onerror = (event: any) => {
-        console.error("Speech recognition error", event.error);
+        // Ignore 'aborted' errors (user cancelled)
+        if (event.error !== 'aborted') {
+          console.error("Speech recognition error", event.error);
+        }
         setListening(false);
+        recognitionRef.current = null;
       };
 
       recognition.onend = () => {
         setListening(false);
+        recognitionRef.current = null;
       };
 
+      recognitionRef.current = recognition;
       recognition.start();
     } catch (e) {
       console.error(e);
@@ -62,9 +80,13 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscript }) => {
   };
 
   const stopListening = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {}
+      recognitionRef.current = null;
+    }
     setListening(false);
-    // Logic to actually stop the recognition instance would require ref storing the instance
-    // For this simple implementation, onend handles the state reset
   };
 
   if (!supported) return null;
