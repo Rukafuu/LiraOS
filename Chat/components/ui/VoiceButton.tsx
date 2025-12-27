@@ -42,39 +42,51 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscript }) => {
     try {
       // @ts-ignore
       const recognition = new window.webkitSpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = false;
-      recognition.lang = 'en-US';
+      recognition.continuous = true; // Keep listening
+      recognition.interimResults = true; // Get partial results
+      recognition.lang = 'pt-BR'; // Portuguese
+      recognition.maxAlternatives = 1;
 
       recognition.onstart = () => {
+        console.log('[VoiceButton] Recognition started');
         setListening(true);
       };
 
       recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        onTranscript(transcript);
-        setListening(false);
-        recognitionRef.current = null;
+        const last = event.results.length - 1;
+        const transcript = event.results[last][0].transcript;
+        
+        // Only send final results
+        if (event.results[last].isFinal) {
+          console.log('[VoiceButton] Final transcript:', transcript);
+          onTranscript(transcript);
+          stopListening();
+        }
       };
 
       recognition.onerror = (event: any) => {
-        // Ignore 'aborted' errors (user cancelled)
-        if (event.error !== 'aborted') {
+        console.warn('[VoiceButton] Recognition error:', event.error);
+        // Ignore 'aborted' and 'no-speech' errors
+        if (event.error !== 'aborted' && event.error !== 'no-speech') {
           console.error("Speech recognition error", event.error);
         }
-        setListening(false);
-        recognitionRef.current = null;
+        stopListening();
       };
 
       recognition.onend = () => {
-        setListening(false);
-        recognitionRef.current = null;
+        console.log('[VoiceButton] Recognition ended');
+        // Only reset if we're still supposed to be listening
+        // (prevents race condition with manual stop)
+        if (recognitionRef.current === recognition) {
+          setListening(false);
+          recognitionRef.current = null;
+        }
       };
 
       recognitionRef.current = recognition;
       recognition.start();
     } catch (e) {
-      console.error(e);
+      console.error('[VoiceButton] Failed to start:', e);
       setListening(false);
     }
   };
