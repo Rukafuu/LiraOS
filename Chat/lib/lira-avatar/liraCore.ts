@@ -94,7 +94,8 @@ export class LiraCore {
         this.app = new window.PIXI.Application({
             view: this.canvas,
             autoStart: true,
-            backgroundAlpha: 0,
+            backgroundColor: 0xFFFFFF, // White background for debugging
+            backgroundAlpha: 1,
             resizeTo: this.container,
             antialias: true,
             autoDensity: true,
@@ -175,6 +176,20 @@ export class LiraCore {
 
             if (this.model) {
                 this.app.stage.addChild(this.model);
+                
+                // 🎨 Force NORMAL blend mode (fix for black silhouette)
+                // @ts-ignore
+                if (this.model.internalModel) {
+                    // @ts-ignore
+                    this.model.blendMode = window.PIXI.BLEND_MODES.NORMAL;
+                    console.log('[LiraCore] Blend mode set to NORMAL');
+                }
+                
+                // Debug: Check if textures loaded
+                console.log('[LiraCore] Model added to stage');
+                console.log('[LiraCore] Model width:', this.model.width, 'height:', this.model.height);
+                // @ts-ignore
+                console.log('[LiraCore] Textures:', this.model.internalModel?.textures?.length || 'unknown');
                 
                 // Define the ticker function
                 this.tickerFn = () => {
