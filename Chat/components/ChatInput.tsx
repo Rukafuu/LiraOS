@@ -194,7 +194,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <div className="w-full pb-6 px-4 z-20">
+    <div className="w-full pb-8 md:pb-6 px-4 z-20">
       <div className="max-w-3xl mx-auto relative">
         <style>{`
           @keyframes neon-pulse {

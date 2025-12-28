@@ -84,7 +84,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                   key={title}
                   initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="font-semibold text-sm md:text-[15px] text-white/90 truncate max-w-[200px] md:max-w-md"
+                  className="font-semibold text-sm md:text-[15px] text-white/90 truncate flex-1 min-w-0 max-w-[150px] md:max-w-md"
                 >
                   {title}
                 </motion.h2>

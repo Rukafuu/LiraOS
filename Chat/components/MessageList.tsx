@@ -116,7 +116,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   );
 
   return (
-    <div className="flex-1 px-2 md:px-0 relative h-full">
+    <div className="flex-1 px-2 md:px-0 relative min-h-0">
       {/* Scroll to Bottom Button */}
       {showScrollButton && (
            <motion.button

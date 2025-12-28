@@ -29,10 +29,20 @@ if %errorlevel% neq 0 (
     goto :end
 )
 
+
+
 echo.
-echo [3/3] Iniciando Servidor XTTS...
+echo [3/4] Verificando Dependencias...
+python -u check_deps.py
+if %errorlevel% neq 0 (
+    echo [ERRO] Falha na verificacao de dependencias.
+    goto :end
+)
+
+echo.
+echo [4/4] Iniciando Servidor XTTS...
 echo -------------------------------------------
-python server.py
+python -u server.py
 echo -------------------------------------------
 
 echo.

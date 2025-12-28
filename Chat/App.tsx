@@ -946,7 +946,7 @@ const LiraAppContent = () => {
 
   return (
     <div className={`
-        flex h-screen bg-lira-bg text-white overflow-hidden font-sans selection:bg-lira-pink/30 transition-colors duration-500
+        flex h-[100dvh] w-full relative bg-lira-bg text-white overflow-hidden font-sans selection:bg-lira-pink/30 transition-colors duration-500
         ${isBarrelRoll ? 'do-a-barrel-roll' : ''}
         ${isMatrixMode ? 'matrix-mode' : ''}
         ${isGodMode ? 'god-mode' : ''}
