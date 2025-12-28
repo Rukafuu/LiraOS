@@ -1,0 +1,5 @@
+TTS
+fastapi
+uvicorn
+transformers==4.40.0
+accelerate

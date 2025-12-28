@@ -82,8 +82,6 @@ Chat/public/assets/**/*.avi
 Chat/public/assets/**/*.mov
 
 # Lira Specific
-/Chat/backend/tts/
-/Chat/backend/rvc/
 /Chat/backend/ocr/
 /Chat/backend/python/models/
 /LiraVtuber Model/
