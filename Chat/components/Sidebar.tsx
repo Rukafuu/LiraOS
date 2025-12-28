@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, MessageSquare, Search, Settings, X, Trash2, Sparkles, Command, LayoutGrid, ShoppingBag, Keyboard, Shield, Video, Crown, Gamepad2 } from 'lucide-react';
 import { ChatSession } from '../types';
@@ -49,7 +49,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [isMobile, setIsMobile] = useState(false);
   const [currentUser, setCurrentUser] = useState(getCurrentUser());
   const [showFeedback, setShowFeedback] = useState(false);
-  const [isFooterCollapsed, setIsFooterCollapsed] = useState(false); // ✅ Footer Collapse State
+  /* Footer Auto-Expand Logic */
+  const [isFooterExpanded, setIsFooterExpanded] = useState(false);
+  const footerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleFooterEnter = () => {
+    if (footerTimeoutRef.current) clearTimeout(footerTimeoutRef.current);
+    setIsFooterExpanded(true);
+  };
+
+  const handleFooterLeave = () => {
+    footerTimeoutRef.current = setTimeout(() => {
+      setIsFooterExpanded(false);
+    }, 2000);
+  };
 
   useEffect(() => {
     const handleUserUpdate = () => setCurrentUser(getCurrentUser());
@@ -210,90 +223,117 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         </div>
 
-        {/* --- SETTINGS & FOOTER --- */}
-        <div className="mt-auto border-t border-white/5 p-4 bg-[#080808]">
-            {/* User Profile - Click to Toggle Footer Mode */}
-            {currentUser && (
-               <div 
-                 onClick={() => setIsFooterCollapsed(!isFooterCollapsed)} // Correctly toggle state
-                 className={`flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/5 mb-3 cursor-pointer hover:bg-white/10 transition-all ${isFooterCollapsed ? 'justify-center' : ''}`}
-                 title="Toggle Menu"
-               >
-                  {currentUser.avatar ? (
-                      <img src={currentUser.avatar} alt="Profile" className="w-8 h-8 rounded-full object-cover" />
-                  ) : (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-                          {currentUser.username.substring(0, 2).toUpperCase()}
-                      </div>
-                  )}
-                  
-                  {!isMobile && !isFooterCollapsed && (
-                      <div className="flex flex-col overflow-hidden">
-                          <span className="text-xs font-bold text-white truncate">{currentUser.username}</span>
-                          <span className="text-[10px] text-gray-400 truncate">{currentUser.email}</span>
-                      </div>
-                  )}
-                  
-                  {!isMobile && !isFooterCollapsed && (
-                      <div className="ml-auto text-gray-500">
-                          {isFooterCollapsed ? <Plus size={14} /> : <div className="w-1 h-1 rounded-full bg-gray-600" />}
-                      </div>
-                  )}
-               </div>
-            )}
+        {/* --- SETTINGS & FOOTER (Auto-Expand) --- */}
+        <div 
+          className="mt-auto border-t border-white/5 bg-[#080808] transition-all duration-300 ease-in-out"
+          onMouseEnter={handleFooterEnter}
+          onMouseLeave={handleFooterLeave}
+        >
+            <div className="p-4">
+                <AnimatePresence mode="wait">
+                    {isFooterExpanded ? (
+                        // EXPANDED VIEW
+                        <motion.div 
+                            key="expanded"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            transition={{ duration: 0.2 }}
+                            className="space-y-2"
+                        >
+                            {/* Profile Card */}
+                            {currentUser && (
+                                <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 mb-4 group hover:bg-white/10 transition-colors">
+                                    {currentUser.avatar ? (
+                                        <img src={currentUser.avatar} alt="Profile" className="w-10 h-10 rounded-full object-cover shadow-sm" />
+                                    ) : (
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-sm font-bold text-white shadow-lg">
+                                            {currentUser.username.substring(0, 2).toUpperCase()}
+                                        </div>
+                                    )}
+                                    <div className="flex flex-col overflow-hidden">
+                                        <span className="text-sm font-bold text-white truncate">{currentUser.username}</span>
+                                        <span className="text-[10px] text-gray-400 truncate">{currentUser.email}</span>
+                                    </div>
+                                </div>
+                            )}
 
-            {/* Menu Items Container - Grid when collapsed, Stack when expanded */}
-             <div className={`transition-all duration-300 ${isFooterCollapsed ? 'grid grid-cols-4 gap-2' : 'space-y-2'}`}>
-              
-                <button 
-                  onClick={onOpenSettings} 
-                  className={`w-full flex items-center rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors group ${isFooterCollapsed ? 'justify-center p-2' : 'gap-3 p-2.5'}`}
-                  title={t('sidebar.settings')}
-                >
-                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                        <Settings size={16} className="text-blue-400 group-hover:rotate-45 transition-transform duration-500" />
-                    </div>
-                    {!isMobile && !isFooterCollapsed && <span className="text-[13px] font-medium">{t('sidebar.settings')}</span>}
-                </button>
-                
-                <button 
-                  onClick={onOpenShortcuts} 
-                  className={`w-full flex items-center rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors ${isFooterCollapsed ? 'justify-center p-2' : 'gap-3 p-2.5'}`}
-                  title={t('sidebar.shortcuts_title').split('(')[0]}
-                >
-                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
-                        <Keyboard size={16} className="text-gray-400" />
-                    </div>
-                    {!isMobile && !isFooterCollapsed && <span className="text-[13px] font-medium">{t('sidebar.shortcuts_title').split('(')[0]}</span>}
-                </button>
+                            {/* Menu Buttons */}
+                            <button 
+                                onClick={onOpenSettings} 
+                                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors group"
+                            >
+                                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                                    <Settings size={16} className="text-blue-400 group-hover:rotate-45 transition-transform duration-500" />
+                                </div>
+                                <span className="text-[13px] font-medium">{t('sidebar.settings')}</span>
+                            </button>
 
-                <button 
-                    onClick={() => setShowFeedback(true)}
-                    className={`w-full flex items-center rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors ${isFooterCollapsed ? 'justify-center p-2' : 'gap-3 p-2.5'}`}
-                    title={t('feedback_modal.title')}
-                >
-                    <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
-                        <MessageSquare size={16} className="text-green-400" />
-                    </div>
-                    {!isMobile && !isFooterCollapsed && (
-                        <div className="flex flex-col items-start overflow-hidden">
-                            <span className="text-[13px] font-medium">{t('feedback_modal.title')}</span>
-                        </div>
+                            <button 
+                                onClick={onOpenShortcuts} 
+                                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors"
+                            >
+                                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                                    <Keyboard size={16} className="text-gray-400" />
+                                </div>
+                                <span className="text-[13px] font-medium">{t('sidebar.shortcuts_title').split('(')[0]}</span>
+                            </button>
+
+                            <button 
+                                onClick={() => setShowFeedback(true)}
+                                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors"
+                            >
+                                <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                                    <MessageSquare size={16} className="text-green-400" />
+                                </div>
+                                <span className="text-[13px] font-medium">{t('feedback_modal.title')}</span>
+                            </button>
+
+                            <button 
+                                onClick={onOpenLegal} 
+                                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors"
+                            >
+                                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                                    <Shield size={16} className="text-gray-400" />
+                                </div>
+                                <span className="text-[13px] font-medium">{t('sidebar.legal')}</span>
+                            </button>
+                        </motion.div>
+                    ) : (
+                        // COLLAPSED VIEW (Compact)
+                        <motion.div 
+                           key="collapsed"
+                           initial={{ opacity: 0 }}
+                           animate={{ opacity: 1 }}
+                           exit={{ opacity: 0 }}
+                           onClick={() => setIsFooterExpanded(true)}
+                           className="flex items-center justify-between cursor-pointer py-2"
+                        >
+                            {/* Left: Mini Profile */}
+                            <div className="flex items-center gap-3">
+                                {currentUser?.avatar ? (
+                                    <img src={currentUser.avatar} alt="Profile" className="w-8 h-8 rounded-full object-cover" />
+                                ) : (
+                                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white">
+                                        {currentUser?.username?.substring(0, 2).toUpperCase() || 'U'}
+                                    </div>
+                                )}
+                                <span className="text-sm font-medium text-white max-w-[80px] truncate">
+                                    {currentUser?.username?.split(' ')[0] || 'User'}
+                                </span>
+                            </div>
+                            
+                            {/* Right: Hint Icons */}
+                            <div className="flex items-center gap-2 text-white/30">
+                                <Settings size={14} />
+                                <Keyboard size={14} />
+                                <MessageSquare size={14} />
+                                <Shield size={14} />
+                            </div>
+                        </motion.div>
                     )}
-                </button>
-
-                <button 
-                  onClick={onOpenLegal} 
-                  className={`w-full flex items-center rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors ${isFooterCollapsed ? 'justify-center p-2' : 'gap-3 p-2.5'}`}
-                  title={t('sidebar.legal')}
-                >
-                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
-                        <Shield size={16} className="text-gray-400" />
-                    </div>
-                    {!isMobile && !isFooterCollapsed && <span className="text-[13px] font-medium">{t('sidebar.legal')}</span>}
-                </button>
+                </AnimatePresence>
             </div>
-
         </div>
       </motion.aside>
 
