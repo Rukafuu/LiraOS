@@ -272,6 +272,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             onBlur={() => setIsFocused(false)}
             placeholder={t('chat_input.placeholder')}
             rows={1}
+            autoFocus
             className="
               flex-1 bg-transparent text-white placeholder-gray-500 
               text-[14px] md:text-[15px] outline-none resize-none py-2 md:py-2.5 max-h-[200px]
@@ -405,9 +406,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
              {isLoading ? (
                 <button 
                   onClick={onStop}
-                  className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center rounded-full bg-white text-black hover:bg-gray-200 transition-colors shadow-lg flex-shrink-0"
+                  className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center rounded-full bg-white text-black hover:bg-red-500 hover:text-white transition-all shadow-lg flex-shrink-0 group"
+                  title={t('common.stop')}
                 >
-                  <Square size={14} fill="currentColor" />
+                  <Square size={14} fill="currentColor" className="group-hover:scale-90 transition-transform" />
                 </button>
              ) : (
                 <button 
@@ -416,7 +418,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   className={`
                     w-8 h-8 md:w-9 md:h-9 flex items-center justify-center rounded-full transition-all duration-200 flex-shrink-0
                     ${(input.trim() || attachments.length > 0) 
-                      ? 'bg-white text-black shadow-lg hover:bg-gray-200 active:scale-95' 
+                      ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)] hover:bg-gray-100 hover:scale-105 active:scale-95' 
                       : 'bg-white/10 text-gray-500 cursor-not-allowed'}
                   `}
                 >

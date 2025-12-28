@@ -204,7 +204,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
             {!isEditing && !message.isStreaming && (
               <div className={`
-                flex items-center gap-1 mt-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200
+                flex items-center gap-1 mt-1 opacity-40 group-hover:opacity-100 transition-opacity duration-200
                 ${isUser ? 'justify-end pr-0' : 'justify-start pl-0'}
               `}>
                  <button 
