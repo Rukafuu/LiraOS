@@ -49,6 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [isMobile, setIsMobile] = useState(false);
   const [currentUser, setCurrentUser] = useState(getCurrentUser());
   const [showFeedback, setShowFeedback] = useState(false);
+  const [isFooterCollapsed, setIsFooterCollapsed] = useState(false); // ✅ Footer Collapse State
 
   useEffect(() => {
     const handleUserUpdate = () => setCurrentUser(getCurrentUser());
@@ -210,58 +211,88 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* --- SETTINGS & FOOTER --- */}
-        <div className="mt-auto border-t border-white/5 p-4 space-y-2 bg-[#080808]">
-            {/* User Profile Mini */}
+        <div className="mt-auto border-t border-white/5 p-4 bg-[#080808]">
+            {/* User Profile - Click to Toggle Footer Mode */}
             {currentUser && (
-               <div className="flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/5 mb-2">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white">
-                      {currentUser.username.substring(0, 2).toUpperCase()}
-                  </div>
-                  {!isMobile && (
+               <div 
+                 onClick={() => setIsFooterCollapsed(!isFooterCollapsed)} // Correctly toggle state
+                 className={`flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/5 mb-3 cursor-pointer hover:bg-white/10 transition-all ${isFooterCollapsed ? 'justify-center' : ''}`}
+                 title="Toggle Menu"
+               >
+                  {currentUser.avatar ? (
+                      <img src={currentUser.avatar} alt="Profile" className="w-8 h-8 rounded-full object-cover" />
+                  ) : (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+                          {currentUser.username.substring(0, 2).toUpperCase()}
+                      </div>
+                  )}
+                  
+                  {!isMobile && !isFooterCollapsed && (
                       <div className="flex flex-col overflow-hidden">
                           <span className="text-xs font-bold text-white truncate">{currentUser.username}</span>
                           <span className="text-[10px] text-gray-400 truncate">{currentUser.email}</span>
                       </div>
                   )}
+                  
+                  {!isMobile && !isFooterCollapsed && (
+                      <div className="ml-auto text-gray-500">
+                          {isFooterCollapsed ? <Plus size={14} /> : <div className="w-1 h-1 rounded-full bg-gray-600" />}
+                      </div>
+                  )}
                </div>
             )}
 
-             <button onClick={onOpenSettings} className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                    <Settings size={16} className="text-blue-400 group-hover:rotate-45 transition-transform duration-500" />
-                </div>
-                {!isMobile && <span className="text-[13px] font-medium">{t('sidebar.settings')}</span>}
-            </button>
-            
-            <button onClick={onOpenShortcuts} className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
-                 <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
-                    <Keyboard size={16} className="text-gray-400" />
-                </div>
-                {!isMobile && <span className="text-[13px] font-medium">{t('sidebar.shortcuts_title').split('(')[0]}</span>}
-            </button>
-
-            {/* ✅ Feedback Button Integration */}
-            <button 
-                onClick={() => setShowFeedback(true)}
-                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors"
-                title={t('feedback_modal.title')}
-             >
-                <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
-                    <MessageSquare size={16} className="text-green-400" />
-                </div>
-                {!isMobile && (
-                    <div className="flex flex-col items-start overflow-hidden">
-                        <span className="text-[13px] font-medium">{t('feedback_modal.title')}</span>
+            {/* Menu Items Container - Grid when collapsed, Stack when expanded */}
+             <div className={`transition-all duration-300 ${isFooterCollapsed ? 'grid grid-cols-4 gap-2' : 'space-y-2'}`}>
+              
+                <button 
+                  onClick={onOpenSettings} 
+                  className={`w-full flex items-center rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors group ${isFooterCollapsed ? 'justify-center p-2' : 'gap-3 p-2.5'}`}
+                  title={t('sidebar.settings')}
+                >
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                        <Settings size={16} className="text-blue-400 group-hover:rotate-45 transition-transform duration-500" />
                     </div>
-                )}
-            </button>
+                    {!isMobile && !isFooterCollapsed && <span className="text-[13px] font-medium">{t('sidebar.settings')}</span>}
+                </button>
+                
+                <button 
+                  onClick={onOpenShortcuts} 
+                  className={`w-full flex items-center rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors ${isFooterCollapsed ? 'justify-center p-2' : 'gap-3 p-2.5'}`}
+                  title={t('sidebar.shortcuts_title').split('(')[0]}
+                >
+                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                        <Keyboard size={16} className="text-gray-400" />
+                    </div>
+                    {!isMobile && !isFooterCollapsed && <span className="text-[13px] font-medium">{t('sidebar.shortcuts_title').split('(')[0]}</span>}
+                </button>
 
-            <button onClick={onOpenLegal} className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
-                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
-                    <Shield size={16} className="text-gray-400" />
-                </div>
-                {!isMobile && <span className="text-[13px] font-medium">{t('sidebar.legal')}</span>}
-            </button>
+                <button 
+                    onClick={() => setShowFeedback(true)}
+                    className={`w-full flex items-center rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors ${isFooterCollapsed ? 'justify-center p-2' : 'gap-3 p-2.5'}`}
+                    title={t('feedback_modal.title')}
+                >
+                    <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                        <MessageSquare size={16} className="text-green-400" />
+                    </div>
+                    {!isMobile && !isFooterCollapsed && (
+                        <div className="flex flex-col items-start overflow-hidden">
+                            <span className="text-[13px] font-medium">{t('feedback_modal.title')}</span>
+                        </div>
+                    )}
+                </button>
+
+                <button 
+                  onClick={onOpenLegal} 
+                  className={`w-full flex items-center rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors ${isFooterCollapsed ? 'justify-center p-2' : 'gap-3 p-2.5'}`}
+                  title={t('sidebar.legal')}
+                >
+                    <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
+                        <Shield size={16} className="text-gray-400" />
+                    </div>
+                    {!isMobile && !isFooterCollapsed && <span className="text-[13px] font-medium">{t('sidebar.legal')}</span>}
+                </button>
+            </div>
 
         </div>
       </motion.aside>
