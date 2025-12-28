@@ -247,14 +247,25 @@ class LiraVoice {
               console.log(`[LiraVoice] ✂️ Truncated huge text for XTTS Safety (${cleanText.length} -> ${textToSend.length} chars)`);
           }
 
-          const res = await fetch(`${API_BASE_URL}/api/voice/tts`, {
+          // Define Endpoint based on voice type
+          let endpoint = `${API_BASE_URL}/api/voice/tts`;
+          const headers: HeadersInit = { 'Content-Type': 'application/json' };
+          
+          if (requestedVoice === 'xtts-local') {
+             // ⚡ DIRECT LOCAL ACCESS (Bypasses Backend to use User's GPU)
+             endpoint = 'http://localhost:5002/tts';
+             console.log('[LiraVoice] ⚡ Routing to Local GPU Driver:', endpoint);
+             // Local server doesn't need auth headers, avoiding CORS preflight complexity
+          } else {
+             // Cloud/Backend Voices need Auth
+             Object.assign(headers, getAuthHeaders());
+          }
+
+          const res = await fetch(endpoint, {
             method: 'POST',
-            credentials: 'include',
-            headers: { 
-              'Content-Type': 'application/json',
-              ...getAuthHeaders()
-            },
-            body: JSON.stringify({ text: textToSend, voiceId: requestedVoice })
+            credentials: requestedVoice === 'xtts-local' ? 'omit' : 'include', // No cookies for local to avoid CORS issues
+            headers,
+            body: JSON.stringify({ text: textToSend, voiceId: requestedVoice, language: 'pt', speaker_wav: 'reference.wav' })
           });
 
 
