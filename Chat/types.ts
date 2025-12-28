@@ -11,6 +11,8 @@ export interface Message {
   id: string;
   role: 'user' | 'model';
   content: string;
+  partial?: string; // Content while streaming
+  status?: 'thinking' | 'streaming' | 'done' | 'error';
   timestamp: number;
   isStreaming?: boolean;
   attachments?: Attachment[];

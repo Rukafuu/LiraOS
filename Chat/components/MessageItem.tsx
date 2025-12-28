@@ -121,13 +121,28 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 </div>
               </div>
             ) : (
-    <div className={`
+            {message.status === 'thinking' ? (
+               <div className="flex flex-col gap-2 py-2 px-4 bg-white/5 rounded-2xl rounded-tl-none animate-pulse min-w-[200px]">
+                  <div className="h-3 bg-white/10 rounded w-3/4"></div>
+                  <div className="h-3 bg-white/10 rounded w-1/2"></div>
+                  <div className="h-3 bg-white/10 rounded w-5/6"></div>
+                  <div className="flex items-center gap-2 mt-1">
+                     <span className="relative flex h-2 w-2">
+                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lira-pink opacity-75"></span>
+                       <span className="relative inline-flex rounded-full h-2 w-2 bg-lira-pink"></span>
+                     </span>
+                     <span className="text-xs text-white/40 italic">Thinking...</span>
+                  </div>
+               </div>
+            ) : (
+              <div className={`
                 relative text-[15px] leading-7 text-gray-200 text-left w-fit max-w-full break-words [overflow-wrap:anywhere]
                 ${isUser ? 'bg-white/5 px-4 py-2 rounded-2xl rounded-tr-none' : ''}
               `}>
                 <div className="markdown-content w-full">
                   {(() => {
-                    const parts = message.content.split(/(\[\[WIDGET:[^|]+\|.+?\]\])/g);
+                    const displayContent = (message.status === 'streaming' && message.partial) ? message.partial : message.content;
+                    const parts = displayContent.split(/(\[\[WIDGET:[^|]+\|.+?\]\])/g);
                     return parts.map((part, idx) => {
                       const match = part.match(/^\[\[WIDGET:([^|]+)\|(.+?)\]\]$/);
                       if (match) {
@@ -195,8 +210,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                     });
                   })()}
                   
-                  {message.isStreaming && (
-                    <span className="inline-block w-2.5 h-5 bg-lira-pink align-middle ml-1 animate-pulse" />
+                  {(message.status === 'streaming' || message.isStreaming) && (
+                    <span className="inline-block w-1.5 h-4 bg-lira-pink align-middle ml-0.5 animate-pulse shadow-[0_0_10px_rgba(235,0,255,0.5)]" />
                   )}
                 </div>
               </div>

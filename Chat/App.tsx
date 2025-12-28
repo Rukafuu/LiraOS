@@ -476,7 +476,7 @@ const LiraAppContent = () => {
              return {
                 ...s,
                 messages: s.messages.map(m => 
-                   m.isStreaming ? { ...m, isStreaming: false } : m
+                   m.isStreaming ? { ...m, isStreaming: false, status: 'done', content: m.partial || m.content || '' } : m
                 )
              };
           }
@@ -507,6 +507,23 @@ const LiraAppContent = () => {
       abortControllerRef.current = abortCtrl;
       setIsGenerating(true);
       const modelMessageId = uuidv4();
+      
+      // 1. IMMEDIATE FEEDBACK: Create Thinking Message
+      setSessions(prev => prev.map(s => { 
+        if (s.id === sessionId) {
+           return { ...s, messages: [...s.messages, {
+               id: modelMessageId,
+               role: 'model',
+               content: '',
+               partial: '',
+               status: 'thinking',
+               timestamp: Date.now(),
+               isStreaming: true
+           }]}; 
+        } 
+        return s; 
+      }));
+
       let accumulatedResponse = "";
       
       // Declare userId at function scope so it's available in finally block
@@ -523,11 +540,12 @@ const LiraAppContent = () => {
         if (extractedMemory) {
           setMemories(prev => [...prev, extractedMemory]);
           addToast('Memória salva 🧠', 'success');
+        }
+
         try {
           // Dynamic Persona Logic: Inject Instructions
           let finalPrompt = promptText;
           const unlockedIds = personas.filter(p => !p.isLocked).map(p => p.id);
-          
           
           if (dynamicPersona) {
               const idsList = unlockedIds.join(', ');
@@ -540,11 +558,10 @@ const LiraAppContent = () => {
           }
 
           const latest = await fetchMemories(userId);
-            if (Array.isArray(latest) && latest.length > 0) {
-              setMemories(latest);
-            }
-          } catch {}
-        }
+             if (Array.isArray(latest) && latest.length > 0) {
+               setMemories(latest);
+             }
+         } catch {}
 
         // Pass memories to context - using selected model with relevância
         const personaToUse = isDeepMode ? { ...activePersona, systemInstruction: `${activePersona.systemInstruction}\nResponda com raciocínio detalhado, valide suposições, cite fontes quando úteis, e apresente passos claros.` } : activePersona;
@@ -552,7 +569,7 @@ const LiraAppContent = () => {
         const stream = streamResponse(history, promptText, personaToUse, relevantMemories, selectedModel, abortCtrl.signal, attachments, userId, localDateTime);
         
         // Throttled Update Logic
-        const UPDATE_INTERVAL = 100; // ms
+        const UPDATE_INTERVAL = 80; // Faster updates for smoother UI
         let lastUpdate = 0;
         
         for await (const chunk of stream) {
@@ -566,26 +583,18 @@ const LiraAppContent = () => {
                lastUpdate = now;
                setSessions(prev => prev.map(s => {
                   if (s.id === sessionId) {
-                      const existingModelMsgIndex = s.messages.findIndex(m => m.id === modelMessageId);
-                      if (existingModelMsgIndex === -1) {
-                          return {
-                              ...s,
-                              messages: [...s.messages, {
-                                  id: modelMessageId,
-                                  role: 'model',
-                                  content: accumulatedResponse,
-                                  timestamp: Date.now(),
-                                  isStreaming: true
-                              }]
-                          };
-                      } else {
-                          const newMessages = [...s.messages];
-                          newMessages[existingModelMsgIndex] = {
-                              ...newMessages[existingModelMsgIndex],
-                              content: accumulatedResponse
-                          };
-                          return { ...s, messages: newMessages };
-                      }
+                      const newMessages = s.messages.map(m => {
+                          if (m.id === modelMessageId) {
+                               return {
+                                   ...m,
+                                   partial: accumulatedResponse,
+                                   status: 'streaming' as const,
+                                   isStreaming: true
+                               };
+                          }
+                          return m;
+                      });
+                      return { ...s, messages: newMessages };
                   }
                   return s;
                }));
@@ -661,7 +670,8 @@ const LiraAppContent = () => {
                 role: 'model',
                 content: accumulatedResponse,
                 timestamp: Date.now(),
-                isStreaming: false
+                isStreaming: false,
+                status: 'done'
              };
              
              // 🎭 Dynamic Persona Switch Processing
@@ -728,7 +738,7 @@ const LiraAppContent = () => {
              if (s.id === sessionId) {
                 return {
                    ...s,
-                   messages: s.messages.map(m => m.id === modelMessageId ? { ...m, isStreaming: false } : m)
+                   messages: s.messages.map(m => m.id === modelMessageId ? { ...m, isStreaming: false, status: 'done', content: accumulatedResponse, partial: undefined } : m)
                 };
              }
              return s;
