@@ -101,7 +101,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         initial={false}
         animate={isOpen ? 'open' : 'closed'}
         variants={sidebarVariants}
-        className={`fixed md:relative z-50 h-full bg-[#0a0a0a]/95 backdrop-blur-xl border-r border-white/5 flex flex-col overflow-hidden ${isMobile ? 'top-0 left-0 w-[280px]' : ''}`}
+        className={`fixed md:relative z-[100] h-full bg-[#0a0a0a]/95 backdrop-blur-xl border-r border-white/5 flex flex-col overflow-hidden ${isMobile ? 'top-0 left-0 w-[280px]' : ''}`}
       >
         {/* HEADER */}
         <div className="p-4 border-b border-white/5 space-y-4">

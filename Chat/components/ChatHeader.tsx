@@ -54,7 +54,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         <div className="flex items-center">
             <button 
               onClick={onToggleSidebar}
-              className="relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors focus:outline-none z-50 mr-6"
+              className="relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors focus:outline-none z-50 mr-2 md:mr-6"
               aria-label="Toggle Sidebar"
             >
               <div className="w-5 h-3.5 relative flex flex-col justify-between">

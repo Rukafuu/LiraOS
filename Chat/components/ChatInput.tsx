@@ -194,7 +194,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <div className="w-full pb-8 md:pb-6 px-4 z-20">
+    <div className="w-full pb-6 md:pb-6 px-2 md:px-4 z-20">
       <div className="max-w-3xl mx-auto relative">
         <style>{`
           @keyframes neon-pulse {
@@ -237,7 +237,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           className={`
-          relative flex items-end gap-2 p-2 
+          relative flex items-end gap-1 md:gap-2 p-1.5 md:p-2 
           bg-[#18181b] rounded-[26px] 
           transition-all duration-300 border
           ${isFocused 
@@ -256,7 +256,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           
           <button 
             onClick={() => fileInputRef.current?.click()}
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all mb-1 ml-1"
+            className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all mb-0.5 md:mb-1 ml-0.5 md:ml-1 flex-shrink-0"
             title={t('chat_input.attach_tooltip')}
           >
             <Plus size={18} strokeWidth={2} />
@@ -274,12 +274,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             rows={1}
             className="
               flex-1 bg-transparent text-white placeholder-gray-500 
-              text-[15px] outline-none resize-none py-2.5 max-h-[200px]
-              scrollbar-thin leading-relaxed self-center
+              text-[14px] md:text-[15px] outline-none resize-none py-2 md:py-2.5 max-h-[200px]
+              scrollbar-thin leading-relaxed self-center min-w-0
             "
           />
 
-          <div className="flex gap-1 mb-1 mr-1 items-center">
+          <div className="flex gap-1 mb-0.5 md:mb-1 mr-0.5 md:mr-1 items-center flex-shrink-0">
              
              {/* 1. Mic Button */}
              <VoiceButton onTranscript={handleVoiceInput} />
@@ -289,7 +289,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 <button
                   onClick={() => setShowMenu(!showMenu)}
                   className={`
-                    h-9 px-3 rounded-full flex items-center gap-2 text-xs font-medium transition-all
+                    h-8 md:h-9 px-2 md:px-3 rounded-full flex items-center gap-1.5 md:gap-2 text-xs font-medium transition-all
                     ${showMenu ? 'bg-white/10 text-white' : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'}
                   `}
                 >
@@ -405,7 +405,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
              {isLoading ? (
                 <button 
                   onClick={onStop}
-                  className="w-9 h-9 flex items-center justify-center rounded-full bg-white text-black hover:bg-gray-200 transition-colors shadow-lg"
+                  className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center rounded-full bg-white text-black hover:bg-gray-200 transition-colors shadow-lg flex-shrink-0"
                 >
                   <Square size={14} fill="currentColor" />
                 </button>
@@ -414,7 +414,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   onClick={handleSubmit}
                   disabled={!input.trim() && attachments.length === 0}
                   className={`
-                    w-9 h-9 flex items-center justify-center rounded-full transition-all duration-200 
+                    w-8 h-8 md:w-9 md:h-9 flex items-center justify-center rounded-full transition-all duration-200 flex-shrink-0
                     ${(input.trim() || attachments.length > 0) 
                       ? 'bg-white text-black shadow-lg hover:bg-gray-200 active:scale-95' 
                       : 'bg-white/10 text-gray-500 cursor-not-allowed'}
