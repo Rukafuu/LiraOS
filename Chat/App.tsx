@@ -12,6 +12,7 @@ import { LoginScreen } from './components/LoginScreen';
 import { OnboardingTour } from './components/OnboardingTour';
 import { LandingChat } from './components/LandingChat';
 const CookieConsentModal = React.lazy(() => import('./components/CookieConsentModal').then(m => ({ default: m.CookieConsentModal })));
+const LiraFloatingWidget = React.lazy(() => import('./components/LiraFloatingWidget').then(m => ({ default: m.LiraFloatingWidget })));
 const CompanionPage = React.lazy(() => import('./components/CompanionPage').then(m => ({ default: m.CompanionPage })));
 import { CookiePreferences } from './components/CookieConsentModal';
 const ShortcutsModal = React.lazy(() => import('./components/ShortcutsModal').then(m => ({ default: m.ShortcutsModal })));
@@ -82,7 +83,8 @@ const LiraAppContent = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [isReturningUser, setIsReturningUser] = useState(false);
-  const [dynamicPersona, setDynamicPersona] = useState(false); // Fix for missing state
+    const [dynamicPersona, setDynamicPersona] = useState(false); // Fix for missing state
+  const [showCompanion, setShowCompanion] = useState(false);
   
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(() => {
      if (typeof window !== 'undefined') {
@@ -879,6 +881,15 @@ const LiraAppContent = () => {
        voiceId: isPremium ? 'xtts-local' : 'google-pt-BR'
     });
   };
+
+  const handleCompanionInteraction = (type: 'drag' | 'resize') => {
+      if (streamingText || isVoiceActive) return;
+      const phrases = type === 'drag' 
+        ? ["Ui!", "Opa!", "Me leva!", "Segura!"] 
+        : ["Tô crescendo!", "Eita!", "Gostei!"];
+      const text = phrases[Math.floor(Math.random() * phrases.length)];
+      handleTTS(text);
+  };
   // Persist UI settings
   useEffect(() => {
     const u = getCurrentUser();
@@ -985,6 +996,7 @@ const LiraAppContent = () => {
           isDeepMode={isDeepMode}
           displayName={stats.username}
           avatarUrl={LIRA_AVATAR}
+          onToggleCompanion={() => setShowCompanion(!showCompanion)}
           onLogout={() => {
             const sessionStr = localStorage.getItem('lira_session');
             try {
@@ -1188,6 +1200,15 @@ const LiraAppContent = () => {
       {!isVoiceActive && (
           <PhotoBooth messages={currentSession?.messages || []} />
       )}
+
+      {showCompanion && (
+          <LiraFloatingWidget 
+              onClose={() => setShowCompanion(false)}
+              onInteraction={handleCompanionInteraction}
+              isSpeaking={Boolean(streamingText || isVoiceActive)}
+          />
+      )}
+
       </Suspense>
     
       <WelcomeModal

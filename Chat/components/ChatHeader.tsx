@@ -25,6 +25,7 @@ interface ChatHeaderProps {
   onToggleVoice?: () => void;
   isExhausted?: boolean;
   fatigue?: number;
+  onToggleCompanion?: () => void;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({ 
@@ -40,7 +41,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   voiceEnabled,
   onToggleVoice,
   isExhausted,
-  fatigue
+  fatigue,
+  onToggleCompanion
 }) => {
   const [showModelSelector, setShowModelSelector] = useState(false);
   const { t } = useTranslation();
@@ -160,13 +162,15 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
               </motion.div>
             </button>
           )}
-          <button 
-              onClick={() => window.open('/companion', 'LiraCompanion', 'width=350,height=500,menubar=no,toolbar=no,location=no,status=no')}
-              className="p-2.5 rounded-xl text-purple-400 hover:text-purple-300 hover:bg-purple-400/10 transition-colors hidden sm:flex items-center gap-2"
-              title="Lira Companion Mode"
-          >
-              <AppWindow size={18} />
-          </button>
+          {onToggleCompanion && (
+            <button 
+                onClick={onToggleCompanion}
+                className="p-2.5 rounded-xl text-purple-400 hover:text-purple-300 hover:bg-purple-400/10 transition-colors hidden sm:flex items-center gap-2"
+                title="Lira Companion Mode (Float)"
+            >
+                <AppWindow size={18} />
+            </button>
+          )}
           {onLogout && (
             <button onClick={onLogout} className="p-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-colors" title={t('chat_header.logout')}>
               <LogOut size={18} />
