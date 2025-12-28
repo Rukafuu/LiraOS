@@ -215,7 +215,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   )}
                 </div>
               </div>
-            )}
+            ))}
 
             {!isEditing && !message.isStreaming && (
               <div className={`
