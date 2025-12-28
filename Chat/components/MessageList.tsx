@@ -92,14 +92,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   const [atBottom, setAtBottom] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
 
-  // Auto-scroll logic (only if user is already at the bottom)
-  useEffect(() => {
-    if (atBottom || isLoading) {
-      setTimeout(() => {
-          virtuosoRef.current?.scrollToIndex({ index: messages.length + (showThinking ? 1 : 0), align: 'end', behavior: 'auto' });
-      }, 50);
-    }
-  }, [messages.length, isLoading, atBottom]);
+
 
   const suggestions = [
     { icon: Code, text: "Write a React hook for fetching data", label: "Code" },
