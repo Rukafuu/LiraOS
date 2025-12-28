@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Brain, Zap, LogOut, Headset, Volume2, VolumeX } from 'lucide-react';
+import { Brain, Zap, LogOut, Headset, Volume2, VolumeX, AppWindow } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AvatarPulse } from './ui/AvatarPulse';
 import { useTranslation } from 'react-i18next';
@@ -160,6 +160,13 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
               </motion.div>
             </button>
           )}
+          <button 
+              onClick={() => window.open('/companion', 'LiraCompanion', 'width=350,height=500,menubar=no,toolbar=no,location=no,status=no')}
+              className="p-2.5 rounded-xl text-purple-400 hover:text-purple-300 hover:bg-purple-400/10 transition-colors hidden sm:flex items-center gap-2"
+              title="Lira Companion Mode"
+          >
+              <AppWindow size={18} />
+          </button>
           {onLogout && (
             <button onClick={onLogout} className="p-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-colors" title={t('chat_header.logout')}>
               <LogOut size={18} />

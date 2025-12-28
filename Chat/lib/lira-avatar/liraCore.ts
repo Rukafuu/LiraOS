@@ -54,7 +54,7 @@ if (typeof window !== 'undefined') {
 
 export class LiraCore {
     private app: PixiApp;
-    private model: Live2DModelType | null = null;
+    public model: Live2DModelType | null = null;
     private canvas: HTMLCanvasElement;
     private container: HTMLElement;
     
@@ -112,7 +112,11 @@ export class LiraCore {
      * Initializes the Live2D environment.
      * Must be called before loading a model.
      */
-    private initLive2D() {
+    /**
+     * Initializes the Live2D environment.
+     * Must be called before loading a model.
+     */
+    public initLive2D() {
         // @ts-ignore
         const live2d = window.PIXI.live2d;
         if (!live2d) {

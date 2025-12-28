@@ -12,6 +12,7 @@ import { LoginScreen } from './components/LoginScreen';
 import { OnboardingTour } from './components/OnboardingTour';
 import { LandingChat } from './components/LandingChat';
 const CookieConsentModal = React.lazy(() => import('./components/CookieConsentModal').then(m => ({ default: m.CookieConsentModal })));
+const CompanionPage = React.lazy(() => import('./components/CompanionPage').then(m => ({ default: m.CompanionPage })));
 import { CookiePreferences } from './components/CookieConsentModal';
 const ShortcutsModal = React.lazy(() => import('./components/ShortcutsModal').then(m => ({ default: m.ShortcutsModal })));
 const GamerModal = React.lazy(() => import('./components/GamerModal').then(m => ({ default: m.GamerModal })));
@@ -854,6 +855,20 @@ const LiraAppContent = () => {
     await triggerAIResponse(currentSessionId, messagesUpToEdit, newContent, editedMessage.attachments || []);
   };
 
+
+  // Broadcast Channel for Companion Sync
+  useEffect(() => {
+    const channel = new BroadcastChannel('lira_companion_channel');
+    
+    if (streamingText || isVoiceActive) {
+        channel.postMessage({ type: 'SPEAK_START' });
+    } else {
+        channel.postMessage({ type: 'SPEAK_END' });
+    }
+
+    return () => channel.close();
+  }, [streamingText, isVoiceActive]);
+  
   const handleTTS = async (text: string) => {
     // Determine voice (reuse overlay logic or default)
     const voiceId = localStorage.getItem('lira_premium_voice_id') || 'xtts-local';
