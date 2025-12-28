@@ -108,13 +108,6 @@ export const MessageList: React.FC<MessageListProps> = ({
     { icon: Compass, text: "Plan a trip to Neo Tokyo", label: "Plan" },
   ];
 
-  const lastMsg = messages[messages.length - 1];
-  const showThinking = isLoading && (
-    messages.length === 0 ||
-    lastMsg?.role === 'user' ||
-    (lastMsg?.role === 'model' && lastMsg?.isStreaming && (lastMsg?.content || '').length < 2)
-  );
-
   return (
     <div className="flex-1 px-2 md:px-0 relative min-h-0">
       {/* Scroll to Bottom Button */}
@@ -122,14 +115,14 @@ export const MessageList: React.FC<MessageListProps> = ({
            <motion.button
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              onClick={() => virtuosoRef.current?.scrollToIndex({ index: messages.length + (showThinking ? 1 : 0), align: 'end', behavior: 'smooth' })}
+              onClick={() => virtuosoRef.current?.scrollToIndex({ index: messages.length - 1, align: 'end', behavior: 'smooth' })}
               className="absolute bottom-6 right-8 z-30 bg-lira-bg/90 border border-white/10 p-2 rounded-full shadow-xl hover:bg-white/10 transition-all text-white backdrop-blur-md"
            >
               <ArrowDown size={20} />
            </motion.button>
       )}
 
-      {messages.length === 0 && !isLoading ? (
+      {messages.length === 0 ? (
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4 relative z-10 mt-10">
             {/* Hero Logo */}
             <motion.div 
@@ -173,24 +166,18 @@ export const MessageList: React.FC<MessageListProps> = ({
       ) : (
         <Virtuoso
             ref={virtuosoRef}
-            totalCount={messages.length + (showThinking ? 1 : 0)}
+            totalCount={messages.length}
             atBottomStateChange={(atBottom) => {
                 setAtBottom(atBottom);
                 setShowScrollButton(!atBottom);
             }}
-            initialTopMostItemIndex={messages.length - 1} // Start at bottom
-            alignToBottom={true} // Stick to bottom
-            followOutput={atBottom ? 'auto' : false} // Auto-scroll only if already at bottom
+            initialTopMostItemIndex={Math.max(0, messages.length - 1)}
+            alignToBottom={true}
+            followOutput={atBottom ? 'auto' : false}
             className="h-full scrollbar-thin"
             itemContent={(index) => {
-                if (index >= messages.length) {
-                    return (
-                        <div className="py-2 max-w-3xl mx-auto px-2">
-                            <ThinkingIndicator />
-                        </div>
-                    );
-                }
                const msg = messages[index];
+               if (!msg) return null;
                return (
                    <div className="py-2 max-w-3xl mx-auto px-2">
                        <MessageItem 
