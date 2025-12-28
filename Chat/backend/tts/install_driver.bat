@@ -2,22 +2,37 @@
 title LiraOS Voice Driver Installer 🔊
 echo.
 echo ========================================================
-echo        INSTALADOR DO DRIVER DE VOZ (LIRA OS)
+echo        INSTALADOR DE DRIVER - LIRA OS / XTTS
 echo ========================================================
 echo.
-echo Este script fará com que o servidor de voz (XTTS) inicie
-echo automaticamente com o Windows, de forma invisivel.
+echo Configurando inicializacao automatica...
+
+set "SCRIPT_PATH=%~dp0launch_silent.vbs"
+set "WORK_DIR=%~dp0"
+set "SHORTCUT_PATH=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\LiraVoiceDriver.lnk"
+
 echo.
-echo Copiando arquivo para shell:startup...
-copy "launch_silent.vbs" "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\LiraVoiceDriver.vbs"
+echo [1/3] Localizando arquivos...
+echo Script: %SCRIPT_PATH%
+echo Pasta:  %WORK_DIR%
+
 echo.
-if %errorlevel% equ 0 (
-    echo [SUCESSO] Driver instalado com sucesso! ✅
-    echo O servidor de voz iniciara automaticamente no proximo reinicio.
+echo [2/3] Criando atalho inteligente...
+powershell -Command "$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('%SHORTCUT_PATH%'); $s.TargetPath = '%SCRIPT_PATH%'; $s.WorkingDirectory = '%WORK_DIR%'; $s.Description = 'LiraOS Voice Server'; $s.Save()"
+
+echo.
+if exist "%SHORTCUT_PATH%" (
+    echo [3/3] Verificando instalacao... OK!
     echo.
-    echo Para iniciar agora mesmo, execute o arquivo 'launch_silent.vbs'.
+    echo [SUCESSO] Driver configurado com sucesso! ✅
+    echo ----------------------------------------------------
+    echo O servidor de voz iniciara automaticamente com o Windows.
+    echo A voz da Lira sera carregada do arquivo 'reference.wav'
+    echo localizado nesta mesma pasta.
+    echo ----------------------------------------------------
 ) else (
-    echo [ERRO] Falha ao copiar arquivo. Tente executar como Administrador. ❌
+    echo [ERRO] Falha ao criar atalho. Tente executar como Administrador. ❌
 )
+
 echo.
 pause
