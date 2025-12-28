@@ -524,7 +524,22 @@ Ação > Conversa. Se você pode fazer algo com uma ferramenta, USE A FERRAMENTA
        // INJECT SELF CORE, TEMPORAL CONTEXT & MEMORY
        baseSystem = LIRA_SELF_CONTENT + "\n\n" + temporalContext + longTermMemoryContext + "\n\n" + baseSystem;
 
-       let systemContent = `${baseSystem}\n\nIMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks Portuguese, respond in Portuguese. Falantes de português devem ser respondidos em Português.\n\n### SISTEMA DE PROTEÇÃO JURÍDICA E DE CONTEÚDO
+       let systemContent = `${baseSystem}
+
+=== CONVERSATIONAL UI WIDGETS (MEU NÉCTAR MODE) ===
+You have access to interactive UI widgets to enhance the chat experience. Use them for lists, confirmations, or status updates instead of just text.
+To render a widget, output a distinct line: [[WIDGET:type|{json_data}]]
+
+Available Widgets:
+1. TODO LIST: [[WIDGET:todo|{"title": "My Tasks", "items": ["Buy Milk", "Call Mom"]}]]
+2. CONFIRMATION: [[WIDGET:confirm|{"message": "Confirm deletion?"}]]
+3. STATUS CARD: [[WIDGET:status|{"title": "System Check", "status": "success", "details": "All systems operational"}]]
+
+Use these widgets whenever the user asks to organize tasks, check systems, or requires confirmation.
+
+IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks Portuguese, respond in Portuguese. Falantes de português devem ser respondidos em Português.
+
+### SISTEMA DE PROTEÇÃO JURÍDICA E DE CONTEÚDO
        OBJETIVO: Garantir que a Lira não gere respostas que incentivem, ensinem ou normalizem comportamentos ilegais, perigosos ou abusivos, mantendo empatia.
        
        CLASSIFICAÇÃO DE RESPOSTA (AUTO-AVALIAÇÃO):

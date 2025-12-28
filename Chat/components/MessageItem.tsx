@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Copy, Check, Edit2, RotateCcw, FileText, Brain } from 'lucide-react';
 import { Message } from '../types';
 import { LIRA_AVATAR } from '../constants';
+import { ChatWidgetRenderer } from './ChatWidgets';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from 'react-i18next';
 
@@ -120,67 +121,79 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 </div>
               </div>
             ) : (
-              <div className={`
+    <div className={`
                 relative text-[15px] leading-7 text-gray-200 text-left w-fit max-w-full break-words [overflow-wrap:anywhere]
                 ${isUser ? 'bg-white/5 px-4 py-2 rounded-2xl rounded-tr-none' : ''}
               `}>
                 <div className="markdown-content w-full">
-                  <ReactMarkdown
-                    components={{
-                      code({ node, inline, className, children, ...props }: any) {
-                        const match = /language-(\w+)/.exec(className || '');
-                        return !inline && match ? (
-                          <div className="rounded-lg overflow-hidden my-4 border border-white/10 text-left shadow-lg bg-[#0c0c0e] w-full max-w-full">
-                            <div className="bg-white/5 px-3 py-2 text-xs text-gray-400 flex justify-between items-center border-b border-white/5">
-                              <div className="flex items-center gap-2">
-                                  <div className="flex gap-1.5">
-                                      <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]" />
-                                      <div className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]" />
-                                      <div className="w-2.5 h-2.5 rounded-full bg-[#27c93f]" />
+                  {(() => {
+                    const parts = message.content.split(/(\[\[WIDGET:[^|]+\|.+?\]\])/g);
+                    return parts.map((part, idx) => {
+                      const match = part.match(/^\[\[WIDGET:([^|]+)\|(.+?)\]\]$/);
+                      if (match) {
+                        return <ChatWidgetRenderer key={idx} type={match[1]} data={match[2]} />;
+                      }
+                      return (
+                        <ReactMarkdown
+                          key={idx}
+                          components={{
+                            code({ node, inline, className, children, ...props }: any) {
+                              const match = /language-(\w+)/.exec(className || '');
+                              return !inline && match ? (
+                                <div className="rounded-lg overflow-hidden my-4 border border-white/10 text-left shadow-lg bg-[#0c0c0e] w-full max-w-full">
+                                  <div className="bg-white/5 px-3 py-2 text-xs text-gray-400 flex justify-between items-center border-b border-white/5">
+                                    <div className="flex items-center gap-2">
+                                        <div className="flex gap-1.5">
+                                            <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]" />
+                                            <div className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]" />
+                                            <div className="w-2.5 h-2.5 rounded-full bg-[#27c93f]" />
+                                        </div>
+                                        <span className="font-mono ml-2 opacity-50">{match[1]}</span>
+                                    </div>
+                                    <button 
+                                      onClick={() => handleCopyCode(String(children))}
+                                      className="flex items-center gap-1 hover:text-white transition-colors"
+                                    >
+                                      <Copy size={12} /> <span className="text-[10px]">{t('message_item.copy_code')}</span>
+                                    </button>
                                   </div>
-                                  <span className="font-mono ml-2 opacity-50">{match[1]}</span>
-                              </div>
-                              <button 
-                                onClick={() => handleCopyCode(String(children))}
-                                className="flex items-center gap-1 hover:text-white transition-colors"
-                              >
-                                <Copy size={12} /> <span className="text-[10px]">{t('message_item.copy_code')}</span>
-                              </button>
-                            </div>
-                            <div className="p-4 overflow-x-auto relative group-code custom-scrollbar">
-                              <pre className="font-mono text-[13px] text-gray-300 whitespace-pre">
-                                <code {...props}>
-                                  {String(children).replace(/\n$/, '')}
+                                  <div className="p-4 overflow-x-auto relative group-code custom-scrollbar">
+                                    <pre className="font-mono text-[13px] text-gray-300 whitespace-pre">
+                                      <code {...props}>
+                                        {String(children).replace(/\n$/, '')}
+                                      </code>
+                                    </pre>
+                                  </div>
+                                </div>
+                              ) : (
+                                <code className={`bg-white/10 text-white px-1.5 py-0.5 rounded text-sm font-mono ${className}`} {...props}>
+                                  {children}
                                 </code>
-                              </pre>
-                            </div>
-                          </div>
-                        ) : (
-                          <code className={`bg-white/10 text-white px-1.5 py-0.5 rounded text-sm font-mono ${className}`} {...props}>
-                            {children}
-                          </code>
-                        );
-                      },
-                      p: ({ children }) => <p className="mb-3 last:mb-0 leading-relaxed break-words">{children}</p>,
-                      a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-lira-secondary hover:underline underline-offset-4">{children}</a>,
-                      ul: ({ children }) => <ul className="list-disc ml-4 mb-4 space-y-1">{children}</ul>,
-                      ol: ({ children }) => <ol className="list-decimal ml-4 mb-4 space-y-1">{children}</ol>,
-                      table: ({ children }) => (
-                         <div className="overflow-x-auto my-4 rounded-lg border border-white/10 max-w-full">
-                            <table className="min-w-full divide-y divide-white/10 text-sm">
-                               {children}
-                            </table>
-                         </div>
-                      ),
-                      thead: ({ children }) => <thead className="bg-white/5 font-semibold text-white">{children}</thead>,
-                      tbody: ({ children }) => <tbody className="divide-y divide-white/5 bg-transparent">{children}</tbody>,
-                      tr: ({ children }) => <tr className="hover:bg-white/5 transition-colors">{children}</tr>,
-                      th: ({ children }) => <th className="px-4 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">{children}</th>,
-                      td: ({ children }) => <td className="px-4 py-3 whitespace-nowrap text-gray-300">{children}</td>,
-                    }}
-                  >
-                    {message.content}
-                  </ReactMarkdown>
+                              );
+                            },
+                            p: ({ children }) => <p className="mb-3 last:mb-0 leading-relaxed break-words">{children}</p>,
+                            a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-lira-secondary hover:underline underline-offset-4">{children}</a>,
+                            ul: ({ children }) => <ul className="list-disc ml-4 mb-4 space-y-1">{children}</ul>,
+                            ol: ({ children }) => <ol className="list-decimal ml-4 mb-4 space-y-1">{children}</ol>,
+                            table: ({ children }) => (
+                               <div className="overflow-x-auto my-4 rounded-lg border border-white/10 max-w-full">
+                                  <table className="min-w-full divide-y divide-white/10 text-sm">
+                                     {children}
+                                  </table>
+                               </div>
+                            ),
+                            thead: ({ children }) => <thead className="bg-white/5 font-semibold text-white">{children}</thead>,
+                            tbody: ({ children }) => <tbody className="divide-y divide-white/5 bg-transparent">{children}</tbody>,
+                            tr: ({ children }) => <tr className="hover:bg-white/5 transition-colors">{children}</tr>,
+                            th: ({ children }) => <th className="px-4 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">{children}</th>,
+                            td: ({ children }) => <td className="px-4 py-3 whitespace-nowrap text-gray-300">{children}</td>,
+                          }}
+                        >
+                          {part}
+                        </ReactMarkdown>
+                      );
+                    });
+                  })()}
                   
                   {message.isStreaming && (
                     <span className="inline-block w-2.5 h-5 bg-lira-pink align-middle ml-1 animate-pulse" />
