@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, useDragControls } from 'framer-motion';
 import { LiraCore } from '../lib/lira-avatar/liraCore';
-import { X, Maximize2, Move } from 'lucide-react';
+import { X, Maximize2, Move, Music } from 'lucide-react';
 
 interface LiraFloatingWidgetProps {
   onClose: () => void;
@@ -15,6 +15,7 @@ export const LiraFloatingWidget: React.FC<LiraFloatingWidgetProps> = ({ onClose,
   const [lira, setLira] = useState<LiraCore | null>(null);
   const liraRef = useRef<LiraCore | null>(null); // ✅ Ref para cleanup seguro
   const [size, setSize] = useState(300); 
+  const [isDancing, setIsDancing] = useState(false);
   const WIDGET_ID = 'lira-floating-widget-root';
 
   // Inicializar Lira
@@ -54,6 +55,13 @@ export const LiraFloatingWidget: React.FC<LiraFloatingWidgetProps> = ({ onClose,
         }
     };
   }, []);
+
+  // Sync Dance Mode
+  useEffect(() => {
+      if (lira) {
+          lira.setDanceMode(isDancing);
+      }
+  }, [isDancing, lira]);
 
   // Animação de fala
   useEffect(() => {
@@ -116,19 +124,39 @@ export const LiraFloatingWidget: React.FC<LiraFloatingWidgetProps> = ({ onClose,
         dragMomentum={false}
         onDragEnd={() => onInteraction('drag')}
         initial={{ x: window.innerWidth - 350, y: window.innerHeight - 400, opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
+        animate={{ 
+            opacity: 1, 
+            scale: 1,
+            rotate: isDancing ? [0, -2, 2, -2, 2, 0] : 0,
+            y: isDancing ? [0, -10, 0] : 0
+        }}
+        transition={{
+            rotate: isDancing ? { repeat: Infinity, duration: 0.5, ease: "easeInOut" } : {},
+            y: isDancing ? { repeat: Infinity, duration: 0.4, ease: "easeInOut" } : {}
+        }}
         exit={{ opacity: 0, scale: 0.8 }}
         style={{ width: size, height: size }}
         className="fixed z-50 rounded-full group"
     >
         {/* Container Circular/Recortado */}
-        <div className="relative w-full h-full overflow-hidden rounded-full border-2 border-white/5 bg-black/40 backdrop-blur-sm shadow-2xl hover:border-purple-500/30 transition-colors">
+        <div className={`
+            relative w-full h-full overflow-hidden rounded-full border-2 
+            ${isDancing ? 'border-lira-pink shadow-[0_0_30px_rgba(236,72,153,0.6)]' : 'border-white/5 bg-black/40 shadow-2xl'}
+            backdrop-blur-sm hover:border-purple-500/30 transition-all duration-500
+        `}>
             
             {/* ID do Canvas */}
             <div id={WIDGET_ID} className="w-full h-full" />
 
             {/* Controls Overlay (Hover) */}
-            <div className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex justify-end p-4">
+            <div className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex justify-end p-4 gap-2">
+                <button 
+                    onClick={() => setIsDancing(!isDancing)} 
+                    className={`hover:text-lira-pink transition-colors ${isDancing ? 'text-lira-pink animate-pulse' : 'text-white/70'}`}
+                    title="Dance Mode!"
+                >
+                    <Music size={20} />
+                </button>
                 <button onClick={onClose} className="text-white/70 hover:text-red-400">
                     <X size={20} />
                 </button>

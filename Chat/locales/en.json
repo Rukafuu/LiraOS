@@ -148,6 +148,19 @@
         "cookie_prefs": "Cookie Preferences"
       }
   },
+  "feedback_modal": {
+      "title": "Send Feedback",
+      "desc": "Found a bug or have a suggestion? We'd love to hear from you!",
+      "placeholder": "Describe your feedback here...",
+      "category": "Category",
+      "cat_bug": "Bug Report",
+      "cat_feature": "Feature Request",
+      "cat_general": "General Feedback",
+      "submit": "Submit Feedback",
+      "submitting": "Sending...",
+      "success": "Thank you! Your feedback has been sent.",
+      "error": "Failed to send feedback. Please try again."
+  },
   "dashboard": {
     "title": "LiraOS Hub",
     "edit_layout": "Edit Layout",

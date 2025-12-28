@@ -62,8 +62,24 @@ export class LiraCore {
     private timePassed: number = 0;
     private idleTimer: number = 0;
     private isZoomingIn: boolean = false;
+    public isDancing: boolean = false;
     private originalScale: number = 1;
     private originalY: number = 0;
+
+    setDanceMode(enabled: boolean) {
+        this.isDancing = enabled;
+        // Reset scale immediately if stopping
+        if (this.model) {
+            if (enabled) {
+                // @ts-ignore
+                this.model.motion('Dance', undefined, 3); // Priority 3 = Force
+            } else {
+                this.model.scale.set(this.originalScale);
+                // Force back to idle by playing nothing or low prio? 
+                // Usually letting it finish is smoother, or triggers Idle group.
+            }
+        }
+    }
 
     private tickerFn: (() => void) | null = null;
 
@@ -203,6 +219,14 @@ export class LiraCore {
                     } catch (e) {}
                 }
                 
+                // 3. Register Motion Groups manually if needed (or rely on .model3.json definitions)
+                // For now, let's try to inject the dance motion programmatically if it's not in the main json
+                // @ts-ignore
+                if (this.model.internalModel && this.model.internalModel.motionManager) {
+                   // @ts-ignore
+                   this.model.internalModel.motionManager.definitions['Dance'] = [{ file: 'motions/dance_viber.motion3.json' }];
+                }
+
                 // Define the ticker function
                 this.tickerFn = () => {
                     // 🚑 VACINA ANTI-ZUMBI
@@ -215,19 +239,29 @@ export class LiraCore {
                         this.timePassed += deltaMS / 1000;
                         this.idleTimer += deltaMS;
 
+                        const centerX = this.app.screen.width / 2;
                         const centerY = this.originalY || (this.app.screen.height / 2);
-                        this.model.y = centerY + Math.sin(this.timePassed * 2) * 5; 
 
-                        if (this.idleTimer > 10000) { 
-                            this.idleTimer = 0;
-                            if (Math.random() > 0.5) {
-                                this.isZoomingIn = !this.isZoomingIn;
+                        // If not dancing, apply simple float
+                        if (!this.isDancing) {
+                            this.model.y = centerY + Math.sin(this.timePassed * 2) * 5; 
+
+                            if (this.idleTimer > 10000) { 
+                                this.idleTimer = 0;
+                                if (Math.random() > 0.5) {
+                                    this.isZoomingIn = !this.isZoomingIn;
+                                }
                             }
-                        }
 
-                        const targetScale = this.isZoomingIn ? this.originalScale * 1.3 : this.originalScale;
-                        this.model.scale.x += (targetScale - this.model.scale.x) * 0.05;
-                        this.model.scale.y = this.model.scale.x;
+                            const targetScale = this.isZoomingIn ? this.originalScale * 1.3 : this.originalScale;
+                            this.model.scale.x += (targetScale - this.model.scale.x) * 0.05;
+                            this.model.scale.y = this.model.scale.x;
+                        } else {
+                            // In dance mode, we let the motion control parameters, 
+                            // but we can still add a visual "bounce" to the whole container y
+                            const beat = this.timePassed * 12;
+                            this.model.y = centerY + Math.abs(Math.sin(beat)) * 10;
+                        }
 
                     } catch (err) {
                         // Suppress update errors during destruction

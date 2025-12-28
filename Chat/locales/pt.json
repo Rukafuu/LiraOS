@@ -148,6 +148,19 @@
         "cookie_prefs": "Preferências de Cookies"
       }
   },
+  "feedback_modal": {
+      "title": "Enviar Feedback",
+      "desc": "Encontrou um bug ou tem uma sugestão? Queremos ouvir você!",
+      "placeholder": "Descreva seu feedback aqui...",
+      "category": "Categoria",
+      "cat_bug": "Reportar Bug",
+      "cat_feature": "Sugestão de Recurso",
+      "cat_general": "Feedback Geral",
+      "submit": "Enviar Feedback",
+      "submitting": "Enviando...",
+      "success": "Obrigado! Seu feedback foi enviado.",
+      "error": "Falha ao enviar. Tente novamente."
+  },
   "dashboard": {
     "title": "Hub LiraOS",
     "edit_layout": "Editar Layout",

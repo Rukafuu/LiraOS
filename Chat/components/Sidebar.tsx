@@ -5,6 +5,7 @@ import { ChatSession } from '../types';
 import { LIRA_AVATAR } from '../constants';
 import { getCurrentUser } from '../services/userService';
 import { useTranslation } from 'react-i18next';
+import { FeedbackModal } from './FeedbackModal';
 
 interface SidebarProps {
   sessions: ChatSession[];
@@ -47,6 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [isMobile, setIsMobile] = useState(false);
   const [currentUser, setCurrentUser] = useState(getCurrentUser());
+  const [showFeedback, setShowFeedback] = useState(false);
 
   useEffect(() => {
     const handleUserUpdate = () => setCurrentUser(getCurrentUser());
@@ -99,171 +101,177 @@ export const Sidebar: React.FC<SidebarProps> = ({
         initial={false}
         animate={isOpen ? 'open' : 'closed'}
         variants={sidebarVariants}
-        transition={{ type: 'spring', stiffness: 400, damping: 40 }}
-        className={`
-          ${isMobile ? 'fixed inset-y-0 left-0 z-50 h-full' : 'relative h-full'}
-          bg-[#0c0c0e] border-r border-white/5
-          flex flex-col overflow-hidden
-        `}
+        className={`fixed md:relative z-50 h-full bg-[#0a0a0a]/95 backdrop-blur-xl border-r border-white/5 flex flex-col overflow-hidden ${isMobile ? 'top-0 left-0 w-[280px]' : ''}`}
       >
-        <div className="w-[260px] h-full flex flex-col min-w-[260px]">
-            {/* Header / Brand */}
-            <div className="px-4 py-5 flex items-center justify-between">
-                <div className="flex items-center space-x-2.5 opacity-90 hover:opacity-100 transition-opacity cursor-pointer">
-                    <div className="w-6 h-6 rounded-md overflow-hidden bg-white/10 flex items-center justify-center border border-white/10">
-                        <img src={LIRA_AVATAR} alt="Logo" className="w-full h-full object-cover" />
-                    </div>
-                    <span className="font-semibold text-sm tracking-tight text-white">LiraOS</span>
+        {/* HEADER */}
+        <div className="p-4 border-b border-white/5 space-y-4">
+           
+           <div className="flex items-center gap-3 px-2">
+             <div className="relative w-8 h-8 rounded-lg overflow-hidden ring-1 ring-white/10 group-hover:ring-purple-500/50 transition-all">
+                <img src={LIRA_AVATAR} className="w-full h-full object-cover" alt="Lira" />
+             </div>
+             <div className="flex flex-col">
+                <span className="text-sm font-bold text-white tracking-wide">LiraOS</span>
+                <span className="text-[10px] text-purple-400 font-mono">v2.0.0-beta</span>
+             </div>
+           </div>
+
+           <button 
+             onClick={onNewChat}
+             className="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white p-2.5 rounded-xl border border-white/5 hover:border-purple-500/30 transition-all group"
+           >
+             <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300 text-purple-400" />
+             <span className="text-sm font-medium">{t('sidebar.new_chat')}</span>
+           </button>
+
+           <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-400 transition-colors" size={14} />
+              <input 
+                type="text" 
+                placeholder={t('common.search')}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-black/40 border border-white/5 rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-colors"
+              />
+           </div>
+        </div>
+
+        {/* NAVIGATION LINKS */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 space-y-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+            
+            <div className="space-y-1">
+                <div className="px-3 text-[10px] font-bold text-gray-500 tracking-wider mb-2">{t('sidebar.my_items')}</div>
+                
+                <button onClick={onOpenDashboard} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
+                    <LayoutGrid size={16} className="text-blue-400 group-hover:scale-110 transition-transform" />
+                    <span className="text-sm">{t('sidebar.dashboard')}</span>
+                </button>
+                
+                <button onClick={onOpenIris} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
+                    <Video size={16} className="text-red-400 group-hover:scale-110 transition-transform" />
+                    <span className="text-sm">{t('sidebar.iris')}</span>
+                </button>
+
+                <button onClick={onOpenStore} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
+                    <ShoppingBag size={16} className="text-yellow-400 group-hover:scale-110 transition-transform" />
+                    <span className="text-sm">{t('sidebar.store')}</span>
+                </button>
+                
+                <button onClick={onOpenGamer} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
+                     <Gamepad2 size={16} className="text-purple-500 group-hover:scale-110 transition-transform" />
+                     <span className="text-sm">{t('sidebar.game')}</span>
+                </button>
+
+                 <button onClick={onOpenDiscord} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
+                     <div className="w-4 h-4 flex items-center justify-center">
+                        <svg viewBox="0 0 127.14 96.36" className="w-full h-full fill-indigo-400 group-hover:scale-110 transition-transform">
+                            <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.11,77.11,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.89,105.89,0,0,0,126.6,80.22c.12-9.23-1.69-19-4.89-29.08l-.84-2.73C117.22,34.81,107.7,8.07,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/>
+                        </svg>
+                     </div>
+                     <span className="text-sm">{t('sidebar.discord_hub')}</span>
+                </button>
+            </div>
+
+
+            <div className="space-y-1">
+                <div className="px-3 text-[10px] font-bold text-gray-500 tracking-wider mb-2 flex justify-between items-center">
+                  <span>{t('sidebar.conversations')}</span>
+                  <span className="text-[9px] bg-white/10 px-1.5 py-0.5 rounded text-gray-400">{filteredSessions.length}</span>
                 </div>
                 
-                <div className="flex items-center gap-1">
+                {filteredSessions.map((session) => (
+                  <div 
+                    key={session.id}
+                    className={`group relative flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all ${
+                        currentSessionId === session.id 
+                        ? 'bg-purple-500/10 text-white border border-purple-500/20' 
+                        : 'text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-transparent'
+                    }`}
+                    onClick={() => onSelectSession(session.id)}
+                  >
+                    <MessageSquare size={14} className={currentSessionId === session.id ? 'text-purple-400' : 'text-gray-500'} />
+                    <div className="flex-1 overflow-hidden">
+                       <p className="text-sm truncate pr-6">{session.title || 'Untitled Chat'}</p>
+                    </div>
+
                     <button 
-                        onClick={() => {
-                            onNewChat();
-                            if(isMobile) onCloseMobile();
+                        className="absolute right-2 opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded text-gray-500 hover:text-red-400 transition-all"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteSession(session.id);
                         }}
-                        className="p-1.5 rounded-lg text-lira-dim hover:text-white hover:bg-white/10 transition-colors"
-                        title={t('sidebar.new_chat')}
                     >
-                        <Plus size={18} />
+                        <Trash2 size={12} />
                     </button>
-                    {isMobile && (
-                        <button onClick={onCloseMobile} className="p-1.5 text-lira-dim hover:text-white">
-                            <X size={18} />
-                        </button>
-                    )}
+                  </div>
+                ))}
+            </div>
+
+        </div>
+
+        {/* --- SETTINGS & FOOTER --- */}
+        <div className="mt-auto border-t border-white/5 p-4 space-y-2 bg-[#080808]">
+            {/* User Profile Mini */}
+            {currentUser && (
+               <div className="flex items-center gap-3 p-2 rounded-xl bg-white/5 border border-white/5 mb-2">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-xs font-bold text-white">
+                      {currentUser.username.substring(0, 2).toUpperCase()}
+                  </div>
+                  {!isMobile && (
+                      <div className="flex flex-col overflow-hidden">
+                          <span className="text-xs font-bold text-white truncate">{currentUser.username}</span>
+                          <span className="text-[10px] text-gray-400 truncate">{currentUser.email}</span>
+                      </div>
+                  )}
+               </div>
+            )}
+
+             <button onClick={onOpenSettings} className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                    <Settings size={16} className="text-blue-400 group-hover:rotate-45 transition-transform duration-500" />
                 </div>
-            </div>
-
-            {/* Meus Itens */}
-            <div className="px-6 py-2">
-                <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wider">{t('sidebar.my_items')}</span>
-            </div>
-            <div className="px-3 mb-2 space-y-0.5">
-                <button 
-                    onClick={onOpenDashboard}
-                    className="w-full text-left flex items-center space-x-2 px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all"
-                >
-                    <LayoutGrid size={14} />
-                    <span>{t('sidebar.dashboard')}</span>
-                </button>
-                <button 
-                    onClick={onOpenStore}
-                    className="w-full text-left flex items-center space-x-2 px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all"
-                >
-                    <ShoppingBag size={14} />
-                    <span>{t('sidebar.store')}</span>
-                </button>
-                <button 
-                    onClick={onOpenIris}
-                    className="w-full text-left flex items-center space-x-2 px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all group"
-                >
-                    <Video size={14} className="text-purple-400" />
-                    <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent group-hover:text-white transition-colors">{t('sidebar.iris')}</span>
-                </button>
-                <button 
-                    onClick={onOpenDiscord}
-                    className="w-full text-left flex items-center space-x-2 px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all group"
-                >
-                    <MessageSquare size={14} className="text-[#5865F2]" />
-                    <span className="group-hover:text-[#5865F2] transition-colors">{t('sidebar.discord_hub')}</span>
-                </button>
-                <div className="relative group pt-2 pb-1">
-                    <Search size={12} className="absolute left-3 top-1/2 -translate-y-[2px] text-gray-500 pointer-events-none" />
-                    <input
-                        type="text"
-                        placeholder={t('common.search')}
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-white/5 border border-transparent focus:border-white/10 focus:bg-white/10 rounded-lg pl-8 pr-3 py-1.5 text-[11px] text-white placeholder-gray-600 outline-none transition-all"
-                    />
+                {!isMobile && <span className="text-[13px] font-medium">{t('sidebar.settings')}</span>}
+            </button>
+            
+            <button onClick={onOpenShortcuts} className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
+                 <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                    <Keyboard size={16} className="text-gray-400" />
                 </div>
-            </div>
+                {!isMobile && <span className="text-[13px] font-medium">{t('sidebar.shortcuts_title').split('(')[0]}</span>}
+            </button>
 
-            {/* Conversas */}
-            <div className="px-6 py-2">
-                <span className="text-[10px] font-medium text-gray-600 uppercase tracking-wider">{t('sidebar.conversations')}</span>
-            </div>
-
-            {/* Chat List */}
-            <div className="flex-1 overflow-y-auto px-3 space-y-0.5 scrollbar-thin">
-                {filteredSessions.length === 0 ? (
-                    <div className="text-center py-8 text-gray-600 text-xs">
-                        No conversations yet
+            {/* ✅ Feedback Button Integration */}
+            <button 
+                onClick={() => setShowFeedback(true)}
+                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors"
+                title={t('feedback_modal.title')}
+             >
+                <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
+                    <MessageSquare size={16} className="text-green-400" />
+                </div>
+                {!isMobile && (
+                    <div className="flex flex-col items-start overflow-hidden">
+                        <span className="text-[13px] font-medium">{t('feedback_modal.title')}</span>
                     </div>
-                ) : (
-                    filteredSessions.map((session) => (
-                    <div key={session.id} className="group relative">
-                        <button
-                        onClick={() => {
-                            onSelectSession(session.id);
-                            if (isMobile) onCloseMobile();
-                        }}
-                        className={`
-                            w-full text-left flex items-center space-x-2 px-3 py-2 rounded-lg text-[12px] transition-all duration-200
-                            ${currentSessionId === session.id 
-                            ? 'bg-white/10 text-white' 
-                            : 'text-gray-400 hover:text-gray-200 hover:bg-white/5'}
-                        `}
-                        >
-                            <span className="truncate flex-1 pr-6">{session.title || 'Untitled'}</span>
-                        </button>
-                        
-                        {/* Hover Actions */}
-                        <div className={`absolute right-2 top-1/2 -translate-y-1/2 flex items-center ${currentSessionId === session.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
-                             <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onDeleteSession(session.id);
-                                }}
-                                className="p-1 rounded-md text-gray-500 hover:text-red-400 hover:bg-white/5 transition-colors"
-                            >
-                                <Trash2 size={12} />
-                            </button>
-                        </div>
-                    </div>
-                    ))
                 )}
-            </div>
+            </button>
 
-            {/* Footer */}
-            <div className="p-3 border-t border-white/5 flex gap-1">
-                <button 
-                    onClick={onOpenSettings}
-                    className="flex-1 flex items-center space-x-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-all group min-w-0"
-                >
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center border border-white/10 text-xs text-white overflow-hidden flex-shrink-0">
-                       {currentUser?.avatar ? (
-                         <img 
-                           src={currentUser.avatar} 
-                           alt="Avatar" 
-                           className="w-full h-full object-cover"
-                         />
-                       ) : (
-                         <span className="text-sm font-bold">
-                           {currentUser?.username?.charAt(0).toUpperCase() || 'U'}
-                         </span>
-                       )}
-                    </div>
-                    <div className="flex-1 text-left min-w-0 truncate">
-                        <div className="text-xs font-medium truncate">
-                          {currentUser?.username || 'User'}
-                        </div>
-                        <div className="text-[10px] text-lira-dim">{t('sidebar.pro_plan')}</div>
-                    </div>
-                    <Settings size={16} />
-                </button>
-                
-                <button 
-                    onClick={onOpenSupporters}
-                    className="p-2 rounded-lg text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10 transition-colors flex items-center justify-center w-10"
-                    title="Hall of Fame"
-                >
-                    <Crown size={18} />
-                </button>
-            </div>
+            <button onClick={onOpenLegal} className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
+                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center">
+                    <Shield size={16} className="text-gray-400" />
+                </div>
+                {!isMobile && <span className="text-[13px] font-medium">{t('sidebar.legal')}</span>}
+            </button>
+
         </div>
       </motion.aside>
+
+      {/* ✅ Feedback Modal Rendering */}
+      <FeedbackModal 
+        isOpen={showFeedback} 
+        onClose={() => setShowFeedback(false)} 
+        userId={currentUser?.id}
+      />
     </>
   );
 };
