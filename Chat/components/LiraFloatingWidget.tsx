@@ -61,6 +61,23 @@ export const LiraFloatingWidget: React.FC<LiraFloatingWidgetProps> = ({ onClose,
     return () => cancelAnimationFrame(animId);
   }, [lira, isSpeaking]);
 
+  // Sincronizar tamanho do modelo com o widget
+  useEffect(() => {
+    if (!lira || !lira.model) return;
+    
+    // 1. Deixa o LiraCore ajustar o tamanho do canvas e centralizar
+    lira.handleResize();
+
+    // 2. Sobrescreve a escala para garantir que ela preencha bem o circulo
+    // Aumentei o fator para dar um zoom legal
+    const forcedScale = size * 0.0008; 
+    lira.model.scale.set(forcedScale);
+    
+    // Re-centralizar caso a escala mude o ponto de ancoragem visual
+    // (O handleResize já seta x/y no meio, e ancora no 0.5, então só mudar scale é seguro)
+    
+  }, [size, lira]);
+
   // Resize Handler
   const handleResize = (e: React.MouseEvent) => {
     e.stopPropagation();

@@ -260,7 +260,10 @@ export class LiraCore {
     /**
      * Resizes and centers the model on the screen.
      */
-    private handleResize() {
+    /**
+     * Resizes and centers the model on the screen.
+     */
+    public handleResize() {
         if (!this.model || !this.app || !this.app.screen) return;
 
         // Reset scale to 1 to get accurate base dimensions for calculation
