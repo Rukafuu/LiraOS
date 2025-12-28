@@ -235,14 +235,19 @@ class LiraVoice {
         try {
           let textToSend = cleanText;
           
-          // ✂️ XTTS SAFETY CUT: Limit to ~1000 chars to avoid "400 tokens" error and crash
-          if (requestedVoice === 'xtts-local' && textToSend.length > 950) {
-              const safeCut = textToSend.lastIndexOf('.', 950);
-              if (safeCut > 100) {
+          // ✂️ XTTS SAFETY CUT: Limit to ~600 chars to avoid "400 tokens" error and crash
+          if (requestedVoice === 'xtts-local' && textToSend.length > 500) {
+              const safeCut = textToSend.lastIndexOf('.', 500);
+              if (safeCut > 50) {
                   textToSend = textToSend.substring(0, safeCut + 1);
               } else {
-                  // If no good punctuation, just hard cut
-                  textToSend = textToSend.substring(0, 950) + "...";
+                  // If no good punctuation, look for other delimiters or hard cut
+                  const spaceCut = textToSend.lastIndexOf(' ', 500);
+                   if (spaceCut > 50) {
+                      textToSend = textToSend.substring(0, spaceCut) + "...";
+                   } else {
+                      textToSend = textToSend.substring(0, 500) + "...";
+                   }
               }
               console.log(`[LiraVoice] ✂️ Truncated huge text for XTTS Safety (${cleanText.length} -> ${textToSend.length} chars)`);
           }
