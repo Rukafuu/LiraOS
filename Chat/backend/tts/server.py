@@ -18,8 +18,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Configuração do Modelo
-MODEL_NAME = "tts_models/multilingual/multi-dataset/xtts_v2"
+@app.middleware("http")
+async def add_pna_header(request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Private-Network"] = "true"
+    return response
+
 # Configuração do Modelo
 MODEL_NAME = "tts_models/multilingual/multi-dataset/xtts_v2"
 device = "cuda" if torch.cuda.is_available() else "cpu"
