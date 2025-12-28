@@ -142,9 +142,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 <div className="markdown-content w-full">
                   {(() => {
                     const displayContent = (message.status === 'streaming' && message.partial) ? message.partial : message.content;
-                    const parts = displayContent.split(/(\[\[WIDGET:[^|]+\|.+?\]\])/g);
+                    const parts = displayContent.split(/(\[\[WIDGET:[^|]+\|[\s\S]+?\]\])/g);
                     return parts.map((part, idx) => {
-                      const match = part.match(/^\[\[WIDGET:([^|]+)\|(.+?)\]\]$/);
+                      const match = part.match(/^\[\[WIDGET:([^|]+)\|([\s\S]+?)\]\]$/);
                       if (match) {
                         return <ChatWidgetRenderer key={idx} type={match[1]} data={match[2]} />;
                       }
