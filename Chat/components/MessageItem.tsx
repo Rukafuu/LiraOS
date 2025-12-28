@@ -121,7 +121,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 </div>
               </div>
             ) : (
-            {message.status === 'thinking' ? (
+            message.status === 'thinking' ? (
                <div className="flex flex-col gap-2 py-2 px-4 bg-white/5 rounded-2xl rounded-tl-none animate-pulse min-w-[200px]">
                   <div className="h-3 bg-white/10 rounded w-3/4"></div>
                   <div className="h-3 bg-white/10 rounded w-1/2"></div>
@@ -215,7 +215,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                   )}
                 </div>
               </div>
-            )}
+            )
 
             {!isEditing && !message.isStreaming && (
               <div className={`
