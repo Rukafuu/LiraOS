@@ -13,12 +13,14 @@ interface LiraFloatingWidgetProps {
 export const LiraFloatingWidget: React.FC<LiraFloatingWidgetProps> = ({ onClose, onInteraction, isSpeaking }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [lira, setLira] = useState<LiraCore | null>(null);
-  const [size, setSize] = useState(300); // Tamanho inicial
+  const liraRef = useRef<LiraCore | null>(null); // ✅ Ref para cleanup seguro
+  const [size, setSize] = useState(300); 
   const WIDGET_ID = 'lira-floating-widget-root';
 
   // Inicializar Lira
   useEffect(() => {
-    if (lira) return;
+    // Se já tiver ref, aborta (React 18 Strict Mode double-mount safety)
+    if (liraRef.current) return;
 
     const init = async () => {
         // Pequeno delay para o DOM montar
@@ -26,23 +28,31 @@ export const LiraFloatingWidget: React.FC<LiraFloatingWidgetProps> = ({ onClose,
         
         try {
             const core = new LiraCore(WIDGET_ID);
+            liraRef.current = core; // Guarda na ref imediatamente
+
             await core.initLive2D();
             await core.loadModel('/assets/model/lira/youling.model3.json');
             
-            // Ajustar posição inicial do modelo dentro do canvas
             if (core.model) {
                 core.model.y = 0; 
-                core.model.scale.set(0.15); // Escala relativa ao canvas
+                core.model.scale.set(0.15);
             }
             
-            setLira(core);
+            setLira(core); // Atualiza estado para renderizações
         } catch (err) {
             console.error('Failed to init floating widget:', err);
         }
     };
     init();
 
-    return () => lira?.destroy();
+    // Cleanup: Destroi a instância correta
+    return () => {
+        if (liraRef.current) {
+            console.log('[Widget] Destroying Lira instance...');
+            liraRef.current.destroy();
+            liraRef.current = null;
+        }
+    };
   }, []);
 
   // Animação de fala
