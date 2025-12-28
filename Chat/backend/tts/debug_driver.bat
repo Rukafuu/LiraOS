@@ -1,27 +1,45 @@
 @echo off
 title Debug Voz LiraOS
+color 0A
+echo.
 echo ===========================================
-echo   DIAGNOSTICO DE VOZ (LIRA OS)
+echo   DIAGNOSTICO DE VOZ v2 (LIRA OS)
 echo ===========================================
 echo.
-echo Tentando iniciar o servidor XTTS manualmente...
-echo Se houver erro, ele aparecera abaixo.
-echo.
-
+echo Diretorio de trabalho: %~dp0
 cd /d "%~dp0"
 
-if not exist venv (
-    echo [ERRO] Pasta 'venv' nao encontrada!
-    echo Voce precisa instalar as dependencias primeiro (start_lira.bat ou install.bat).
-    pause
-    exit
+echo [1/3] Verificando ambiente Python...
+if exist venv (
+    echo     - Usando 'venv'
+    call venv\Scripts\activate
+) else if exist .venv (
+    echo     - Usando '.venv'
+    call .venv\Scripts\activate
+) else (
+    echo     [!] Nenhum 'venv' encontrado. Tentando usar Python global...
 )
 
-call venv\Scripts\activate
-python server.py
+echo.
+echo [2/3] Versao do Python:
+python --version
+if %errorlevel% neq 0 (
+    echo [ERRO CRITICO] Python nao encontrado no PATH ou no venv!
+    echo Instale o Python 3.10+ e marque "Add to PATH".
+    goto :end
+)
 
 echo.
-echo ===========================================
-echo O SERVIDOR PAROU. LEIA O ERRO ACIMA.
-echo ===========================================
+echo [3/3] Iniciando Servidor XTTS...
+echo -------------------------------------------
+python server.py
+echo -------------------------------------------
+
+echo.
+echo O servidor encerrou.
+
+:end
+echo.
+echo Pressione qualquer tecla para sair...
 pause
+cmd /k
