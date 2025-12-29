@@ -340,7 +340,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                        </div>
 
                        {/* Options */}
-                       <div className="border-t border-white/5 pt-2 mb-2">
+                       <div className="border-t border-white/5 pt-2">
                           <div className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer" onClick={onToggleDeepMode}>
                              <div className="flex items-center gap-2 text-sm text-gray-300">
                                 <Zap size={14} className={isDeepMode ? 'text-lira-blue' : 'text-gray-500'} />
@@ -350,51 +350,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                                 <div className={`w-3 h-3 rounded-full bg-white transition-transform ${isDeepMode ? 'translate-x-4' : ''}`} />
                              </div>
                           </div>
-                          
-                          {/* Auto-Send Voice Toggle */}
-                          <div className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer" onClick={toggleAutoSend}>
-                             <div className="flex items-center gap-2 text-sm text-gray-300">
-                                <Mic size={14} className={autoSendVoice ? 'text-lira-pink' : 'text-gray-500'} />
-                                <span>{t('chat_input.voice_mode')}</span>
-                             </div>
-                             <div className={`w-8 h-4 rounded-full p-0.5 transition-colors ${autoSendVoice ? 'bg-lira-pink' : 'bg-white/10'}`}>
-                                <div className={`w-3 h-3 rounded-full bg-white transition-transform ${autoSendVoice ? 'translate-x-4' : ''}`} />
-                             </div>
-                          </div>
-                       </div>
-
-                       {/* Voice Settings */}
-                       <div className="border-t border-white/5 pt-2">
-                          <div className="text-[10px] uppercase text-gray-500 font-bold px-1 mb-1">{t('chat_input.voice_output')}</div>
-                          <div className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer" onClick={onToggleVoice}>
-                             <div className="flex items-center gap-2 text-sm text-gray-300">
-                                {voiceEnabled ? <Volume2 size={14} className="text-lira-pink" /> : <VolumeX size={14} className="text-gray-500" />}
-                                <span>{t('chat_input.read_aloud')}</span>
-                             </div>
-                             <div className={`w-8 h-4 rounded-full p-0.5 transition-colors ${voiceEnabled ? 'bg-lira-pink' : 'bg-white/10'}`}>
-                                <div className={`w-3 h-3 rounded-full bg-white transition-transform ${voiceEnabled ? 'translate-x-4' : ''}`} />
-                             </div>
-                          </div>
-                          
-                          {/* Premium Voice Selector */}
-                          {voiceEnabled && selectedModel === 'xiaomi' && (
-                             <div className="mt-2 pl-2 border-l-2 border-white/5 ml-2">
-                               {PREMIUM_VOICES.map(v => (
-                                 <button
-                                   key={v.id}
-                                   onClick={() => {
-                                     setSelectedVoiceId(v.id);
-                                     localStorage.setItem('lira_premium_voice_id', v.id);
-                                     addToast(`Voice: ${v.name}`, 'info');
-                                   }}
-                                   className={`w-full text-left px-2 py-1.5 rounded text-xs flex items-center gap-2 ${selectedVoiceId === v.id ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
-                                 >
-                                   <div className={`w-1.5 h-1.5 rounded-full ${selectedVoiceId === v.id ? 'bg-lira-pink' : 'bg-gray-600'}`} />
-                                   <span>{v.name}</span>
-                                 </button>
-                               ))}
-                             </div>
-                          )}
                        </div>
 
                     </div>
