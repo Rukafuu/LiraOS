@@ -238,42 +238,35 @@ export const DiscordModal: React.FC<DiscordModalProps> = ({ isOpen, onClose }) =
                      </div>
 
                      {/* Buttons */}
-                     {config?.inviteUrl ? (
-                         <div className="space-y-3">
-                            <a 
-                                href={config.inviteUrl} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="block w-full"
-                             >
-                                <button className="w-full py-3 px-4 bg-[#5865F2] hover:bg-[#4752C4] text-white font-semibold rounded-xl transition-all shadow-[0_4px_14px_0_rgba(88,101,242,0.39)] hover:shadow-[0_6px_20px_rgba(88,101,242,0.23)] flex items-center justify-center gap-2">
-                                    <Bot size={20} />
-                                    {t('discord.invite')} (Adicionar Bot)
-                                </button>
-                             </a>
+                     <div className="space-y-3">
+                        <a 
+                            href="https://discord.com/oauth2/authorize?client_id=1441163941224124636" 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="block w-full"
+                         >
+                            <button className="w-full py-3 px-4 bg-[#5865F2] hover:bg-[#4752C4] text-white font-semibold rounded-xl transition-all shadow-[0_4px_14px_0_rgba(88,101,242,0.39)] hover:shadow-[0_6px_20px_rgba(88,101,242,0.23)] flex items-center justify-center gap-2">
+                                <Bot size={20} />
+                                {t('discord.invite')} (Adicionar Bot)
+                            </button>
+                         </a>
 
-                             {/* Link Account Button */}
-                             {!isLinked ? (
-                                <button 
-                                    onClick={handleLinkAccount}
-                                    className="w-full py-3 px-4 bg-[#2B2D31] hover:bg-[#35373C] text-white font-medium rounded-xl transition-all border border-white/10 flex items-center justify-center gap-2"
-                                >
-                                    <Link size={18} className="text-gray-400" />
-                                    Vincular Minha Conta Discord
-                                </button> 
-                             ) : (
-                                <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/20 text-center">
-                                    <div className="text-sm text-green-400 font-bold mb-1">Conta Vinculada! ✅</div>
-                                    <div className="text-xs text-gray-400">Você já pode usar os recursos premium no chat do bot.</div>
-                                </div>
-                             )}
-                         </div>
-                     ) : (
-                         <button disabled className="w-full py-3 px-4 bg-white/5 text-gray-500 font-semibold rounded-xl flex items-center justify-center gap-2 cursor-not-allowed border border-white/5" title="Bot not configured yet">
-                             <Bot size={20} />
-                             {t('discord.invite_missing')}
-                         </button>
-                     )}
+                         {/* Link Account Button */}
+                         {!isLinked ? (
+                            <button 
+                                onClick={handleLinkAccount}
+                                className="w-full py-3 px-4 bg-[#2B2D31] hover:bg-[#35373C] text-white font-medium rounded-xl transition-all border border-white/10 flex items-center justify-center gap-2"
+                            >
+                                <Link size={18} className="text-gray-400" />
+                                Vincular Minha Conta Discord
+                            </button> 
+                         ) : (
+                            <div className="p-3 rounded-xl bg-green-500/10 border border-green-500/20 text-center">
+                                <div className="text-sm text-green-400 font-bold mb-1">Conta Vinculada! ✅</div>
+                                <div className="text-xs text-gray-400">Você já pode usar os recursos premium no chat do bot.</div>
+                            </div>
+                         )}
+                     </div>
 
                      {config?.applicationId ? (
                          <a 
