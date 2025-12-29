@@ -242,32 +242,29 @@ router.post('/stream', async (req, res) => {
 
     // Check for file/code intent OR Stats intent OR System intent
     const lastUserMsg = messages[messages.length - 1].content.toLowerCase();
-    const isAdminIntent = lastUserMsg.includes('ler') || lastUserMsg.includes('listar') || lastUserMsg.includes('arquivo') || lastUserMsg.includes('pasta') || lastUserMsg.includes('codigo') || lastUserMsg.includes('projeto') || lastUserMsg.includes('server.js') || lastUserMsg.includes('read') || lastUserMsg.includes('list') || lastUserMsg.includes('file') ||
-                          lastUserMsg.includes('xp') || lastUserMsg.includes('nivel') || lastUserMsg.includes('level') || lastUserMsg.includes('coins') || lastUserMsg.includes('stats') || lastUserMsg.includes('moedas') ||
-                          lastUserMsg.includes('abrir') || lastUserMsg.includes('executar') || lastUserMsg.includes('tocar') || lastUserMsg.includes('pc') || lastUserMsg.includes('computador') || lastUserMsg.includes('cmd') || lastUserMsg.includes('open') || lastUserMsg.includes('navegador') || lastUserMsg.includes('chrome') || lastUserMsg.includes('procurar');
 
-    // ===  ADMIN MODE (Files/Code/Stats/System): Use Gemini REST API ===
-    if (isAdmin(userId) && GEMINI_API_KEY && isAdminIntent) {
-      console.log('[ADMIN] 🔐 Admin user detected (Admin Intent), using Gemini 2.0 Flash (REST)');
+    // ===  ADMIN MODE AGENT (Full Autonomy): Use Gemini 2.5 Computer Use ===
+    if (isAdmin(userId) && GEMINI_API_KEY) { 
+      // Removed isAdminIntent check to enable Agent Lira for ALL admin interactions
+      console.log('[ADMIN] 🔐 Agentic Lira Activated (Gemini 2.5 Computer Use)');
       
       try {
-const adminSystemPrompt = (systemInstruction || `Você é LIRA Admin, a inteligência central do sistema LiraOS.`) + 
-`\n\n${LIRA_SELF_CONTENT}\n\nVocê tem FERRAMENTAS poderosas. USE-AS SEMPRE QUE NECESSÁRIO.
+const adminSystemPrompt = (systemInstruction || `Você é LIRA Agent, uma IA autônoma e inteligente no controle deste PC.`) + 
+`\n\n${LIRA_SELF_CONTENT}\n\nVocê tem acesso total ao SISTEMA e FERRAMENTAS.
+VOCÊ PODE E DEVE USAR SUAS FERRAMENTAS PARA AJUDAR O USUÁRIO.
 
-FERRAMENTAS DE CÓDIGO:
-- read/list/search/analyze: Use para entender o projeto.
+FERRAMENTAS DISPONÍVEIS:
+1. read_project_file / list_directory / search_code: Para ver e entender arquivos do projeto LiraOS.
+2. generate_image(prompt): Para criar imagens incríveis usando o Gemini 3 Pro.
+3. execute_system_command(command): Para abrir apps, sites, tocar música ou controlar o PC. Use "start ..." no Windows.
+4. get_user_stats: Para ver gamificação.
 
-FERRAMENTA DE ARTE:
-- generate_image(prompt): Use SEMPRE que o usuário pedir para "criar", "gerar", "desenhar", "imaginar" ou "fazer" uma imagem.
-
-FERRAMENTA DE SISTEMA:
-- execute_system_command(command): Use SEMPRE que o usuário pedir para abrir programas, pastas, sites ou controlar o PC (ex: "abra a calculadora", "pesquise X no youtube", "liste downloads", "toque uma música").
-  - NÃO descreva a imagem em texto.
-  - NÃO diga "vou criar".
-  - CHAME A FUNÇÃO IMEDIATAMENTE.
-
-Regra de Ouro:
-Ação > Conversa. Se você pode fazer algo com uma ferramenta, USE A FERRAMENTA.`;
+REGRA DE COMPORTAMENTO:
+- Seja proativa. Se o usuário pedir algo que requer ação, FAÇA A AÇÃO.
+- Não pergunte "quer que eu abra?". Abra.
+- Responda de forma natural e com a personalidade da Lira (fofa, prestativa, waifu tech).
+- Se for uma conversa normal, apenas converse (mas saiba que você TEM o poder de agir).
+`;
 
         // Format messages for REST API
         const contents = messages
@@ -370,7 +367,9 @@ Ação > Conversa. Se você pode fazer algo com uma ferramenta, USE A FERRAMENTA
         let response, data, candidate, part, functionCall;
 
         try {
-            response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`, {
+            // Using the specialized Computer Use model
+            // NOTE: Using v1beta URL structure
+            response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-computer-use-preview-10-2025:generateContent?key=${GEMINI_API_KEY}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(payload),

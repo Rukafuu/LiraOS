@@ -251,7 +251,9 @@ export async function consumeRecoverCode(email, code) {
 }
 
 const ADMIN_USER_ID = 'usr_1766449245238_96a75426fe68';
-export const ADMIN_EMAILS = ['lucas.frischeisen@gmail.com', 'amarinthlira@gmail.com'];
+// Load admins from ENV + Hardcoded defaults
+const envAdmins = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim()) : [];
+export const ADMIN_EMAILS = [...envAdmins, 'lucas.frischeisen@gmail.com', 'amarinthlira@gmail.com'];
 
 export async function isAdmin(userId) {
   if (userId === ADMIN_USER_ID) return true;
