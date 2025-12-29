@@ -83,11 +83,14 @@ router.get('/:id', requireAuth, async (req, res) => {
     const { id } = req.params;
     
     try {
-        const job = await jobStore.get(id);
+        const job = await jobStore.get(req.params.id);
+        if (!job) return res.status(404).json({ error: 'Job not found' });
 
-        if (!job) {
-            return res.status(404).json({ error: 'Job not found' });
-        }
+        // Force No-Cache Headers to fix stuck UI on Vercel (Rate Limited)
+        res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+        res.set('Pragma', 'no-cache');
+        res.set('Expires', '0');
+        res.set('Surrogate-Control', 'no-store');
     
         // Debug Log
         if (job.status !== 'completed' && job.status !== 'failed') {
