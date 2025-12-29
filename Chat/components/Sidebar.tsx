@@ -53,6 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [showFeedback, setShowFeedback] = useState(false);
   /* Footer Auto-Expand Logic */
   const [isFooterExpanded, setIsFooterExpanded] = useState(false);
+  const [isItemsExpanded, setIsItemsExpanded] = useState(false);
   const footerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleFooterEnter = () => {
@@ -65,6 +66,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       setIsFooterExpanded(false);
     }, 2000);
   };
+
+  const handleItemsEnter = () => setIsItemsExpanded(true);
+  const handleItemsLeave = () => setIsItemsExpanded(false);
 
   useEffect(() => {
     const handleUserUpdate = () => setCurrentUser(getCurrentUser());
@@ -155,42 +159,93 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* NAVIGATION LINKS */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 space-y-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
             
-            <div className="space-y-1">
-                <div className="px-3 text-[10px] font-bold text-gray-500 tracking-wider mb-2">{t('sidebar.my_items')}</div>
-                
-                <button onClick={onOpenDashboard} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
-                    <LayoutGrid size={16} className="text-blue-400 group-hover:scale-110 transition-transform" />
-                    <span className="text-sm">{t('sidebar.dashboard')}</span>
-                </button>
-                
-                <button onClick={onOpenIris} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
-                    <Video size={16} className="text-red-400 group-hover:scale-110 transition-transform" />
-                    <span className="text-sm">{t('sidebar.iris')}</span>
-                </button>
+            <div 
+              className="border-y border-white/5 bg-[#080808]/50 transition-all duration-300 ease-in-out"
+              onMouseEnter={handleItemsEnter}
+              onMouseLeave={handleItemsLeave}
+            >
+                <div className="p-3">
+                    <AnimatePresence mode="wait">
+                        {isItemsExpanded ? (
+                            // EXPANDED VIEW
+                            <motion.div 
+                                key="expanded"
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                                className="space-y-1"
+                            >
+                                <div className="px-3 text-[10px] font-bold text-gray-500 tracking-wider mb-2">{t('sidebar.my_items')}</div>
+                                
+                                <button onClick={onOpenDashboard} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
+                                    <LayoutGrid size={16} className="text-blue-400 group-hover:scale-110 transition-transform" />
+                                    <span className="text-sm">{t('sidebar.dashboard')}</span>
+                                </button>
+                                
+                                <button onClick={onOpenIris} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
+                                    <Video size={16} className="text-red-400 group-hover:scale-110 transition-transform" />
+                                    <span className="text-sm">{t('sidebar.iris')}</span>
+                                </button>
 
-                <button onClick={onOpenStore} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
-                    <ShoppingBag size={16} className="text-yellow-400 group-hover:scale-110 transition-transform" />
-                    <span className="text-sm">{t('sidebar.store')}</span>
-                </button>
-                
-                <button onClick={onOpenGamer} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
-                     <Gamepad2 size={16} className="text-purple-500 group-hover:scale-110 transition-transform" />
-                     <span className="text-sm">{t('sidebar.game')}</span>
-                </button>
+                                <button onClick={onOpenStore} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
+                                    <ShoppingBag size={16} className="text-yellow-400 group-hover:scale-110 transition-transform" />
+                                    <span className="text-sm">{t('sidebar.store')}</span>
+                                </button>
+                                
+                                <button onClick={onOpenGamer} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
+                                     <Gamepad2 size={16} className="text-purple-500 group-hover:scale-110 transition-transform" />
+                                     <span className="text-sm">{t('sidebar.game')}</span>
+                                </button>
 
-                <button onClick={onOpenDailyQuests} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
-                     <Gift size={16} className="text-pink-400 group-hover:scale-110 transition-transform" />
-                     <span className="text-sm">Missões Diárias</span>
-                </button>
+                                <button onClick={onOpenDailyQuests} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
+                                     <Gift size={16} className="text-pink-400 group-hover:scale-110 transition-transform" />
+                                     <span className="text-sm">Missões Diárias</span>
+                                </button>
 
-                 <button onClick={onOpenDiscord} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
-                     <div className="w-4 h-4 flex items-center justify-center">
-                        <svg viewBox="0 0 127.14 96.36" className="w-full h-full fill-indigo-400 group-hover:scale-110 transition-transform">
-                            <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.11,77.11,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.89,105.89,0,0,0,126.6,80.22c.12-9.23-1.69-19-4.89-29.08l-.84-2.73C117.22,34.81,107.7,8.07,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/>
-                        </svg>
-                     </div>
-                     <span className="text-sm">{t('sidebar.discord_hub')}</span>
-                </button>
+                                 <button onClick={onOpenDiscord} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
+                                     <div className="w-4 h-4 flex items-center justify-center">
+                                        <svg viewBox="0 0 127.14 96.36" className="w-full h-full fill-indigo-400 group-hover:scale-110 transition-transform">
+                                            <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.11,77.11,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.89,105.89,0,0,0,126.6,80.22c.12-9.23-1.69-19-4.89-29.08l-.84-2.73C117.22,34.81,107.7,8.07,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/>
+                                        </svg>
+                                     </div>
+                                     <span className="text-sm">{t('sidebar.discord_hub')}</span>
+                                </button>
+                            </motion.div>
+                        ) : (
+                            // COLLAPSED VIEW (Icons Only)
+                            <motion.div 
+                               key="collapsed"
+                               initial={{ opacity: 0 }}
+                               animate={{ opacity: 1 }}
+                               exit={{ opacity: 0 }}
+                               onClick={() => setIsItemsExpanded(true)}
+                               className="flex items-center justify-around cursor-pointer py-2"
+                            >
+                                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center hover:bg-blue-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenDashboard(); }}>
+                                    <LayoutGrid size={16} className="text-blue-400" />
+                                </div>
+                                <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center hover:bg-red-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenIris(); }}>
+                                    <Video size={16} className="text-red-400" />
+                                </div>
+                                <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center hover:bg-yellow-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenStore(); }}>
+                                    <ShoppingBag size={16} className="text-yellow-400" />
+                                </div>
+                                <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center hover:bg-purple-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenGamer(); }}>
+                                    <Gamepad2 size={16} className="text-purple-500" />
+                                </div>
+                                <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center hover:bg-pink-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenDailyQuests(); }}>
+                                    <Gift size={16} className="text-pink-400" />
+                                </div>
+                                <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center hover:bg-indigo-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenDiscord(); }}>
+                                    <svg viewBox="0 0 127.14 96.36" className="w-4 h-4 fill-indigo-400">
+                                        <path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.11,77.11,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.89,105.89,0,0,0,126.6,80.22c.12-9.23-1.69-19-4.89-29.08l-.84-2.73C117.22,34.81,107.7,8.07,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/>
+                                    </svg>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
             </div>
 
 
