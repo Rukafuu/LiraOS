@@ -296,47 +296,47 @@ export class LiraCore {
      * Resizes and centers the model on the screen.
      */
     /**
-     * Resizes and centers the model on the screen.
+     * Resizes and centers the model to fit 80% of the screen.
+     * Debounced to prevent rapid successive calls.
      */
-    public handleResize() {
-        if (!this.model || !this.app || !this.app.screen) return;
+    handleResize() {
+        // Clear existing timeout
+        if (this.resizeTimeout) {
+            clearTimeout(this.resizeTimeout);
+        }
 
-        // Reset scale to 1 to get accurate base dimensions for calculation
-        const currentScale = this.model.scale.x;
-        this.model.scale.set(1);
+        // Debounce resize (wait 100ms)
+        this.resizeTimeout = window.setTimeout(() => {
+            if (!this.model) return;
 
-        const screenW = this.app.screen.width;
-        const screenH = this.app.screen.height;
+            const screenW = this.app.screen.width;
+            const screenH = this.app.screen.height;
 
-        // --- LÓGICA DE ESCALA RESPONSIVA (PC & MOBILE) ---
-        // 1. Define os limites da tela (80% da área visível)
-        const targetWidth = screenW * 0.8;
-        const targetHeight = screenH * 0.8;
+            // @ts-ignore
+            const bounds = this.model.getBounds();
+            const modelW = bounds.width;
+            const modelH = bounds.height;
 
-        // 2. Calcula qual seria a escala necessária para caber na largura e na altura
-        // model.width/height at scale 1 represents unscaled dimensions
-        const scaleBasedOnWidth = targetWidth / this.model.width;
-        const scaleBasedOnHeight = targetHeight / this.model.height;
+            if (modelW === 0 || modelH === 0) return;
 
-        // 3. Escolhe a MENOR escala entre as duas.
-        // Isso garante que ela nunca estoure nem verticalmente, nem horizontalmente.
-        let finalScale = Math.min(scaleBasedOnWidth, scaleBasedOnHeight);
+            const targetW = screenW * 0.8;
+            const targetH = screenH * 0.8;
 
-        // (Opcional) Limite máximo para ela não ficar gigante em telas 4K
-        // finalScale = Math.min(finalScale, 1.5); 
+            const scaleBasedOnWidth = targetW / modelW;
+            const scaleBasedOnHeight = targetH / modelH;
 
-        this.model.scale.set(finalScale);
-        
-        // 4. Centraliza
-        this.model.x = screenW / 2;
-        this.model.y = screenH / 2; // Ponto central da tela
-        this.model.anchor.set(0.5, 0.5); // Ponto de ancoragem no umbigo da Lira
+            let finalScale = Math.min(scaleBasedOnWidth, scaleBasedOnHeight);
 
-        // Update original state for Idle Brain
-        this.originalScale = finalScale;
-        this.originalY = this.model.y;
+            this.model.scale.set(finalScale);
+            this.model.x = screenW / 2;
+            this.model.y = screenH / 2;
+            this.model.anchor.set(0.5, 0.5);
 
-        console.log(`✅ Lira redimensionada para caber em 80% da tela. Scale: ${finalScale.toFixed(4)}`);
+            this.originalScale = finalScale;
+            this.originalY = this.model.y;
+
+            console.log(`✅ Lira redimensionada (Debounced). Scale: ${finalScale.toFixed(4)}`);
+        }, 100);
     }
 
     /**
