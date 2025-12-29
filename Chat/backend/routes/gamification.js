@@ -112,6 +112,27 @@ router.post('/achievements', async (req, res) => {
 });
 
 
+router.post('/claim', async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { questId } = req.body;
+    
+    if (!questId) {
+      return res.status(400).json({ error: 'Missing questId' });
+    }
+    
+    const result = await claimQuest(userId, questId);
+    
+    if (!result.success) {
+      return res.status(400).json({ error: result.message });
+    }
+    
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 router.get('/leaderboard', async (req, res) => {
   try {
     const list = await getLeaderboard();
