@@ -286,39 +286,16 @@ class LiraVoice {
             
             // XTTS WAV & ElevenLabs MP3
             if (contentType?.includes('audio/wav') || contentType?.includes('audio/mpeg')) {
-              console.log(`[LiraVoice] Fetching Audio Blob (${(await res.clone().blob()).size} bytes)...`);
-              const blob = await res.blob();
-              const url = URL.createObjectURL(blob);
+              console.log("[LiraVoice] Fetching Audio Buffer...");
+              const arrayBuffer = await res.arrayBuffer();
               
-              console.log("[LiraVoice] Playing via Global HTML5 Audio Element...");
-              
-              if (!this.globalAudio) this.globalAudio = new Audio();
-              
-              // Reset and Load
-              this.globalAudio.pause();
-              this.globalAudio.currentTime = 0;
-              this.globalAudio.src = url;
-              this.globalAudio.volume = options.volume || 1.0;
-              
-              try {
-                  // Connect Visualizer if possible
-                  await this.connectGlobalAudio();
-
-                  // 🔫 FIRE
-                  await this.globalAudio.play();
-                  console.log("✅ Play success.");
-
-              } catch (playErr) {
-                  console.error("❌ Play Blocked/Failed:", playErr);
-                  console.warn("⚠️ FALLBACK TO GOOGLE TTS IMMEDIATELY");
-                  return this.speak(cleanText, { ...options, usePremium: false, voiceId: 'google-pt-BR' });
+              if (arrayBuffer.byteLength === 0) {
+                 throw new Error("Empty audio buffer received");
               }
+
+              console.log(`[LiraVoice] Playing ${arrayBuffer.byteLength} bytes via Web Audio API...`);
+              await this.playAudioBuffer(arrayBuffer, options.volume || 1.0);
               
-              this.speaking = true;
-              this.globalAudio.onended = () => { 
-                this.speaking = false; 
-                this.notifyEnd();
-              };
               return { ok: true, usedVoiceId: requestedVoice, fallbackUsed: false };
             }
           }
