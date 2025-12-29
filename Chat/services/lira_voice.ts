@@ -209,6 +209,12 @@ class LiraVoice {
         .replace(/\s+/g, ' ')
         .trim();
 
+    if (!cleanText) {
+        console.log("[LiraVoice] 🔇 Empty text (or only widget), skipping speech.");
+        this.notifyEnd();
+        return { ok: true, usedVoiceId: 'none', fallbackUsed: false };
+    }
+
     console.log(`[LiraVoice] Speaking: "${cleanText}" (Original: "${text.substring(0, 20)}...")`);
     
     this.notifyStart();
