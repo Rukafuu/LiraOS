@@ -28,15 +28,26 @@
   <body>
     <div id="root"></div>
     <script>
+      // Auto-reload on chunk loading errors
+      window.addEventListener('error', function(event) {
+        if (event.message && (event.message.includes('Failed to fetch dynamically imported module') || event.message.includes('Loading chunk'))) {
+          console.warn('Chunk error detected, reloading...');
+          window.location.reload();
+        }
+      });
+      window.addEventListener('unhandledrejection', function(event) {
+        if (event.reason && event.reason.message && event.reason.message.includes('Failed to fetch dynamically imported module')) {
+          console.warn('Chunk promise rejection, reloading...');
+          event.preventDefault();
+          window.location.reload();
+        }
+      });
       if ("serviceWorker" in navigator) {
-        navigator.serviceWorker
-          .getRegistrations()
-          .then(function (registrations) {
-            for (let registration of registrations) {
-              registration.unregister();
-              console.log("Service Worker Unregistered");
-            }
-          });
+        navigator.serviceWorker.getRegistrations().then(function (registrations) {
+          for (let registration of registrations) {
+            registration.unregister();
+          }
+        });
       }
     </script>
     <script type="module" src="/index.tsx"></script>
