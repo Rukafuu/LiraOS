@@ -11,21 +11,19 @@ interface StreamingMessageBubbleProps {
   isModel?: boolean;
 }
 
-export const StreamingMessageBubble: React.FC<StreamingMessageBubbleProps> = ({
+export const StreamingMessageBubble: React.FC<StreamingMessageBubbleProps> = React.memo(({
   content,
   isStreaming,
   status = 'done',
   isModel = true
 }) => {
-  // Logic: 
-  // If status == 'thinking', show Thinking bubble.
-  // If status == 'streaming', show text with typewriter effect.
-  // If status == 'done', show text immediately without animation.
+  // Early optimization: If not streaming and status is 'done', skip typewriter entirely
+  const shouldAnimate = isStreaming || status === 'streaming';
   
   const { displayedContent, isTyping } = useTypewriterReveal({
       content,
-      isEnabled: isStreaming || status === 'streaming', // Only animate during active streaming
-      speed: 10 // Fast 10ms default
+      isEnabled: shouldAnimate,
+      speed: 10
   });
 
   const showCursor = (isStreaming || isTyping) && status !== 'error';
@@ -74,7 +72,7 @@ export const StreamingMessageBubble: React.FC<StreamingMessageBubbleProps> = ({
         )}
     </div>
   );
-};
+});
 
 // --- Helpers ---
 
