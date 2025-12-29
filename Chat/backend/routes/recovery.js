@@ -44,7 +44,9 @@ router.post(['/init', '/init-new'], async (req, res) => {
     host: SMTP_HOST,
     port: SMTP_PORT,
     secure: SMTP_SECURE,
-    auth: { user: SMTP_USER, pass: SMTP_PASS }
+    auth: { user: SMTP_USER, pass: SMTP_PASS },
+    connectionTimeout: 60000, // 60s timeout
+    socketTimeout: 60000
   });
 
   try {
