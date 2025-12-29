@@ -60,6 +60,7 @@ app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: Date.now() 
 
 // Routes Mounting
 console.log('[DEBUG] Mounting routes...');
+app.use('/api/auth/recover', recoveryRoutes); // Fix for frontend path mismatch
 app.use('/auth', authRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/memories', memoryRoutes);
