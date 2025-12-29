@@ -65,6 +65,7 @@ export class LiraCore {
     public isDancing: boolean = false;
     private originalScale: number = 1;
     private originalY: number = 0;
+    private resizeTimeout: number | null = null; // Debounce timer
 
     setDanceMode(enabled: boolean) {
         this.isDancing = enabled;
