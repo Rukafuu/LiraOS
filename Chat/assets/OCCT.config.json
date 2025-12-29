@@ -269,7 +269,7 @@
         "Duration": "01:00:00",
         "Version": "150000132000",
         "IsInfinite": false,
-        "TestType": "CpuOnlyOcct",
+        "TestType": "Vram",
         "CpuOcctConfig": {
           "DataSet": "Large",
           "OcctInstructionSet": "Auto",
@@ -393,7 +393,7 @@
             0
           ],
           "TestAllGpus": false,
-          "SelectType": 2,
+          "SelectType": 0,
           "CoilWhinePartition": "SpinningCat",
           "Priority": "Normal"
         },
@@ -415,7 +415,7 @@
           "MemoryInMiB": 0,
           "MemoryInPercent": 80,
           "MemoryMemUnit": "Percent",
-          "SelectType": 2,
+          "SelectType": 0,
           "Priority": "Normal"
         },
         "MonitoringOnlyConfig": {
@@ -423,7 +423,9 @@
           "Priority": "Normal"
         },
         "StorageConfig": {
-          "Paths": [],
+          "Paths": [
+            "C:\\"
+          ],
           "TestSizeMiB": 2048
         },
         "PowerSupplyConfig": {
@@ -435,20 +437,45 @@
           "SelectType": 2
         },
         "CombinedConfig": {
-          "CpuOcct": false,
+          "CpuOcct": true,
           "CpuOcctConfig": {
             "DataSet": "Large",
             "OcctInstructionSet": "Auto",
             "LoadType": "Variable",
             "Mode": "Normal",
             "Threads": "Auto",
-            "FixedThreadCount": 0,
+            "FixedThreadCount": 12,
             "StartAtCycle": 1,
             "AdvancedThreadConfig": {
               "AdvancedThreadType": "CycleAllCores",
               "CycleActiveCoreInterval": 3,
               "CycleActiveCoreIntervalUnit": "Seconds",
-              "CoreConfigs": [],
+              "CoreConfigs": [
+                {
+                  "CoreNumber": 0,
+                  "State": 2
+                },
+                {
+                  "CoreNumber": 1,
+                  "State": 1
+                },
+                {
+                  "CoreNumber": 2,
+                  "State": 1
+                },
+                {
+                  "CoreNumber": 3,
+                  "State": 1
+                },
+                {
+                  "CoreNumber": 4,
+                  "State": 1
+                },
+                {
+                  "CoreNumber": 5,
+                  "State": 1
+                }
+              ],
               "NumThreadsPerGroup": 2
             },
             "Priority": "Normal"

@@ -12,7 +12,7 @@ interface ProgressiveImageProps {
   aspectRatio?: string; // "1/1", "16/9"
 }
 
-export const ProgressiveImage: React.FC<ProgressiveImageProps> = ({ 
+export const ProgressiveImage: React.FC<ProgressiveImageProps> = React.memo(({ 
   status, 
   prompt, 
   finalSrc, 
@@ -21,6 +21,20 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
 }) => {
   const progress = useSimulatedProgress(status);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [showOverlay, setShowOverlay] = useState(false);
+  const hasShownOverlayRef = React.useRef(false);
+
+  // Only show overlay during active generation, not on page reload
+  useEffect(() => {
+    if (status === 'generating' && !hasShownOverlayRef.current) {
+      setShowOverlay(true);
+      hasShownOverlayRef.current = true;
+    } else if (status === 'ready' && !imageLoaded && hasShownOverlayRef.current) {
+      setShowOverlay(true);
+    } else if (imageLoaded || status === 'error') {
+      setShowOverlay(false);
+    }
+  }, [status, imageLoaded]);
 
   // Overlay Component for Focus Mode
   const LoadingOverlay = () => (
@@ -80,7 +94,7 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
   return (
     <>
         <AnimatePresence>
-            {(status === 'generating' || (status === 'ready' && !imageLoaded)) && <LoadingOverlay />}
+            {showOverlay && <LoadingOverlay />}
         </AnimatePresence>
 
         <div className="relative w-full max-w-md my-4 rounded-xl overflow-hidden border border-white/10 shadow-2xl bg-[#0c0c0e]">
@@ -130,4 +144,4 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
         </div>
     </>
   );
-};
+});
