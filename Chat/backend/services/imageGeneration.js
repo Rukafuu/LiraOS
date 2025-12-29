@@ -113,8 +113,12 @@ async function generateHuggingFaceImage(prompt, apiKey) {
                 body: JSON.stringify({
                     inputs: sanitizedPrompt,
                     parameters: {
-                        num_inference_steps: 4,
-                        guidance_scale: 0
+                        // Schnell is optimized for 4 steps. Higher steps cause timeouts on free tier.
+                        num_inference_steps: 4, 
+                        guidance_scale: 0.0,
+                        width: 1024,
+                        height: 1024,
+                        negative_prompt: "blurry, low resolution, deformed, extra limbs, bad anatomy, text, watermark"
                     }
                 }),
                 signal: controller.signal
