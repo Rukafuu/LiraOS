@@ -40,24 +40,21 @@ router.post(['/init', '/init-new'], async (req, res) => {
     return res.json({ success: true, devMode: true, code }); 
   }
 
-  const transportConfig = (SMTP_HOST.includes('gmail')) ? 
-      {
-          service: 'gmail',
-          service: 'gmail',
-          auth: { user: SMTP_USER, pass: SMTP_PASS },
-          family: 4 // Force IPv4 even with service preset
-      } : {
-          host: SMTP_HOST,
-          port: SMTP_PORT,
-          secure: SMTP_SECURE,
-          auth: { user: SMTP_USER, pass: SMTP_PASS },
-          tls: { rejectUnauthorized: false },
-          family: 4 
-      };
+  // Force explicit SMTP configuration to bypass 'service: gmail' defaults which might fail in cloud environments
+  const transportConfig = {
+      host: 'smtp.gmail.com',
+      port: 465, // SSL Port (often less blocked than 587)
+      secure: true, // Use SSL
+      auth: { user: SMTP_USER, pass: SMTP_PASS },
+      tls: {
+          rejectUnauthorized: false
+      }
+      // Removed 'family: 4' to let Cloud/Docker decide best route (IPv6 might be faster/available)
+  };
 
   const transporter = nodemailer.createTransport({
       ...transportConfig,
-      connectionTimeout: 60000,
+      connectionTimeout: 60000, // 60s
       socketTimeout: 60000
   });
 
