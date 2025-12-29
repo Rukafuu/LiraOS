@@ -71,7 +71,7 @@ export const LandingChat: React.FC<LandingChatProps> = ({ onLoginReq }) => {
     };
 
     return (
-        <div className="relative flex flex-col items-center justify-center min-h-screen bg-[#030305] text-white p-4 overflow-hidden font-sans selection:bg-purple-500/30">
+        <div className="relative flex flex-col items-center justify-center min-h-screen bg-[#030305] text-white p-4 overflow-y-auto md:overflow-hidden font-sans selection:bg-purple-500/30">
             {/* ... Backgrounds ... */}
             <div className="absolute inset-0 opacity-40">
                 <ParticleBackground />
@@ -107,7 +107,7 @@ export const LandingChat: React.FC<LandingChatProps> = ({ onLoginReq }) => {
                         {t('landing.hero_subtitle')}
                     </p>
 
-                    <div className="hidden md:flex gap-4 pt-4">
+                    <div className="flex w-full md:w-auto justify-center md:justify-start gap-4 pt-4">
                         <button onClick={onLoginReq} className="px-6 py-3 rounded-xl bg-white text-black font-bold hover:bg-gray-200 transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.2)]">
                             <Terminal size={18} />
                             {t('landing.login_system')}
@@ -206,17 +206,7 @@ export const LandingChat: React.FC<LandingChatProps> = ({ onLoginReq }) => {
                 </motion.div>
 
                 {/* Mobile Login Button (Visible only on small screens) */}
-                <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 1 }}
-                    className="md:hidden mt-8"
-                >
-                     <button onClick={onLoginReq} className="w-full px-8 py-3 rounded-xl bg-white text-black font-bold flex items-center justify-center gap-2">
-                        <Terminal size={18} />
-                        {t('landing.login_system')}
-                    </button>
-                </motion.div>
+
 
             </div>
         </div>
