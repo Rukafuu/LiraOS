@@ -505,12 +505,13 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                    }
                })();
 
-               // 4. Return "Job Started" to Agent (so it knows to wait or just acknowledge)
+
+               // 4. Return "Job Started" to Agent with stricter instruction
                functionResult = { 
                    success: true, 
                    jobId: jobId, 
                    status: "generating",
-                   system_note: "The image is being generated in the background. The user sees a progressive loading widget. DO NOT output the image Markdown yet. Just say something like 'I'm painting it now...'." 
+                   system_note: "✅ SUCCESS: The image is being generated in a LIVE WIDGET below your message. \n\nINSTRUCTION: \n1. Do NOT say 'I will show you when ready'. \n2. Do NOT say 'Waiting for result'. \n3. Simply say: 'Here is what I'm creating for you!' or describe the prompt enthusiastically.\n4. The Widget IS the result." 
                };
                break;
             case 'execute_system_command':
