@@ -18,6 +18,7 @@ import { CookiePreferences } from './components/CookieConsentModal';
 const ShortcutsModal = React.lazy(() => import('./components/ShortcutsModal').then(m => ({ default: m.ShortcutsModal })));
 const GamerModal = React.lazy(() => import('./components/GamerModal').then(m => ({ default: m.GamerModal })));
 const DailyQuestsModal = React.lazy(() => import('./components/DailyQuestsModal').then(m => ({ default: m.DailyQuestsModal })));
+import { LoadingScreen } from './components/LoadingScreen';
 import { ParticleBackground } from './components/ui/ParticleBackground';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { GamificationProvider, useGamification } from './contexts/GamificationContext';
@@ -1081,7 +1082,7 @@ const LiraAppContent = () => {
         </div>
       </div>
  
-      <Suspense fallback={<div className="fixed inset-0 z-[60] flex items-center justify-center"><div className="text-sm text-white bg-black/50 px-3 py-2 rounded">Loading…</div></div>}>
+      <Suspense fallback={<LoadingScreen />}>
       <SettingsModal 
         isOpen={isSettingsOpen} 
         onClose={() => setIsSettingsOpen(false)} 
