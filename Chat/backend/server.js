@@ -121,12 +121,19 @@ app.use((err, req, res, next) => {
 
 // Start Server & Services
 app.listen(PORT, '0.0.0.0', async () => {
-  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`[SYSTEM] LiraOS Backend v1.1 Starter (Deploy Timestamp: ${new Date().toISOString()})`);
+  console.log(`[SYSTEM] Server running on port ${PORT}`);
+  console.log(`[SYSTEM] Environment: ${process.env.NODE_ENV}`);
+  console.log(`[SYSTEM] Frontend URL: ${FRONTEND_URL}`);
   
   // Jobs
   // TODO: Migrate cleanupExpiredBans to support PostgreSQL
   // cleanupExpiredBans();
   
+  // Start PC Controller Service
+  import('./services/pcControllerService.js').then(service => {
+      service.pcControllerService.start();
+  }).catch(err => console.error('Failed to load PC Controller Service:', err));
   
   // Discord Bot
   if (process.env.DISCORD_TOKEN) {
