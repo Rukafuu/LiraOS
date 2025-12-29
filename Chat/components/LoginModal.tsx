@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Lock, LogIn, UserPlus, RefreshCw, Github, BadgeCheck } from 'lucide-react';
+import { X, Mail, Lock, LogIn, UserPlus, RefreshCw, Github, BadgeCheck, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { getCurrentUser } from '../services/userService';
 import { PatreonIcon } from './icons/PatreonIcon';
@@ -19,6 +19,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogge
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -120,7 +121,20 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogge
                 <label className="text-xs text-gray-400">Password</label>
                 <div className="relative">
                   <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-[#18181b] border border-white/10 rounded-lg py-2.5 pl-9 pr-4 text-sm text-white focus:border-white/30 outline-none transition-all" placeholder="••••••••" />
+                  <input 
+                    type={showPassword ? 'text' : 'password'}
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    className="w-full bg-[#18181b] border border-white/10 rounded-lg py-2.5 pl-9 pr-10 text-sm text-white focus:border-white/30 outline-none transition-all" 
+                    placeholder="••••••••" 
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
                 </div>
                 <button onClick={handleForgot} className="text-[11px] text-lira-blue hover:underline underline-offset-4">Forgot password?</button>
               </div>
