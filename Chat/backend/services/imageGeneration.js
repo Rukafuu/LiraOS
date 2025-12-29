@@ -205,7 +205,8 @@ export async function generateImage(prompt, userTier = 'free', hfApiKey = null) 
                 model: 'Flux',
                 quality: 'standard',
                 seed,
-                fallback: true
+                fallback: true,
+                errorDetails: error.message || 'Unknown HF Error'
             };
         }
         

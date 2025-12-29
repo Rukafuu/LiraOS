@@ -819,8 +819,12 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
                            const result = await generateImage(finalPrompt, userPlanLower, HF_API_KEY);
                            
                            if (result.success) {
-                               // Send image with loading indicator
-                               res.write(`data: ${JSON.stringify({ content: `![Generative Image](${result.imageUrl})\n\n> ✅ *Imagem gerada com sucesso!*${result.fallback ? ' (Fallback usado)' : ''}\n\n` })}\n\n`);
+                                // Send image with loading indicator
+                                let successMsg = `![Generative Image](${result.imageUrl})\n\n> ✅ *Imagem gerada com sucesso!*`;
+                                if (result.fallback) {
+                                    successMsg += `\n> ⚠️ **Fallback:** O provedor premium falhou: _${result.errorDetails}_\n> *Usando backup gratuito (pode estar instável).*`;
+                                }
+                                res.write(`data: ${JSON.stringify({ content: successMsg + '\n\n' })}\n\n`);
                            } else {
                                res.write(`data: ${JSON.stringify({ content: `\n> ❌ **Erro ao gerar imagem.** Tente novamente.\n\n` })}\n\n`);
                            }
