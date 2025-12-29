@@ -814,7 +814,7 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
                            res.write(`data: ${JSON.stringify({ content: `\n> 🎨 Criando arte: "${promptPreview}"\n> *Usando ${providerInfo.model} (${providerInfo.name}) - Qualidade: ${providerInfo.quality}*\n\n` })}\n\n`);
                            
                            // Generate image with tier-based provider
-                           const HF_API_KEY = process.env.HUGGINGFACE_API_KEY;
+                           const HF_API_KEY = process.env.HUGGINNGFACE_ACCESS_TOKEN;
                            const result = await generateImage(finalPrompt, userPlanLower, HF_API_KEY);
                            
                            if (result.success) {
