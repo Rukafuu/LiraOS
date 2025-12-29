@@ -1,17 +1,36 @@
 import prisma from './prismaClient.js';
+import { isAdmin } from './authStore.js';
 
 // Helper for BigInt fields
 const toInt = (n) => Number(n); 
 
 export const getState = async (userId) => {
   try {
+    const isAdm = await isAdmin(userId);
     const row = await prisma.gamification.findUnique({
       where: { userId }
     });
+    
+    if (isAdm) {
+        return {
+          userId,
+          xp: 9999999,
+          coins: 9999999,
+          level: 1000, // Singularity God
+          stats: row?.stats || {},
+          unlockedThemes: row?.unlockedThemes || [], // TODO: Inject all
+          unlockedPersonas: row?.unlockedPersonas || [],
+          achievements: row?.achievements || [],
+          updatedAt: Date.now()
+        };
+    }
+
     if (!row) return null;
     return {
       ...row,
       xp: row.xp || 0,
+       // ... existing
+
       coins: row.coins || 0,
       level: row.level || 1,
       stats: row.stats || {}, // Prisma handles Json

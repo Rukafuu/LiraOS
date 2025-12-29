@@ -251,8 +251,12 @@ export async function consumeRecoverCode(email, code) {
 }
 
 const ADMIN_USER_ID = 'usr_1766449245238_96a75426fe68';
-export function isAdmin(userId) {
-  return userId === ADMIN_USER_ID;
+export const ADMIN_EMAILS = ['lucas.frischeisen@gmail.com', 'amarinthlira@gmail.com'];
+
+export async function isAdmin(userId) {
+  if (userId === ADMIN_USER_ID) return true;
+  const user = await getUserById(userId);
+  return user && ADMIN_EMAILS.includes(user.email);
 }
 
 export async function setPassword(email, newPassword) {

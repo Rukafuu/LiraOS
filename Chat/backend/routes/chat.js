@@ -513,7 +513,8 @@ Ação > Conversa. Se você pode fazer algo com uma ferramenta, USE A FERRAMENTA
        
        // Determine precise Tier
        let userTier = 'Observer';
-       if (isAdmin(userId)) {
+       const isUserAdmin = await isAdmin(userId);
+       if (isUserAdmin) {
           userTier = 'Singularity';
        } else if (user && user.plan && user.plan !== 'free') {
           userTier = user.plan.charAt(0).toUpperCase() + user.plan.slice(1);
