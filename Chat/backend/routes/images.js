@@ -88,6 +88,13 @@ router.get('/:id', requireAuth, async (req, res) => {
         if (!job) {
             return res.status(404).json({ error: 'Job not found' });
         }
+    
+        // Debug Log
+        if (job.status !== 'completed' && job.status !== 'failed') {
+             // console.log(`[API_IMG] Job ${req.params.id} still ${job.status}`);
+        } else {
+             console.log(`[API_IMG] Job ${req.params.id} is ${job.status}`);
+        }
 
         res.json({
             id: job.id,
