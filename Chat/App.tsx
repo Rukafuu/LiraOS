@@ -12,7 +12,7 @@ import { LoginScreen } from './components/LoginScreen';
 import { OnboardingTour } from './components/OnboardingTour';
 import { LandingChat } from './components/LandingChat';
 const CookieConsentModal = React.lazy(() => import('./components/CookieConsentModal').then(m => ({ default: m.CookieConsentModal })));
-const LiraFloatingWidget = React.lazy(() => import('./components/LiraFloatingWidget').then(m => ({ default: m.LiraFloatingWidget })));
+const LiraCompanionWidget = React.lazy(() => import('./components/LiraCompanionWidget').then(m => ({ default: m.LiraCompanionWidget })));
 const CompanionPage = React.lazy(() => import('./components/CompanionPage').then(m => ({ default: m.CompanionPage })));
 import { CookiePreferences } from './components/CookieConsentModal';
 const ShortcutsModal = React.lazy(() => import('./components/ShortcutsModal').then(m => ({ default: m.ShortcutsModal })));
@@ -1220,9 +1220,8 @@ const LiraAppContent = () => {
       )}
 
       {showCompanion && (
-          <LiraFloatingWidget 
+          <LiraCompanionWidget 
               onClose={() => setShowCompanion(false)}
-              onInteraction={handleCompanionInteraction}
               isSpeaking={Boolean(streamingText || isVoiceActive)}
           />
       )}
