@@ -82,12 +82,18 @@ class DiscordService {
         // Map<discordId, { email, code, expiresAt }>
         this.pendingLinks = new Map();
 
-        this.client.on(Events.ClientReady, () => {
+        this.client.on(Events.ClientReady, async () => {
             console.log(`[DISCORD] 🤖 Bot logged in as ${this.client.user.tag}`);
             this.client.user.setActivity('conversas e ajudando no código 💻');
+            
+            // Register slash commands
+            await this.registerSlashCommands();
         });
 
         this.client.on('messageCreate', this.handleMessage.bind(this));
+        
+        // Handle slash command interactions
+        this.client.on(Events.InteractionCreate, this.handleInteraction.bind(this));
         
         // Error handling for audio player
         this.audioPlayer.on('error', error => {
@@ -99,6 +105,144 @@ class DiscordService {
         
         // Initialize Admin Commands
         this.adminCommands = new AdminCommands(this);
+    }
+
+    async registerSlashCommands() {
+        try {
+            const commands = [
+                {
+                    name: 'help',
+                    description: '📚 Mostra todos os comandos disponíveis'
+                },
+                {
+                    name: 'perfil',
+                    description: '🧙‍♂️ Ver seu perfil, XP, moedas e nível'
+                },
+                {
+                    name: 'link',
+                    description: '🔐 Vincular sua conta LiraOS',
+                    options: [{
+                        name: 'email',
+                        description: 'Seu email cadastrado no LiraOS',
+                        type: 3, // STRING
+                        required: true
+                    }]
+                },
+                {
+                    name: 'confirm',
+                    description: '✅ Confirmar vínculo com código',
+                    options: [{
+                        name: 'codigo',
+                        description: 'Código de 6 dígitos recebido por email',
+                        type: 3, // STRING
+                        required: true
+                    }]
+                },
+                {
+                    name: 'entra',
+                    description: '🎙️ Entrar no seu canal de voz'
+                },
+                {
+                    name: 'sai',
+                    description: '👋 Sair do canal de voz'
+                }
+            ];
+
+            // Add owner-only commands
+            if (DISCORD_OWNER_ID) {
+                commands.push(
+                    {
+                        name: 'genesis',
+                        description: '🌌 [DONO] Ativar Genesis Protocol'
+                    },
+                    {
+                        name: 'osubot',
+                        description: '🎮 [DONO] Ativar bot de osu!'
+                    },
+                    {
+                        name: 'give',
+                        description: '💰 [DONO] Dar XP ou moedas',
+                        options: [
+                            {
+                                name: 'usuario',
+                                description: 'Usuário Discord',
+                                type: 6, // USER
+                                required: true
+                            },
+                            {
+                                name: 'tipo',
+                                description: 'XP ou Moedas',
+                                type: 3, // STRING
+                                required: true,
+                                choices: [
+                                    { name: 'XP', value: 'xp' },
+                                    { name: 'Moedas', value: 'coins' }
+                                ]
+                            },
+                            {
+                                name: 'quantidade',
+                                description: 'Quantidade a dar',
+                                type: 4, // INTEGER
+                                required: true
+                            }
+                        ]
+                    }
+                );
+            }
+
+            await this.client.application.commands.set(commands);
+            console.log('[DISCORD] ✅ Slash commands registered successfully!');
+        } catch (error) {
+            console.error('[DISCORD] ❌ Failed to register slash commands:', error);
+        }
+    }
+
+    async handleInteraction(interaction) {
+        if (!interaction.isCommand()) return;
+
+        const { commandName } = interaction;
+
+        try {
+            switch (commandName) {
+                case 'help':
+                    await this.handleSlashHelp(interaction);
+                    break;
+                case 'perfil':
+                    await this.handleSlashProfile(interaction);
+                    break;
+                case 'link':
+                    await this.handleSlashLink(interaction);
+                    break;
+                case 'confirm':
+                    await this.handleSlashConfirm(interaction);
+                    break;
+                case 'entra':
+                    await this.handleSlashJoin(interaction);
+                    break;
+                case 'sai':
+                    await this.handleSlashLeave(interaction);
+                    break;
+                case 'genesis':
+                    await this.handleSlashGenesis(interaction);
+                    break;
+                case 'osubot':
+                    await this.handleSlashOsubot(interaction);
+                    break;
+                case 'give':
+                    await this.handleSlashGive(interaction);
+                    break;
+                default:
+                    await interaction.reply({ content: '❌ Comando não reconhecido.', ephemeral: true });
+            }
+        } catch (error) {
+            console.error('[DISCORD] Slash command error:', error);
+            const reply = { content: '❌ Erro ao executar comando.', ephemeral: true };
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp(reply);
+            } else {
+                await interaction.reply(reply);
+            }
+        }
     }
 
     async start() {
@@ -772,6 +916,144 @@ class DiscordService {
             console.error('[DISCORD] AI Error:', e);
             return "Erro no processamento da IA: " + e.message;
         }
+    }
+
+    // ===== SLASH COMMAND HANDLERS =====
+
+    async handleSlashHelp(interaction) {
+        const isOwner = (DISCORD_OWNER_ID && interaction.user.id === DISCORD_OWNER_ID);
+        
+        const embed = new EmbedBuilder()
+            .setColor(0xEB00FF)
+            .setTitle('🤖 Lira - Central de Comandos')
+            .setDescription('Use `/` para ver todos os comandos com autocomplete!')
+            .addFields(
+                { name: '📚 **Comandos Disponíveis**', value: '`/help` - Esta mensagem\n`/perfil` - Ver XP e moedas\n`/link` - Vincular conta\n`/confirm` - Confirmar vínculo\n`/entra` - Entrar em voz\n`/sai` - Sair de voz', inline: false }
+            );
+
+        if (isOwner) {
+            embed.addFields(
+                { name: '👑 **Comandos de Dono**', value: '`/genesis` - Genesis Protocol\n`/osubot` - Bot osu!\n`/give` - Dar XP/moedas', inline: false }
+            );
+        }
+
+        embed.setFooter({ text: isOwner ? '👑 Acesso total como dono' : '💡 Mencione @Lira para conversar!' });
+
+        await interaction.reply({ embeds: [embed], ephemeral: true });
+    }
+
+    async handleSlashProfile(interaction) {
+        // Reuse existing profile logic
+        const fakeMessage = {
+            author: interaction.user,
+            reply: async (content) => await interaction.reply(content)
+        };
+        await this.handleProfileCommand(fakeMessage);
+    }
+
+    async handleSlashLink(interaction) {
+        const email = interaction.options.getString('email');
+        const fakeMessage = {
+            author: interaction.user,
+            content: `.link ${email}`,
+            reply: async (content) => await interaction.reply(content)
+        };
+        await this.handleLinkCommand(fakeMessage, `.link ${email}`);
+    }
+
+    async handleSlashConfirm(interaction) {
+        const codigo = interaction.options.getString('codigo');
+        const fakeMessage = {
+            author: interaction.user,
+            content: `.confirm ${codigo}`,
+            reply: async (content) => await interaction.reply(content)
+        };
+        await this.handleConfirmCommand(fakeMessage, `.confirm ${codigo}`);
+    }
+
+    async handleSlashJoin(interaction) {
+        if (!interaction.member?.voice?.channel) {
+            await interaction.reply({ content: "❌ Você precisa estar em um canal de voz!", ephemeral: true });
+            return;
+        }
+
+        try {
+            this.currentVoiceConnection = joinVoiceChannel({
+                channelId: interaction.member.voice.channel.id,
+                guildId: interaction.guild.id,
+                adapterCreator: interaction.guild.voiceAdapterCreator,
+            });
+
+            this.currentVoiceConnection.subscribe(this.audioPlayer);
+            await interaction.reply({ content: `✅ Entrei no canal **${interaction.member.voice.channel.name}**! 🎙️`, ephemeral: false });
+        } catch (error) {
+            console.error('[DISCORD] Voice join error:', error);
+            await interaction.reply({ content: "❌ Não consegui entrar no canal de voz.", ephemeral: true });
+        }
+    }
+
+    async handleSlashLeave(interaction) {
+        const connection = getVoiceConnection(interaction.guild.id);
+        if (connection) {
+            connection.destroy();
+            this.currentVoiceConnection = null;
+            await interaction.reply({ content: "👋 Desconectada do canal de voz.", ephemeral: false });
+        } else {
+            await interaction.reply({ content: "❌ Eu não estou em nenhum canal de voz.", ephemeral: true });
+        }
+    }
+
+    async handleSlashGenesis(interaction) {
+        const isOwner = (DISCORD_OWNER_ID && interaction.user.id === DISCORD_OWNER_ID);
+        
+        if (!isOwner) {
+            await interaction.reply({ content: "❌ Apenas o dono pode usar este comando.", ephemeral: true });
+            return;
+        }
+
+        const fakeMessage = {
+            author: interaction.user,
+            guild: interaction.guild,
+            channel: interaction.channel,
+            reply: async (content) => await interaction.reply(content)
+        };
+        
+        await this.genesisProtocol.execute(fakeMessage);
+    }
+
+    async handleSlashOsubot(interaction) {
+        const isOwner = (DISCORD_OWNER_ID && interaction.user.id === DISCORD_OWNER_ID);
+        
+        if (!isOwner) {
+            await interaction.reply({ content: "❌ Apenas o dono pode usar este comando.", ephemeral: true });
+            return;
+        }
+
+        await interaction.reply({ content: "🔄 Forçando início do bot osu!...", ephemeral: false });
+        const result = await pcController.activateOsuBot();
+        await interaction.followUp({ content: result, ephemeral: false });
+    }
+
+    async handleSlashGive(interaction) {
+        const isOwner = (DISCORD_OWNER_ID && interaction.user.id === DISCORD_OWNER_ID);
+        
+        if (!isOwner) {
+            await interaction.reply({ content: "❌ Apenas o dono pode usar este comando.", ephemeral: true });
+            return;
+        }
+
+        const targetUser = interaction.options.getUser('usuario');
+        const type = interaction.options.getString('tipo');
+        const amount = interaction.options.getInteger('quantidade');
+
+        const fakeMessage = {
+            author: interaction.user,
+            mentions: { users: new Map([[targetUser.id, targetUser]]) },
+            reply: async (content) => await interaction.reply(content)
+        };
+
+        const args = [targetUser.id, type, amount.toString()];
+        await this.adminCommands.handleCommand(fakeMessage, 'give', args);
     }
 }
 
