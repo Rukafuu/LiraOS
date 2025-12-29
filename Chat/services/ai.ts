@@ -1,5 +1,5 @@
 import { Message, Persona, Memory, Attachment } from '../types';
-import { getSettings } from './userService';
+import { getSettings, getAuthHeaders } from './userService';
 
 const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
 const FRONTEND_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_FRONTEND_URL) || 'http://localhost:5173';
@@ -55,7 +55,10 @@ export const saveSessionServer = async (session: any): Promise<boolean> => {
   try {
     const res = await fetch(`${API_BASE_URL}/api/chat/sessions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('lira_session') ? JSON.parse(localStorage.getItem('lira_session')!).token : ''}` },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...getAuthHeaders() 
+      },
       body: JSON.stringify({ session })
     });
     return res.ok;
@@ -64,11 +67,13 @@ export const saveSessionServer = async (session: any): Promise<boolean> => {
   }
 };
 
+
+
 export const deleteSessionServer = async (id: string): Promise<boolean> => {
   try {
     const res = await fetch(`${API_BASE_URL}/api/chat/sessions/${id}`, {
       method: 'DELETE',
-      headers: { 'Authorization': `Bearer ${localStorage.getItem('lira_session') ? JSON.parse(localStorage.getItem('lira_session')!).token : ''}` }
+      headers: getAuthHeaders()
     });
     return res.ok;
   } catch {
@@ -235,7 +240,10 @@ export const generateChatTitle = async (firstMessage: string, model: string = 'm
   try {
     const response = await fetch(`${API_BASE_URL}/api/generate-title`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
+      },
       body: JSON.stringify({ firstMessage, model })
     });
 
