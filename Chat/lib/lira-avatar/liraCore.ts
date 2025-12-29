@@ -421,6 +421,14 @@ export class LiraCore {
     destroy() {
         console.log("[LiraCore] Destroying instance...");
         
+        // 0. STOP APP IMMEDIATELY to prevent any new render frames
+        if (this.app) {
+            try {
+                // @ts-ignore
+                this.app.stop();
+            } catch (e) {}
+        }
+
         // 1. Remove Ticker FIRST to stop update loop
         if (this.app && this.tickerFn) {
             this.app.ticker.remove(this.tickerFn);
