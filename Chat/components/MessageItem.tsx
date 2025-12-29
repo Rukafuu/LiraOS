@@ -7,6 +7,7 @@ import { LIRA_AVATAR } from '../constants';
 import { ChatWidgetRenderer } from './ChatWidgets';
 import { useToast } from '../contexts/ToastContext';
 import { useTranslation } from 'react-i18next';
+import { StreamingMessageBubble } from './chat/StreamingMessageBubble';
 
 interface MessageItemProps {
   message: Message;
@@ -139,136 +140,39 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 relative text-[15px] leading-7 text-gray-200 text-left w-fit max-w-full break-words [overflow-wrap:anywhere]
                 ${isUser ? 'bg-white/5 px-4 py-2 rounded-2xl rounded-tr-none' : ''}
               `}>
-                <div className="markdown-content w-full">
-                  {(() => {
-                    const displayContent = (message.status === 'streaming' && message.partial) ? message.partial : message.content;
-                    const parts = displayContent.split(/((?:\[\[)?WIDGET:[^|]+\|[\s\S]+?(?:\]\]|\]))/g);
-                    return parts.map((part, idx) => {
-                      const match = part.match(/^(?:\[\[)?WIDGET:([^|]+)\|([\s\S]+?)(?:\]\]|\])$/);
-                      if (match) {
-                        return <ChatWidgetRenderer key={idx} type={match[1]} data={match[2]} />;
-                      }
-                      return (
-                        <ReactMarkdown
-                          key={idx}
-                          components={{
-                            code({ node, inline, className, children, ...props }: any) {
-                              const match = /language-(\w+)/.exec(className || '');
-                              return !inline && match ? (
-                                <div className="rounded-lg overflow-hidden my-4 border border-white/10 text-left shadow-lg bg-[#0c0c0e] w-full max-w-full">
-                                  <div className="bg-white/5 px-3 py-2 text-xs text-gray-400 flex justify-between items-center border-b border-white/5">
-                                    <div className="flex items-center gap-2">
-                                        <div className="flex gap-1.5">
-                                            <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f56]" />
-                                            <div className="w-2.5 h-2.5 rounded-full bg-[#ffbd2e]" />
-                                            <div className="w-2.5 h-2.5 rounded-full bg-[#27c93f]" />
+                 <div className="markdown-content w-full">
+                    {/* Use Streaming Bubble for AI messages, standard markdown for User */}
+                    {!isUser ? (
+                        <StreamingMessageBubble 
+                            content={((message.status === 'streaming' && message.partial) ? message.partial : message.content) || ''}
+                            isStreaming={message.isStreaming || message.status === 'streaming'}
+                            status={message.status}
+                            isModel={true}
+                        />
+                    ) : (
+                        <ReactMarkdown 
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                                 code({node, inline, className, children, ...props}: any) {
+                                    const match = /language-(\w+)/.exec(className || '');
+                                    return !inline && match ? (
+                                        <div className="bg-black/30 p-2 rounded-md my-2 overflow-x-auto">
+                                            <code className={className} {...props}>
+                                                {children}
+                                            </code>
                                         </div>
-                                        <span className="font-mono ml-2 opacity-50">{match[1]}</span>
-                                    </div>
-                                    <button 
-                                      onClick={() => handleCopyCode(String(children))}
-                                      className="flex items-center gap-1 hover:text-white transition-colors"
-                                    >
-                                      <Copy size={12} /> <span className="text-[10px]">{t('message_item.copy_code')}</span>
-                                    </button>
-                                  </div>
-                                  <div className="p-4 overflow-x-auto relative group-code custom-scrollbar">
-                                    <pre className="font-mono text-[13px] text-gray-300 whitespace-pre">
-                                      <code {...props}>
-                                        {String(children).replace(/\n$/, '')}
-                                      </code>
-                                    </pre>
-                                  </div>
-                                </div>
-                              ) : (
-                                <code className={`bg-white/10 text-white px-1.5 py-0.5 rounded text-sm font-mono ${className}`} {...props}>
-                                  {children}
-                                </code>
-                              );
-                            },
-                            p: ({ children }) => <p className="mb-3 last:mb-0 leading-relaxed break-words">{children}</p>,
-                            a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-lira-secondary hover:underline underline-offset-4">{children}</a>,
-                            ul: ({ children }) => <ul className="list-disc ml-4 mb-4 space-y-1">{children}</ul>,
-                            ol: ({ children }) => <ol className="list-decimal ml-4 mb-4 space-y-1">{children}</ol>,
-                            table: ({ children }) => (
-                               <div className="overflow-x-auto my-4 rounded-lg border border-white/10 max-w-full">
-                                  <table className="min-w-full divide-y divide-white/10 text-sm">
-                                     {children}
-                                  </table>
-                               </div>
-                            ),
-                            thead: ({ children }) => <thead className="bg-white/5 font-semibold text-white">{children}</thead>,
-                            tbody: ({ children }) => <tbody className="divide-y divide-white/5 bg-transparent">{children}</tbody>,
-                            tr: ({ children }) => <tr className="hover:bg-white/5 transition-colors">{children}</tr>,
-                            th: ({ children }) => <th className="px-4 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">{children}</th>,
-                            td: ({ children }) => <td className="px-4 py-3 whitespace-nowrap text-gray-300">{children}</td>,
-                            img: ({ src, alt }) => {
-                              const [imageError, setImageError] = useState(false);
-                              const [imageLoading, setImageLoading] = useState(true);
-                              
-                              // Debug logging
-                              useEffect(() => {
-                                console.log('[MessageItem] Image component rendered:', { src, alt });
-                              }, [src]);
-                              
-                              return imageError ? (
-                                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 my-4 text-red-400 max-w-md">
-                                  <p className="text-sm font-semibold flex items-center gap-2">
-                                    ❌ Falha ao carregar imagem gerada
-                                  </p>
-                                  <p className="text-xs mt-2 text-red-300/80">
-                                    O serviço de geração pode estar temporariamente indisponível. Tente novamente em alguns instantes.
-                                  </p>
-                                  {src && (
-                                    <a 
-                                      href={src} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="text-xs mt-2 inline-block underline hover:text-red-200"
-                                    >
-                                      Tentar abrir link direto: {src.substring(0, 50)}...
-                                    </a>
-                                  )}
-                                </div>
-                              ) : (
-                                <div className="relative my-4 rounded-lg overflow-hidden border border-white/10 max-w-2xl">
-                                  {imageLoading && (
-                                    <div className="absolute inset-0 bg-white/5 flex items-center justify-center min-h-[200px]">
-                                      <div className="flex flex-col items-center gap-2">
-                                        <div className="w-8 h-8 border-2 border-lira-pink border-t-transparent rounded-full animate-spin" />
-                                        <span className="text-xs text-white/40">Carregando imagem...</span>
-                                      </div>
-                                    </div>
-                                  )}
-                                  <img 
-                                    src={src} 
-                                    alt={alt || "Generated Image"} 
-                                    onError={(e) => {
-                                      console.error('[MessageItem] Image failed to load:', src, e);
-                                      setImageError(true);
-                                    }}
-                                    onLoad={() => {
-                                      console.log('[MessageItem] Image loaded successfully:', src);
-                                      setImageLoading(false);
-                                    }}
-                                    className="w-full h-auto"
-                                    loading="lazy"
-                                  />
-                                </div>
-                              );
-                            },
-                          }}
+                                    ) : (
+                                        <code className="bg-white/10 px-1 py-0.5 rounded text-sm font-mono" {...props}>
+                                            {children}
+                                        </code>
+                                    )
+                                 }
+                            }}
                         >
-                          {part}
+                            {message.content}
                         </ReactMarkdown>
-                      );
-                    });
-                  })()}
-                  
-                  {(message.status === 'streaming' || message.isStreaming) && (
-                    <span className="inline-block w-1.5 h-4 bg-lira-pink align-middle ml-0.5 animate-pulse shadow-[0_0_10px_rgba(235,0,255,0.5)]" />
-                  )}
-                </div>
+                    )}
+                 </div>
               </div>
             ))}
 
