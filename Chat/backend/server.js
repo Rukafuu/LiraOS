@@ -180,3 +180,11 @@ if (shouldStartBridge) {
 } else {
     console.log('[STARTUP] Game Bridge disabled (ENABLE_GAME_BRIDGE != true). Running in headless/cloud mode.');
 }
+// Prevent crash on unhandled errors
+process.on('uncaughtException', (err) => {
+  console.error('[CRASH PREVENTED] Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[CRASH PREVENTED] Unhandled Rejection at:', promise, 'reason:', reason);
+});
