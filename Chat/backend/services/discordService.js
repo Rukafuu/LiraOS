@@ -52,7 +52,7 @@ try {
 // SMTP Settings
 const SMTP_HOST = process.env.SMTP_HOST;
 const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
-const SMTP_SECURE = Boolean(process.env.SMTP_SECURE || false);
+const SMTP_SECURE = process.env.SMTP_SECURE === 'true';
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
 
