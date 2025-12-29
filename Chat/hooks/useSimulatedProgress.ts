@@ -1,81 +1,35 @@
 import { useState, useEffect, useRef } from 'react';
 
-interface UseSimulatedProgressOptions {
-  status: 'idle' | 'generating' | 'ready' | 'error';
-  duration?: number; // Duration to reach 90% in ms
-  finalDuration?: number; // Duration from 90% to 100% in ms
-}
+type ProgressStatus = 'idle' | 'generating' | 'ready' | 'error';
 
-export function useSimulatedProgress({
-  status,
-  duration = 8000,
-  finalDuration = 500
-}: UseSimulatedProgressOptions) {
+export const useSimulatedProgress = (status: ProgressStatus) => {
   const [progress, setProgress] = useState(0);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const startTimeRef = useRef<number>(0);
 
   useEffect(() => {
+    let interval: NodeJS.Timeout;
+
     if (status === 'generating') {
-      // Reset and start progress
-      setProgress(0);
-      startTimeRef.current = Date.now();
+      // Start from 0 if not already started
+      setProgress((prev) => (prev === 100 ? 0 : prev));
 
-      // Easing function for smooth progress (ease-out)
-      const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+      interval = setInterval(() => {
+        setProgress((prev) => {
+            // Fast at first, then slower as it reaches 90%
+            if (prev >= 90) return prev;
+            const increment = prev < 50 ? 5 : prev < 80 ? 2 : 1;
+            return Math.min(prev + increment, 90);
+        });
+      }, 500);
 
-      intervalRef.current = setInterval(() => {
-        const elapsed = Date.now() - startTimeRef.current;
-        const t = Math.min(elapsed / duration, 1);
-        const easedProgress = easeOut(t);
-        
-        // Progress from 0 to 90%
-        const newProgress = Math.min(easedProgress * 90, 90);
-        setProgress(newProgress);
-
-        if (newProgress >= 90) {
-          if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-          }
-        }
-      }, 50);
     } else if (status === 'ready') {
-      // Jump to 100% smoothly
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-
-      const startProgress = progress;
-      const startTime = Date.now();
-
-      intervalRef.current = setInterval(() => {
-        const elapsed = Date.now() - startTime;
-        const t = Math.min(elapsed / finalDuration, 1);
-        const newProgress = startProgress + (100 - startProgress) * t;
-        
-        setProgress(newProgress);
-
-        if (newProgress >= 100) {
-          if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-          }
-          setProgress(100);
-        }
-      }, 16);
-    } else if (status === 'error' || status === 'idle') {
-      // Reset
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-      setProgress(0);
+      // Jump to 100%
+      setProgress(100);
+    } else if (status === 'error') {
+      // Keep as is or handle differently
     }
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [status, duration, finalDuration]);
+    return () => clearInterval(interval);
+  }, [status]);
 
   return progress;
-}
+};

@@ -1,217 +1,119 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Activity, RefreshCcw, AlertCircle } from 'lucide-react';
 import { useSimulatedProgress } from '../hooks/useSimulatedProgress';
 
 interface ProgressiveImageProps {
   status: 'idle' | 'generating' | 'ready' | 'error';
-  progress?: number; // Optional external progress (0-100)
+  prompt: string;
   finalSrc?: string;
-  alt?: string;
-  aspectRatio?: number; // e.g., 1 for square, 16/9 for landscape
+  jobId?: string; // Optional for debugging or retry logic
   onRetry?: () => void;
-  prompt?: string;
+  aspectRatio?: string; // "1/1", "16/9"
 }
 
-export const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
-  status,
-  progress: externalProgress,
-  finalSrc,
-  alt = 'Generated Image',
-  aspectRatio = 1,
+export const ProgressiveImage: React.FC<ProgressiveImageProps> = ({ 
+  status, 
+  prompt, 
+  finalSrc, 
   onRetry,
-  prompt
+  aspectRatio = "1/1"
 }) => {
-  const simulatedProgress = useSimulatedProgress({ status });
-  const progress = externalProgress ?? simulatedProgress;
+  const progress = useSimulatedProgress(status);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
 
-  useEffect(() => {
-    if (status === 'ready' && finalSrc) {
-      // Preload image
-      const img = new Image();
-      img.onload = () => setImageLoaded(true);
-      img.onerror = () => setImageError(true);
-      img.src = finalSrc;
-    } else {
-      setImageLoaded(false);
-      setImageError(false);
-    }
-  }, [finalSrc, status]);
-
-  const paddingBottom = `${(1 / aspectRatio) * 100}%`;
-
+  // If status is ready but image hasn't loaded yet, we still show some loading state (or keep blur)
+  
   return (
-    <div 
-      className="relative w-full max-w-2xl my-4"
-      style={{ paddingBottom }}
-      aria-busy={status === 'generating'}
-      aria-live="polite"
-    >
-      <div className="absolute inset-0 rounded-lg overflow-hidden border border-white/10">
-        <AnimatePresence mode="wait">
-          {status === 'generating' && (
-            <motion.div
-              key="placeholder"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-pink-900/20 to-blue-900/20"
-            >
-              {/* Shimmer effect */}
-              <div className="absolute inset-0 shimmer-effect" />
-              
-              {/* Blur overlay */}
-              <div 
-                className="absolute inset-0 backdrop-blur-xl bg-black/40"
-                style={{
-                  backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'100\' height=\'100\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' /%3E%3C/filter%3E%3Crect width=\'100\' height=\'100\' filter=\'url(%23noise)\' opacity=\'0.05\'/%3E%3C/svg%3E")',
-                  backgroundRepeat: 'repeat'
-                }}
-              />
+    <div className="relative w-full max-w-md my-4 rounded-xl overflow-hidden border border-white/10 shadow-2xl bg-[#0c0c0e]">
+       {/* Container with constrained aspect ratio */}
+       <div style={{ aspectRatio }} className="w-full relative">
+          
+          <AnimatePresence mode="wait">
+            {/* ERROR STATE */}
+            {status === 'error' && (
+               <motion.div 
+                 key="error"
+                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                 className="absolute inset-0 flex flex-col items-center justify-center bg-red-500/5 p-6 text-center"
+               >
+                 <AlertCircle className="text-red-400 mb-3" size={32} />
+                 <p className="text-red-200 text-sm font-medium mb-4">Falha ao gerar imagem</p>
+                 {onRetry && (
+                   <button onClick={onRetry} className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-300 rounded-lg text-xs transition-colors flex items-center gap-2">
+                     <RefreshCcw size={14} /> Tentar Novamente
+                   </button>
+                 )}
+               </motion.div>
+            )}
 
-              {/* Progress indicator */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6">
-                <div className="relative w-24 h-24">
-                  {/* Circular progress */}
-                  <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="45"
-                      fill="none"
-                      stroke="rgba(255,255,255,0.1)"
-                      strokeWidth="8"
-                    />
-                    <motion.circle
-                      cx="50"
-                      cy="50"
-                      r="45"
-                      fill="none"
-                      stroke="url(#gradient)"
-                      strokeWidth="8"
-                      strokeLinecap="round"
-                      strokeDasharray={`${2 * Math.PI * 45}`}
-                      initial={{ strokeDashoffset: 2 * Math.PI * 45 }}
-                      animate={{ 
-                        strokeDashoffset: 2 * Math.PI * 45 * (1 - progress / 100)
-                      }}
-                      transition={{ duration: 0.3, ease: 'easeOut' }}
-                    />
-                    <defs>
-                      <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#EB00FF" />
-                        <stop offset="100%" stopColor="#00D4FF" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
+            {/* GENERATING / LOADING STATE */}
+            {(status === 'generating' || (status === 'ready' && !imageLoaded)) && (
+               <motion.div 
+                 key="loading"
+                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                 className="absolute inset-0 z-10"
+               >
+                  {/* Background Blur Mesh */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-[#1a1a2e] to-black" />
                   
-                  {/* Percentage text */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-2xl font-bold text-white">
-                      {Math.round(progress)}%
-                    </span>
+                  {/* Shimmer Effect */}
+                  <motion.div 
+                     className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent skew-x-12"
+                     initial={{ x: '-100%' }}
+                     animate={{ x: '100%' }}
+                     transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                  />
+
+                  {/* Center Content */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
+                     <div className="relative w-16 h-16 mb-4">
+                        <div className="absolute inset-0 rounded-full border-4 border-white/10" />
+                        <svg className="w-full h-full transform -rotate-90">
+                           <circle 
+                              cx="32" cy="32" r="28" 
+                              stroke="url(#gradient)" strokeWidth="4" fill="transparent"
+                              strokeDasharray="176"
+                              strokeDashoffset={176 - (176 * progress) / 100}
+                              className="transition-all duration-500 ease-out"
+                           />
+                           <defs>
+                              <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                 <stop offset="0%" stopColor="#c084fc" />
+                                 <stop offset="100%" stopColor="#db2777" />
+                              </linearGradient>
+                           </defs>
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white">
+                           {Math.round(progress)}%
+                        </div>
+                     </div>
+                     
+                     <p className="text-xs text-transparent bg-clip-text bg-gradient-to-r from-purple-200 to-pink-200 font-medium uppercase tracking-widest animate-pulse">
+                        Criando Arte
+                     </p>
+                     <p className="text-[11px] text-gray-500 mt-2 italic line-clamp-2 text-center max-w-[80%]">
+                        "{prompt}"
+                     </p>
                   </div>
-                </div>
-
-                {/* Status text */}
-                <div className="text-center">
-                  <p className="text-sm font-medium text-white mb-1">
-                    🎨 Gerando imagem...
-                  </p>
-                  {prompt && (
-                    <p className="text-xs text-white/60 max-w-md line-clamp-2">
-                      "{prompt}"
-                    </p>
-                  )}
-                </div>
-
-                {/* Animated dots */}
-                <div className="flex gap-1">
-                  {[0, 1, 2].map((i) => (
-                    <motion.div
-                      key={i}
-                      className="w-2 h-2 rounded-full bg-white/40"
-                      animate={{
-                        scale: [1, 1.5, 1],
-                        opacity: [0.4, 1, 0.4]
-                      }}
-                      transition={{
-                        duration: 1.5,
-                        repeat: Infinity,
-                        delay: i * 0.2
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            </motion.div>
+               </motion.div>
+            )}
+          </AnimatePresence>
+          
+          {/* FINAL IMAGE */}
+          {status === 'ready' && finalSrc && (
+             <motion.img 
+                src={finalSrc} 
+                alt={prompt}
+                initial={{ opacity: 0, scale: 1.05, filter: 'blur(10px)' }}
+                animate={imageLoaded ? { opacity: 1, scale: 1, filter: 'blur(0px)' } : {}}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                onLoad={() => setImageLoaded(true)}
+                className="w-full h-full object-cover"
+             />
           )}
 
-          {status === 'ready' && finalSrc && imageLoaded && !imageError && (
-            <motion.img
-              key="final-image"
-              src={finalSrc}
-              alt={alt}
-              initial={{ opacity: 0, filter: 'blur(20px)' }}
-              animate={{ opacity: 1, filter: 'blur(0px)' }}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
-              className="absolute inset-0 w-full h-full object-contain"
-              loading="lazy"
-            />
-          )}
-
-          {(status === 'error' || imageError) && (
-            <motion.div
-              key="error"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-red-500/10 border-2 border-red-500/30 rounded-lg flex flex-col items-center justify-center gap-4 p-6"
-            >
-              <div className="text-center">
-                <div className="text-4xl mb-2">❌</div>
-                <p className="text-sm font-semibold text-red-400 mb-1">
-                  Falha ao gerar imagem
-                </p>
-                <p className="text-xs text-red-300/80">
-                  O serviço pode estar temporariamente indisponível.
-                </p>
-              </div>
-              
-              {onRetry && (
-                <button
-                  onClick={onRetry}
-                  className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 rounded-lg text-sm font-medium text-red-200 transition-colors"
-                >
-                  🔄 Tentar Novamente
-                </button>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      <style>{`
-        @keyframes shimmer {
-          0% {
-            transform: translateX(-100%);
-          }
-          100% {
-            transform: translateX(100%);
-          }
-        }
-
-        .shimmer-effect {
-          background: linear-gradient(
-            90deg,
-            transparent 0%,
-            rgba(255, 255, 255, 0.1) 50%,
-            transparent 100%
-          );
-          animation: shimmer 2s infinite;
-        }
-      `}</style>
+       </div>
     </div>
   );
 };

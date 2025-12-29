@@ -346,6 +346,20 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                   }
                 },
                 {
+                  name: 'generate_image',
+                  description: 'Generates an image using AI art models. Use this when the user asks to draw, paint, or create a picture.',
+                  parameters: {
+                    type: "object",
+                    required: ["prompt"],
+                    properties: {
+                      prompt: {
+                        type: "string",
+                        description: "Detailed visual description of the image to generate."
+                      }
+                    }
+                  }
+                },
+                {
                   name: 'execute_system_command',
                   description: 'Executes a system command on the user PC (open apps, files, websites, search logs).',
                   parameters: {
@@ -409,11 +423,16 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
 
 
         if (functionCall) {
-          console.log(`[ADMIN] 🔧 Function call: ${functionCall.name}`);
-          
-          // 🧠 Visual Feedback: Let the user know what Lira is doing
-          const actionMessage = `\n> *🔧 Executando: ${functionCall.name}*\n> *📂 Alvo: ${functionCall.args.path || functionCall.args.query || 'Project'}*\n\n`;
-          res.write(`data: ${JSON.stringify({ content: actionMessage })}\n\n`);
+
+          if (functionCall.name === 'generate_image') {
+              // Special Widget for Image Generation
+              const prompt = functionCall.args.prompt || '...';
+              res.write(`data: ${JSON.stringify({ content: `[[WIDGET:gen_image|{"prompt": "${prompt.replace(/"/g, '\\"')}"}]]\n\n` })}\n\n`);
+          } else {
+              // Standard Tool Log
+              const actionMessage = `\n> *🔧 Executando: ${functionCall.name}*\n> *📂 Alvo: ${functionCall.args.path || functionCall.args.query || functionCall.args.prompt || 'System'}*\n\n`;
+              res.write(`data: ${JSON.stringify({ content: actionMessage })}\n\n`);
+          }
 
           let functionResult;
           switch (functionCall.name) {
@@ -435,6 +454,64 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
             case 'get_user_stats':
                const stats = await getState(userId);
                functionResult = stats ? { xp: stats.xp, coins: stats.coins, level: stats.level } : { error: "Stats not found" };
+               break;
+            case 'generate_image':
+               const { generateImage } = await import('../services/imageGeneration.js');
+               const { imageJobs } = await import('../services/jobStore.js');
+               const { v4: uuidv4 } = await import('uuid');
+
+               const prompt = functionCall.args.prompt;
+               const jobId = uuidv4();
+               
+               // 1. Create Job
+               const job = {
+                   id: jobId,
+                   status: 'generating',
+                   progress: 0,
+                   prompt: prompt,
+                   createdAt: Date.now()
+               };
+               imageJobs.set(jobId, job);
+
+               // 2. Emit Progressive Widget IMMEDIATELY
+               res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_image|{"jobId": "${jobId}", "prompt": "${prompt.replace(/"/g, '\\"')}"}]]\n\n` })}\n\n`);
+
+               // 3. Start Async Process (Fire & Forget)
+               (async () => {
+                   try {
+                       // Simulation of progress
+                       const progInt = setInterval(() => {
+                           if(job.progress < 80) job.progress += 10;
+                       }, 800);
+
+                       const HF_KEY = process.env.HUGGINNGFACE_ACCESS_TOKEN;
+                       const imgResult = await generateImage(prompt, 'singularity', HF_KEY);
+                       
+                       clearInterval(progInt);
+
+                       if (imgResult.success) {
+                           job.status = 'completed';
+                           job.progress = 100;
+                           job.result = imgResult.imageUrl;
+                           job.fallback = imgResult.fallback;
+                           // Notify chat stream? No, the widget polls.
+                       } else {
+                           job.status = 'failed';
+                           job.error = "Generation Failure";
+                       }
+                   } catch(e) {
+                       job.status = 'failed';
+                       job.error = e.message;
+                   }
+               })();
+
+               // 4. Return "Job Started" to Agent (so it knows to wait or just acknowledge)
+               functionResult = { 
+                   success: true, 
+                   jobId: jobId, 
+                   status: "generating",
+                   system_note: "The image is being generated in the background. The user sees a progressive loading widget. DO NOT output the image Markdown yet. Just say something like 'I'm painting it now...'." 
+               };
                break;
             case 'execute_system_command':
                functionResult = await pcController.handleInstruction(functionCall.args.command);
