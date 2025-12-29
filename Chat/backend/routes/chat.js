@@ -485,32 +485,41 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
 
                // 3. Start Async Process (Fire & Forget)
                // 3. Start Async Process (Fire & Forget)
-               (async () => {
-                   try {
-                       // Simulation of progress
-                       const progInt = setInterval(async () => {
-                            // avoid DB spam
-                       }, 800);
+                (async () => {
+                   console.log(`[ASYNC_IMG] Starting async generation for Job ${jobId}`);
+                    try {
+                        const progInt = setInterval(async () => {
+                             // heartbeat
+                        }, 800);
 
-                       const HF_KEY = process.env.HUGGINNGFACE_ACCESS_TOKEN;
-                       const imgResult = await generateImage(prompt, 'singularity', HF_KEY);
-                       
-                       clearInterval(progInt);
+                        const HF_KEY = process.env.HUGGINNGFACE_ACCESS_TOKEN;
+                        
+                        // Add 60s Global Timeout
+                        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Global Generation Timeout (60s)")), 60000));
+                        
+                        const imgResult = await Promise.race([
+                            generateImage(prompt, 'singularity', HF_KEY),
+                            timeoutPromise
+                        ]);
+                        
+                        clearInterval(progInt);
+                        console.log(`[ASYNC_IMG] Result for ${jobId}: success=${imgResult.success}`);
 
-                       if (imgResult.success) {
-                           await jobStore.update(jobId, {
-                               status: 'completed',
-                               progress: 100,
-                               result: imgResult.imageUrl,
-                               provider: imgResult.provider
-                           });
-                       } else {
-                           await jobStore.update(jobId, { status: 'failed', error: "Generation Failure" });
-                       }
-                   } catch(e) {
-                       await jobStore.update(jobId, { status: 'failed', error: e.message });
-                   }
-               })();
+                        if (imgResult.success) {
+                            await jobStore.update(jobId, {
+                                status: 'completed',
+                                progress: 100,
+                                result: imgResult.imageUrl,
+                                provider: imgResult.provider
+                            });
+                        } else {
+                            await jobStore.update(jobId, { status: 'failed', error: "Generation Failure" });
+                        }
+                    } catch(e) {
+                        console.error(`[ASYNC_IMG] CRITICAL ERROR Job ${jobId}:`, e);
+                        await jobStore.update(jobId, { status: 'failed', error: e.message });
+                    }
+                })();
 
 
                // 4. Return "Job Started" to Agent with stricter instruction
