@@ -123,9 +123,19 @@ async function generateHuggingFaceImage(prompt, apiKey) {
         clearTimeout(timeout);
         
         if (!response.ok) {
-            const error = await response.text();
-            console.error('[HF] Generation failed:', error);
-            throw new Error(`Hugging Face API error: ${response.status}`);
+            const errorText = await response.text();
+            console.error(`[HF] Generation failed with status ${response.status}:`, errorText);
+            
+            // Helpful messages for common errors
+            if (response.status === 401) {
+                console.error('[HF] ❌ Invalid API Key. Check your .env file.');
+            } else if (response.status === 403) {
+                console.error('[HF] ❌ Forbidden. You might need to accept the model terms on Hugging Face.');
+            } else if (response.status === 503) {
+                console.error('[HF] ⚠️ Model is loading. This is normal for FLUX.1-schnell on free inference API. Retry might work.');
+            }
+
+            throw new Error(`Hugging Face API error: ${response.status} - ${errorText}`);
         }
         
         const blob = await response.blob();
