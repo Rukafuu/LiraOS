@@ -207,14 +207,12 @@ export const DiscordModal: React.FC<DiscordModalProps> = ({ isOpen, onClose }) =
             ) : (
                 <div className="space-y-4">
                     {/* Status Banner */}
-                    <div className="bg-green-500/10 border border-green-500/20 p-3 rounded-xl flex items-center justify-between">
+                    {/* Status Banner */}
+                    <div className="bg-green-500/10 border border-green-500/20 p-3 rounded-xl flex items-center">
                          <div className="flex items-center gap-2">
                              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                              <span className="text-sm font-medium text-green-400">Bot Active</span>
                          </div>
-                         <button onClick={() => setShowConfig(true)} className="text-xs text-gray-400 hover:text-white underline">
-                             Configure
-                         </button>
                     </div>
 
                     {/* Features List (Always Visible) */}
@@ -268,24 +266,7 @@ export const DiscordModal: React.FC<DiscordModalProps> = ({ isOpen, onClose }) =
                          )}
                      </div>
 
-                     {config?.applicationId ? (
-                         <a 
-                            href={`https://discord.com/users/${config.applicationId}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="block w-full"
-                         >
-                            <button className="w-full py-3 px-4 bg-[#2B2D31] hover:bg-[#35373C] text-gray-200 hover:text-white font-medium rounded-xl transition-all border border-white/5 flex items-center justify-center gap-2">
-                                <MessageSquare size={18} />
-                                {t('discord.dm')}
-                            </button>
-                         </a>
-                     ) : (
-                         <button disabled className="w-full py-3 px-4 bg-white/5 text-gray-500 font-medium rounded-xl flex items-center justify-center gap-2 cursor-not-allowed border border-white/5" title="Set DISCORD_APPLICATION_ID in .env">
-                             <MessageSquare size={18} />
-                             {t('discord.dm_missing')}
-                         </button>
-                     )}
+
                 </div>
             )}
             
