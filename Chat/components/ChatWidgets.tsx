@@ -148,7 +148,7 @@ const SmartProgressiveWidget: React.FC<{ jobId: string; prompt: string }> = ({ j
            const job = await res.json();
            console.log(`[POLL] Job ${jobId} status: ${job.status}`);
            if (isMounted) {
-               if (job.status === 'completed') {
+               if (job.status === 'completed' || job.status === 'ready') {
                    setFinalSrc(job.result);
                    setStatus('ready');
                    clearInterval(interval);
