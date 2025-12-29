@@ -39,7 +39,8 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 // Middleware
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' ? FRONTEND_URL : true, 
-  credentials: true
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json({ limit: '50mb' }));
 
