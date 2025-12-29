@@ -62,6 +62,13 @@
     "recovery_sent": "Recovery email sent. Check your inbox.",
     "logged_in_oauth": "Logged in via OAuth"
   },
+  "welcome_modal": {
+    "welcome_back": "Welcome back",
+    "welcome": "Welcome",
+    "message": "Ready to continue your LiraOS journey. Do you want to resume the last conversation or start a new one?",
+    "resume": "Resume",
+    "new_chat": "New Conversation"
+  },
   "settings": {
       "title": "Settings",
       "language": "Language",

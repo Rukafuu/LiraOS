@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { LIRA_AVATAR } from '../constants';
 
 interface WelcomeModalProps {
@@ -10,6 +11,8 @@ interface WelcomeModalProps {
 }
 
 export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, username, isReturning, onClose }) => {
+  const { t } = useTranslation();
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -22,12 +25,20 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, username, is
                   <img src={LIRA_AVATAR} alt="Lira" className="w-full h-full object-cover" />
                 </div>
                 <div className="flex-1">
-                  <div className="text-xs uppercase tracking-widest text-lira-blue/70 mb-1">{isReturning ? 'Bem-vindo de volta' : 'Bem-vindo'}</div>
+                  <div className="text-xs uppercase tracking-widest text-lira-blue/70 mb-1">
+                    {isReturning ? t('welcome_modal.welcome_back') : t('welcome_modal.welcome')}
+                  </div>
                   <div className="text-3xl font-extrabold text-white">{username}</div>
-                  <div className="mt-3 text-sm text-gray-400">Pronta para continuar sua jornada no LiraOS. Você quer retomar a última conversa ou iniciar uma nova?</div>
+                  <div className="mt-3 text-sm text-gray-400">
+                    {t('welcome_modal.message')}
+                  </div>
                   <div className="mt-6 flex gap-3">
-                    <button onClick={onClose} className="px-4 py-2.5 bg-white text-black text-sm font-semibold rounded-xl hover:bg-gray-200 transition-colors">Retomar</button>
-                    <a href="#" className="px-4 py-2.5 bg-white/10 text-white text-sm rounded-xl hover:bg-white/20 border border-white/10 transition-colors">Nova conversa</a>
+                    <button onClick={onClose} className="px-4 py-2.5 bg-white text-black text-sm font-semibold rounded-xl hover:bg-gray-200 transition-colors">
+                      {t('welcome_modal.resume')}
+                    </button>
+                    <a href="#" className="px-4 py-2.5 bg-white/10 text-white text-sm rounded-xl hover:bg-white/20 border border-white/10 transition-colors">
+                      {t('welcome_modal.new_chat')}
+                    </a>
                   </div>
                 </div>
               </div>
