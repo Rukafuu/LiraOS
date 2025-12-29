@@ -4,6 +4,42 @@ import { isAdmin } from './authStore.js';
 // Helper for BigInt fields
 const toInt = (n) => Number(n); 
 
+function getTodayDate() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function generateDailyQuests() {
+  return {
+    date: getTodayDate(),
+    quests: [
+      { id: 'daily_login', title: 'Login Diário', desc: 'Entre no sistema hoje', target: 1, progress: 1, reward: 50, claimed: false, type: 'login' },
+      { id: 'msg_10', title: 'Conversador', desc: 'Envie 10 mensagens', target: 10, progress: 0, reward: 100, claimed: false, type: 'message_count' },
+      { id: 'xp_200', title: 'Evolução', desc: 'Ganhe 200 XP', target: 200, progress: 0, reward: 150, claimed: false, type: 'xp_gain' }
+    ]
+  };
+}
+
+async function checkDailyRotation(userId, currentStats) {
+    const today = getTodayDate();
+    let stats = currentStats || {};
+    let quests = stats.dailyQuests;
+
+    if (!quests || quests.date !== today) {
+        quests = generateDailyQuests();
+        stats = { ...stats, dailyQuests: quests };
+        
+        try {
+            await prisma.gamification.update({
+                where: { userId },
+                data: { stats }
+            });
+        } catch (e) {
+            // Ignore if record doesn't exist yet (handled by saveState)
+        }
+    }
+    return stats;
+}
+
 export const getState = async (userId) => {
   try {
     const isAdm = await isAdmin(userId);
@@ -16,9 +52,9 @@ export const getState = async (userId) => {
           userId,
           xp: 9999999,
           coins: 9999999,
-          level: 1000, // Singularity God
-          stats: row?.stats || {},
-          unlockedThemes: row?.unlockedThemes || [], // TODO: Inject all
+          level: 1000, 
+          stats: row?.stats || {}, 
+          unlockedThemes: row?.unlockedThemes || [], 
           unlockedPersonas: row?.unlockedPersonas || [],
           achievements: row?.achievements || [],
           updatedAt: Date.now()
@@ -26,14 +62,15 @@ export const getState = async (userId) => {
     }
 
     if (!row) return null;
+    
+    const stats = await checkDailyRotation(userId, row.stats);
+
     return {
       ...row,
       xp: row.xp || 0,
-       // ... existing
-
       coins: row.coins || 0,
       level: row.level || 1,
-      stats: row.stats || {}, // Prisma handles Json
+      stats: stats, 
       unlockedThemes: row.unlockedThemes || [],
       unlockedPersonas: row.unlockedPersonas || [],
       achievements: row.achievements || [],
@@ -72,7 +109,6 @@ export const saveState = async (userId, data) => {
       }
     });
     
-    // Return formatted
     return {
       ...row,
       updatedAt: toInt(row.updatedAt)
@@ -92,14 +128,37 @@ export const getOrCreateDefault = async (userId) => {
     xp: 0,
     coins: 0,
     level: 1,
-    stats: {},
+    stats: { dailyQuests: generateDailyQuests() },
     unlockedThemes: [],
     unlockedPersonas: [],
     activePersonaId: 'default'
   };
-  // saveState handles upsert, so effectively creates it
   await saveState(userId, def);
   return def;
+};
+
+export const claimQuest = async (userId, questId) => {
+    const state = await getOrCreateDefault(userId);
+    let { xp, coins, stats } = state;
+    
+    stats = await checkDailyRotation(userId, stats);
+    
+    const quests = stats.dailyQuests.quests;
+    const questIndex = quests.findIndex(q => q.id === questId);
+    
+    if (questIndex === -1) return { success: false, message: 'Quest not found' };
+    
+    const quest = quests[questIndex];
+    if (quest.claimed) return { success: false, message: 'Already claimed' };
+    if (quest.progress < quest.target) return { success: false, message: 'Not completed' };
+    
+    // Grant Reward
+    quest.claimed = true;
+    coins += quest.reward;
+    
+    // Save
+    await saveState(userId, { coins, stats });
+    return { success: true, reward: quest.reward };
 };
 
 export const award = async (userId, rewards, plan = 'free') => {
@@ -115,17 +174,40 @@ export const award = async (userId, rewards, plan = 'free') => {
   const mult = multipliers[plan.toLowerCase()] || 1.0;
 
   const state = await getOrCreateDefault(userId);
-  let { xp, coins } = state;
+  let { xp, coins, stats } = state;
+  let newStats = await checkDailyRotation(userId, stats);
   
-  if (rewards.xp) xp += Math.round(rewards.xp * mult);
+  // Calculate Generic Rewards
+  const xpGain = rewards.xp ? Math.round(rewards.xp * mult) : 0;
+  if (rewards.xp) xp += xpGain;
   if (rewards.coins) coins += rewards.coins;
+  
+  // Update Quests Progress
+  const todayQuests = newStats.dailyQuests?.quests || [];
+  let questUpdated = false;
+
+  todayQuests.forEach(q => {
+      if (q.claimed) return;
+      if (q.progress >= q.target) return;
+      
+      let increment = 0;
+      if (q.type === 'message_count' && rewards.xp > 0) increment = 1; 
+      if (q.type === 'xp_gain' && xpGain > 0) increment = xpGain;
+      // Login is auto-1 on generation
+
+      if (increment > 0) {
+          q.progress = Math.min(q.target, q.progress + increment);
+          questUpdated = true;
+      }
+  });
   
   const level = 1 + Math.floor(xp / 1000);
   
   const updates = {
     xp,
     coins,
-    level
+    level,
+    stats: newStats
   };
   
   return await saveState(userId, updates);
