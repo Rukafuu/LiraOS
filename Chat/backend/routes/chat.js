@@ -539,10 +539,8 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
           
           console.log(`[ADMIN] ✅ Function result success: ${!!functionResult}`);
           
-          const resultStr = typeof functionResult === 'object' ? JSON.stringify(functionResult, null, 2) : String(functionResult);
-          const previewStr = resultStr.length > 300 ? resultStr.substring(0, 300) + '...' : resultStr;
-          
-          res.write(`data: ${JSON.stringify({ content: `> ✅ Resultado: \n\`\`\`json\n${previewStr}\n\`\`\`\n\n` })}\n\n`);
+          // Log result internally but do not show raw JSON to user to avoid UI clutter
+          console.log(`[ADMIN] Tool Output (Hidden from UI):`, typeof functionResult === 'object' ? JSON.stringify(functionResult).substring(0, 100) + '...' : functionResult);
 
           console.log('[ADMIN] Sending follow-up request with tool output...');
 
