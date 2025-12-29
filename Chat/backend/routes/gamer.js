@@ -14,7 +14,9 @@ dotenv.config();
 const router = express.Router();
 
 // Initialize Gemini
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+// Initialize Gemini
+const genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
+console.log(`[GAMER] Module loaded. Gemini Enabled: ${!!genAI}`);
 
 const CANDIDATE_MODELS = [
     "gemini-2.5-flash",
