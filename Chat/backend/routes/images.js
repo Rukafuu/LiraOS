@@ -2,7 +2,7 @@ import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { generateImage } from '../services/imageGeneration.js';
 import { requireAuth } from '../middlewares/authMiddleware.js';
-import { imageJobs } from '../services/jobStore.js';
+import { jobStore } from '../services/jobStore.js';
 
 const router = express.Router();
 
@@ -15,28 +15,32 @@ router.post('/generate', requireAuth, async (req, res) => {
         if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
 
         const jobId = uuidv4();
-        const job = {
-            id: jobId,
+        // Create initial job in DB
+        await jobStore.create(jobId, {
+            prompt,
             status: 'queued',
             progress: 0,
-            prompt,
-            createdAt: Date.now()
-        };
-
-        imageJobs.set(jobId, job);
+            createdAt: Date.now(),
+            userId: req.user?.id
+        });
 
         // Start processing asynchronously
         (async () => {
             try {
-                job.status = 'generating';
-                job.progress = 10;
+                await jobStore.update(jobId, { status: 'generating', progress: 10 });
                 
                 // Simulate some progress steps if the actual generation doesn't support streaming
-                const progressInterval = setInterval(() => {
-                    if (job.status === 'generating' && job.progress < 80) {
-                        job.progress += 10;
-                    }
-                }, 500);
+                const progressInterval = setInterval(async () => {
+                    // Fetch latest status to ensure we don't overwrite completion? 
+                    // Optimization: Just blind update progress if < 80
+                    try {
+                         // We can't easily check 'job.progress' without fetching.
+                         // But for simplicity, we assume generation takes time.
+                         // Let's just update timestamp or keep distinct updates.
+                         // Actually, reading from DB every 500ms is heavy for just simulation.
+                         // We'll skip simulation updates in DB to save IO, or do it less frequently.
+                    } catch(e) {}
+                }, 1000);
 
                 const HF_KEY = process.env.HUGGINNGFACE_ACCESS_TOKEN;
                 const result = await generateImage(prompt, tier, HF_KEY);
@@ -44,18 +48,24 @@ router.post('/generate', requireAuth, async (req, res) => {
                 clearInterval(progressInterval);
 
                 if (result.success) {
-                    job.status = 'completed';
-                    job.progress = 100;
-                    job.result = result.imageUrl;
-                    job.fallback = result.fallback;
+                    await jobStore.update(jobId, {
+                        status: 'completed', // Ready
+                        progress: 100,
+                        result: result.imageUrl,
+                        provider: result.provider
+                    });
                 } else {
-                    job.status = 'failed';
-                    job.error = 'Image generation failed';
+                     await jobStore.update(jobId, {
+                        status: 'failed',
+                        error: 'Image generation failed'
+                    });
                 }
             } catch (err) {
                 console.error(`Job ${jobId} failed:`, err);
-                job.status = 'failed';
-                job.error = err.message || 'Unknown error';
+                await jobStore.update(jobId, {
+                    status: 'failed',
+                    error: err.message || 'Unknown error'
+                });
             }
         })();
 
@@ -69,21 +79,31 @@ router.post('/generate', requireAuth, async (req, res) => {
 
 // GET /api/images/:jobId
 // Simple Polling Endpoint
-router.get('/:id', requireAuth, (req, res) => {
+router.get('/:id', requireAuth, async (req, res) => {
     const { id } = req.params;
-    const job = imageJobs.get(id);
+    
+    try {
+        const job = await jobStore.get(id);
 
-    if (!job) {
-        return res.status(404).json({ error: 'Job not found' });
+        if (!job) {
+            return res.status(404).json({ error: 'Job not found' });
+        }
+
+        res.json({
+            id: job.id,
+            status: job.status === 'completed' ? 'ready' : job.status, // Map 'completed' to 'ready' for frontend? Or frontend handles 'completed'?
+            // Frontend expects 'ready' or 'completed'?
+            // ProgressiveImage.tsx checks "status === 'ready'".
+            // Backend jobStore usually used 'completed'.
+            // Let's map it here to be safe: 'completed' -> 'ready'.
+            
+            progress: job.progress,
+            result: job.result, // This is the persistent URL/Base64
+            error: job.error
+        });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
     }
-
-    res.json({
-        id: job.id,
-        status: job.status,
-        progress: job.progress,
-        result: job.result,
-        error: job.error
-    });
 });
 
 export default router;

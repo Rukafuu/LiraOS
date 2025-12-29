@@ -173,3 +173,17 @@ model IrisVideo {
 
   @@map("iris_videos")
 }
+
+model ImageJob {
+  id        String   @id
+  userId    String?
+  prompt    String
+  status    String
+  result    String?  // Base64 or URL
+  createdAt BigInt
+  provider  String?
+  error     String?
+  progress  Int?     @default(0)
+
+  @@map("image_jobs")
+}

@@ -453,31 +453,32 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                break;
             case 'generate_image':
                const { generateImage } = await import('../services/imageGeneration.js');
-               const { imageJobs } = await import('../services/jobStore.js');
+               const { jobStore } = await import('../services/jobStore.js');
                const { v4: uuidv4 } = await import('uuid');
 
                const prompt = functionCall.args.prompt;
                const jobId = uuidv4();
                
-               // 1. Create Job
-               const job = {
-                   id: jobId,
+               // 1. Create Job in DB
+               await jobStore.create(jobId, {
+                   prompt: prompt,
                    status: 'generating',
                    progress: 0,
-                   prompt: prompt,
-                   createdAt: Date.now()
-               };
-               imageJobs.set(jobId, job);
+                   createdAt: Date.now(),
+                   userId: userId,
+                   provider: 'gemini' // Admin uses gemini implicitly or whatever genImage uses
+               });
 
                // 2. Emit Progressive Widget IMMEDIATELY
                res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_image|{"jobId": "${jobId}", "prompt": "${prompt.replace(/"/g, '\\"')}"}]]\n\n` })}\n\n`);
 
                // 3. Start Async Process (Fire & Forget)
+               // 3. Start Async Process (Fire & Forget)
                (async () => {
                    try {
                        // Simulation of progress
-                       const progInt = setInterval(() => {
-                           if(job.progress < 80) job.progress += 10;
+                       const progInt = setInterval(async () => {
+                            // avoid DB spam
                        }, 800);
 
                        const HF_KEY = process.env.HUGGINNGFACE_ACCESS_TOKEN;
@@ -486,18 +487,17 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                        clearInterval(progInt);
 
                        if (imgResult.success) {
-                           job.status = 'completed';
-                           job.progress = 100;
-                           job.result = imgResult.imageUrl;
-                           job.fallback = imgResult.fallback;
-                           // Notify chat stream? No, the widget polls.
+                           await jobStore.update(jobId, {
+                               status: 'completed',
+                               progress: 100,
+                               result: imgResult.imageUrl,
+                               provider: imgResult.provider
+                           });
                        } else {
-                           job.status = 'failed';
-                           job.error = "Generation Failure";
+                           await jobStore.update(jobId, { status: 'failed', error: "Generation Failure" });
                        }
                    } catch(e) {
-                       job.status = 'failed';
-                       job.error = e.message;
+                       await jobStore.update(jobId, { status: 'failed', error: e.message });
                    }
                })();
 
@@ -885,29 +885,51 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
                            
                            // Import image generation service
                            const { generateImage, getProviderInfo } = await import('../services/imageGeneration.js');
+                           const { jobStore } = await import('../services/jobStore.js');
+                           const { v4: uuidv4 } = await import('uuid');
                            
                            // Get user tier (already calculated earlier in the request)
                            let userPlanLower = userPlan.toLowerCase();
                            if (isUserAdmin) userPlanLower = 'singularity';
                            const providerInfo = getProviderInfo(userPlanLower);
                            
-                           res.write(`data: ${JSON.stringify({ content: `\n> 🎨 Criando arte: "${promptPreview}"\n> *Usando ${providerInfo.model} (${providerInfo.name}) - Qualidade: ${providerInfo.quality}*\n\n` })}\n\n`);
+                           // Create Job in DB
+                           const jobId = uuidv4();
+                           await jobStore.create(jobId, {
+                               prompt: finalPrompt,
+                               status: 'generating',
+                               progress: 0,
+                               createdAt: Date.now(),
+                               userId: userId,
+                               provider: providerInfo.name
+                           });
+
+                           // Emit Widget for Standard Mode too!
+                           res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_image|{"jobId": "${jobId}", "prompt": "${finalPrompt.replace(/"/g, '\\"')}"}]]\n\n` })}\n\n`);
                            
-                           // Generate image with tier-based provider
-                           const HF_API_KEY = process.env.HUGGINNGFACE_ACCESS_TOKEN;
-                           const result = await generateImage(finalPrompt, userPlanLower, HF_API_KEY);
-                           
-                           if (result.success) {
-                                // Send image with loading indicator
-                                let successMsg = `![Generative Image](${result.imageUrl})\n\n> ✅ *Imagem gerada com sucesso!*`;
-                                if (result.fallback) {
-                                    // Use simple static message to avoid ANY JSON/SSE parsing issues
-                                    successMsg += `\n> ⚠️ **Fallback:** Provedor premium indisponível.\n> *Usando backup gratuito.*`;
+                           // Start Async Gen
+                           (async () => {
+                                try {
+                                    const HF_API_KEY = process.env.HUGGINNGFACE_ACCESS_TOKEN;
+                                    const result = await generateImage(finalPrompt, userPlanLower, HF_API_KEY);
+                                    
+                                    if (result.success) {
+                                        await jobStore.update(jobId, {
+                                            status: 'completed',
+                                            progress: 100,
+                                            result: result.imageUrl,
+                                            provider: result.provider
+                                        });
+                                    } else {
+                                        await jobStore.update(jobId, { status: 'failed', error: "Generation Failed" });
+                                    }
+                                } catch(e) {
+                                    await jobStore.update(jobId, { status: 'failed', error: e.message });
                                 }
-                                res.write(`data: ${JSON.stringify({ content: successMsg + '\n\n' })}\n\n`);
-                           } else {
-                               res.write(`data: ${JSON.stringify({ content: `\n> ❌ **Erro ao gerar imagem.** Tente novamente.\n\n` })}\n\n`);
-                           }
+                           })();
+                            
+                           // We do NOT send Markdown image anymore, we rely on widget.
+                           // But we might want to say something? No, widget is enough.
                            
                        } catch (parseError) {
                            console.error('[IMAGE_GEN] Error processing image generation:', parseError);
