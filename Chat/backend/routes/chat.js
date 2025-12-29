@@ -808,7 +808,8 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
                            const { generateImage, getProviderInfo } = await import('../services/imageGeneration.js');
                            
                            // Get user tier (already calculated earlier in the request)
-                           const userPlanLower = userPlan.toLowerCase();
+                           let userPlanLower = userPlan.toLowerCase();
+                           if (isUserAdmin) userPlanLower = 'singularity';
                            const providerInfo = getProviderInfo(userPlanLower);
                            
                            res.write(`data: ${JSON.stringify({ content: `\n> 🎨 Criando arte: "${promptPreview}"\n> *Usando ${providerInfo.model} (${providerInfo.name}) - Qualidade: ${providerInfo.quality}*\n\n` })}\n\n`);
