@@ -22,7 +22,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     username: '',
     password: ''
   });
-  const BACKEND_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4005';
+  const BACKEND_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
@@ -47,6 +47,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       (async () => {
         try {
           const targetUrl = `${BACKEND_URL}/api/recovery/init?t=${Date.now()}`;
+          console.log('[LOGIN] Requesting recovery from:', targetUrl);
+          
           const res = await fetch(targetUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -56,20 +58,35 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           setIsScanning(false);
           
           if (res.ok) {
-            setSuccessMessage('Password reset email sent! Check your inbox for instructions.');
+            const data = await res.json();
+            if (data.devMode && data.code) {
+                 setSuccessMessage(`DEV MODE: Your code is ${data.code}`);
+            } else {
+                 setSuccessMessage('Password reset email sent! Check your inbox.');
+            }
             setTimeout(() => {
               setIsForgotPassword(false);
               setIsLogin(true);
               setFormData({ email: formData.email, username: '', password: '' });
-            }, 3000);
+            }, 6000); // Longer timeout to read code
           } else {
             const errorData = await res.json().catch(() => ({}));
-            const errorMessage = errorData?.detail || errorData?.message || errorData?.error || 'Failed to send reset email';
-            setError(errorMessage);
+            console.error('[LOGIN] Recovery error:', errorData);
+
+            if (errorData.devCode) {
+                // Emergency bypass for SMTP failures
+                setError(`SMTP Error. EMERGENCY CODE: ${errorData.devCode}`);
+                // Allow copying code
+                console.log('Emergency Code:', errorData.devCode);
+            } else {
+                const errorMessage = errorData?.detail || errorData?.message || errorData?.error || 'Failed to send reset email';
+                setError(errorMessage);
+            }
           }
         } catch (error) {
+          console.error('[LOGIN] Network error:', error);
           setIsScanning(false);
-          setError('Network error. Please check if the backend is running.');
+          setError('Network error. Check console for details.');
         }
       })();
       return;

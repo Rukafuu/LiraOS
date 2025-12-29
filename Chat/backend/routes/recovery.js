@@ -54,8 +54,8 @@ router.post(['/init', '/init-new'], async (req, res) => {
 
   const transporter = nodemailer.createTransport({
       ...transportConfig,
-      connectionTimeout: 60000, // 60s
-      socketTimeout: 60000
+      connectionTimeout: 5000, // Fail fast (5s) if blocked
+      socketTimeout: 5000
   });
 
   try {
