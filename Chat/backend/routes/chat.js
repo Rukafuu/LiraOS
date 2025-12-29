@@ -424,12 +424,8 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
 
         if (functionCall) {
 
-          if (functionCall.name === 'generate_image') {
-              // Special Widget for Image Generation
-              const prompt = functionCall.args.prompt || '...';
-              res.write(`data: ${JSON.stringify({ content: `[[WIDGET:gen_image|{"prompt": "${prompt.replace(/"/g, '\\"')}"}]]\n\n` })}\n\n`);
-          } else {
-              // Standard Tool Log
+          if (functionCall.name !== 'generate_image') {
+              // Standard Tool Log (Image generation emits its own widget later)
               const actionMessage = `\n> *🔧 Executando: ${functionCall.name}*\n> *📂 Alvo: ${functionCall.args.path || functionCall.args.query || functionCall.args.prompt || 'System'}*\n\n`;
               res.write(`data: ${JSON.stringify({ content: actionMessage })}\n\n`);
           }

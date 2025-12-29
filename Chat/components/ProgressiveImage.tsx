@@ -90,7 +90,7 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
                      </div>
                      
                      <p className="text-xs text-transparent bg-clip-text bg-gradient-to-r from-purple-200 to-pink-200 font-medium uppercase tracking-widest animate-pulse">
-                        Criando Arte
+                        {status === 'ready' ? "Imagem Pronta! Renderizando..." : "Criando Arte"}
                      </p>
                      <p className="text-[11px] text-gray-500 mt-2 italic line-clamp-2 text-center max-w-[80%]">
                         "{prompt}"
