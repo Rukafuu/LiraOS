@@ -535,7 +535,9 @@ class DiscordService {
         const transportConfig = (SMTP_HOST.includes('gmail')) ? 
             {
                 service: 'gmail',
-                auth: { user: SMTP_USER, pass: SMTP_PASS }
+                service: 'gmail',
+                auth: { user: SMTP_USER, pass: SMTP_PASS },
+                family: 4 // Force IPv4 even with service preset
             } : {
                 host: SMTP_HOST,
                 port: SMTP_PORT,
