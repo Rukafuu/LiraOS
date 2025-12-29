@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { motion } from 'framer-motion';
 import { Copy, Check, Edit2, RotateCcw, FileText, Brain } from 'lucide-react';
@@ -206,6 +206,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                               const [imageError, setImageError] = useState(false);
                               const [imageLoading, setImageLoading] = useState(true);
                               
+                              // Debug logging
+                              useEffect(() => {
+                                console.log('[MessageItem] Image component rendered:', { src, alt });
+                              }, [src]);
+                              
                               return imageError ? (
                                 <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 my-4 text-red-400 max-w-md">
                                   <p className="text-sm font-semibold flex items-center gap-2">
@@ -221,14 +226,14 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                                       rel="noopener noreferrer"
                                       className="text-xs mt-2 inline-block underline hover:text-red-200"
                                     >
-                                      Tentar abrir link direto
+                                      Tentar abrir link direto: {src.substring(0, 50)}...
                                     </a>
                                   )}
                                 </div>
                               ) : (
                                 <div className="relative my-4 rounded-lg overflow-hidden border border-white/10 max-w-2xl">
                                   {imageLoading && (
-                                    <div className="absolute inset-0 bg-white/5 flex items-center justify-center">
+                                    <div className="absolute inset-0 bg-white/5 flex items-center justify-center min-h-[200px]">
                                       <div className="flex flex-col items-center gap-2">
                                         <div className="w-8 h-8 border-2 border-lira-pink border-t-transparent rounded-full animate-spin" />
                                         <span className="text-xs text-white/40">Carregando imagem...</span>
@@ -238,8 +243,14 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                                   <img 
                                     src={src} 
                                     alt={alt || "Generated Image"} 
-                                    onError={() => setImageError(true)}
-                                    onLoad={() => setImageLoading(false)}
+                                    onError={(e) => {
+                                      console.error('[MessageItem] Image failed to load:', src, e);
+                                      setImageError(true);
+                                    }}
+                                    onLoad={() => {
+                                      console.log('[MessageItem] Image loaded successfully:', src);
+                                      setImageLoading(false);
+                                    }}
                                     className="w-full h-auto"
                                     loading="lazy"
                                   />
