@@ -305,7 +305,12 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               const lp = localPersonasStr ? JSON.parse(localPersonasStr) : null;
               const ap = localActivePersona || null;
               const serverIsDefault = (data?.stats?.level || 1) === 1 && (data?.stats?.coins || 0) <= 100 && (data?.stats?.currentXp || 0) === 0;
-              if (serverIsDefault && (ls || lq || lt || lp || ap)) {
+              
+              // SECURITY FIX: Prevent accidental inheritance of Admin/High-level stats from previous sessions
+              const localLevel = ls?.level || 1;
+              const isSuspiciousData = localLevel >= 10 || (ls?.coins || 0) > 5000;
+
+              if (serverIsDefault && (ls || lq || lt || lp || ap) && !isSuspiciousData) {
                 await fetch(`${backendUrl}/api/recovery/import`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },

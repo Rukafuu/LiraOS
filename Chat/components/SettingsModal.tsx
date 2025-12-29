@@ -34,8 +34,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
 
   // Get current user data
   const currentUser = getCurrentUser();
+  // Ensure we are not showing stale data if context hasn't updated
+  const effectiveStats = stats.username === currentUser?.username ? stats : { ...stats, username: currentUser?.username || '', level: 1, currentXp: 0 };
+  
   const [userAvatar, setUserAvatar] = useState<string | undefined>(currentUser?.avatar);
-  const [displayName, setDisplayName] = useState(stats.username || '');
+  const [displayName, setDisplayName] = useState(effectiveStats.username || '');
 
   // Filter only unlocked themes for settings
   const ownedThemes = availableThemes.filter(t => unlockedThemes.includes(t.id));
