@@ -132,7 +132,7 @@ app.listen(PORT, '0.0.0.0', async () => {
   
   // Start PC Controller Service
   import('./services/pcControllerService.js').then(service => {
-      service.pcControllerService.start();
+      service.pcController.start();
   }).catch(err => console.error('Failed to load PC Controller Service:', err));
   
   // Discord Bot

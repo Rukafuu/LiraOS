@@ -45,6 +45,10 @@ class PCControllerService {
             'gimp-2.10.exe', 'audacity.exe', 'obs64.exe', 'streamlabs obs.exe'
         ];
     }
+    
+    start() {
+        console.log('[PC_CONTROLLER] Service started.');
+    }
 
     async handleInstruction(instruction) {
         if (!instruction || !instruction.trim()) return "Instrução vazia.";
