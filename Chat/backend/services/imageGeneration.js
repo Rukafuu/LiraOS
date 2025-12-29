@@ -46,13 +46,10 @@ const PROVIDERS = {
 export function getProviderForTier(userTier = 'free') {
     const tier = userTier.toLowerCase();
     
-    // Premium tiers (and Vega) get Gemini 3 -> TEMPORARILY DISABLED due to API unavailability (404)
-    // if (['sirius', 'antares', 'supernova', 'singularity', 'vega'].includes(tier)) {
-    //     return 'gemini';
-    // }
-    
-    // Fallback to Pollinations for everyone (Reliable Flux Model)
-    return 'pollinations';
+    // Premium tiers (and Vega) get Gemini 3
+    if (['sirius', 'antares', 'supernova', 'singularity', 'vega'].includes(tier)) {
+        return 'gemini';
+    }
     
     // Free/Observer get Pollinations
     return 'pollinations';
@@ -99,10 +96,10 @@ async function generateGeminiImage(prompt, apiKey) {
     if (!apiKey) throw new Error('Gemini API key required');
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    // Use correct Imagen 3 model
-    const model = genAI.getGenerativeModel({ model: 'imagen-3.0-generate-001' });
+    // Use correct Gemini 3 model from list
+    const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-image-preview' });
 
-    console.log(`[GEMINI] Generating image with prompt: "${prompt.substring(0, 50)}..." via imagen-3.0-generate-001`);
+    console.log(`[GEMINI] Generating image with prompt: "${prompt.substring(0, 50)}..." via gemini-3-pro-image-preview`);
     
     const result = await model.generateContent(prompt);
     const response = await result.response;
