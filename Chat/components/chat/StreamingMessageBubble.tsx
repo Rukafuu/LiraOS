@@ -19,11 +19,12 @@ export const StreamingMessageBubble: React.FC<StreamingMessageBubbleProps> = ({
 }) => {
   // Logic: 
   // If status == 'thinking', show Thinking bubble.
-  // If status == 'streaming' OR 'done', show text using Typewriter effect for smoothing.
+  // If status == 'streaming', show text with typewriter effect.
+  // If status == 'done', show text immediately without animation.
   
   const { displayedContent, isTyping } = useTypewriterReveal({
       content,
-      isEnabled: true, // Always smooth it out
+      isEnabled: isStreaming || status === 'streaming', // Only animate during active streaming
       speed: 10 // Fast 10ms default
   });
 
