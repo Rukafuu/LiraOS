@@ -532,15 +532,21 @@ class DiscordService {
             return;
         }
 
+        const transportConfig = (SMTP_HOST.includes('gmail')) ? 
+            {
+                service: 'gmail',
+                auth: { user: SMTP_USER, pass: SMTP_PASS }
+            } : {
+                host: SMTP_HOST,
+                port: SMTP_PORT,
+                secure: SMTP_SECURE,
+                auth: { user: SMTP_USER, pass: SMTP_PASS },
+                tls: { rejectUnauthorized: false },
+                family: 4
+            };
+
         const transporter = nodemailer.createTransport({
-            host: SMTP_HOST,
-            port: SMTP_PORT,
-            secure: SMTP_SECURE,
-            auth: { user: SMTP_USER, pass: SMTP_PASS },
-            tls: {
-               rejectUnauthorized: false
-            },
-            family: 4, // Force IPv4
+            ...transportConfig,
             connectionTimeout: 60000,
             socketTimeout: 60000
         });
