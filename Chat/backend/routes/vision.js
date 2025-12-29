@@ -2,7 +2,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import { requireAuth } from '../middlewares/authMiddleware.js';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 dotenv.config();
 
@@ -33,7 +33,7 @@ async function paddleOCR(b64, mt) {
   }
 }
 
-const geminiClient = process.env.GEMINI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY }) : null;
+const geminiClient = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
 
 router.post('/analyze', async (req, res) => {
   try {

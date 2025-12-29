@@ -129,6 +129,10 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = React.memo(({
                     animate={imageLoaded ? { opacity: 1, scale: 1, filter: 'blur(0px)' } : {}}
                     transition={{ duration: 0.8, ease: "easeOut" }}
                     onLoad={() => setImageLoaded(true)}
+                    onError={() => {
+                        console.error("Image failed to load:", finalSrc);
+                        setImageLoaded(true); // Stop overlay even if failed
+                    }}
                     className="w-full h-full object-cover"
                 />
                 )}
