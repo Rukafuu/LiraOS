@@ -24,6 +24,7 @@ import systemRoutes from './routes/system.js';
 import discordRoutes from './routes/discordRoutes.js';
 import patreonRoutes from './routes/patreonRoutes.js';
 import instagramRoutes from './routes/instagram.js';
+import imagesRoutes from './routes/images.js';
 
 // Services & Utils
 import { discordService } from './services/discordService.js';
@@ -64,6 +65,7 @@ app.use('/api/vision', visionRoutes);
 app.use('/api/voice', voiceRoutes);
 app.use('/api/gamer', gamerRoutes);
 app.use('/api/gamification', gamificationRoutes);
+app.use('/api/images', imagesRoutes);
 // Serve Songs Statically
 const songsPath = path.join(__dirname, 'songs');
 app.use('/songs', express.static(songsPath));
