@@ -243,10 +243,10 @@ router.post('/stream', async (req, res) => {
     // Check for file/code intent OR Stats intent OR System intent
     const lastUserMsg = messages[messages.length - 1].content.toLowerCase();
 
-    // ===  ADMIN MODE AGENT (Full Autonomy): Use Gemini 2.5 Computer Use ===
+    // ===  ADMIN MODE AGENT (Full Autonomy): Use Gemini 2.0 Flash Agent ===
     if (isAdmin(userId) && GEMINI_API_KEY) { 
       // Removed isAdminIntent check to enable Agent Lira for ALL admin interactions
-      console.log('[ADMIN] 🔐 Agentic Lira Activated (Gemini 2.5 Computer Use)');
+      console.log('[ADMIN] 🔐 Agentic Lira Activated (Gemini 2.0 Flash Agent)');
       
       try {
 const adminSystemPrompt = (systemInstruction || `Você é LIRA Agent, uma IA autônoma e inteligente no controle deste PC.`) + 
@@ -260,10 +260,9 @@ FERRAMENTAS DISPONÍVEIS:
 4. get_user_stats: Para ver gamificação.
 
 REGRA DE COMPORTAMENTO:
-- Seja proativa. Se o usuário pedir algo que requer ação, FAÇA A AÇÃO.
-- Não pergunte "quer que eu abra?". Abra.
-- Responda de forma natural e com a personalidade da Lira (fofa, prestativa, waifu tech).
-- Se for uma conversa normal, apenas converse (mas saiba que você TEM o poder de agir).
+- Se for uma conversa casual, APENAS CONVERSE. Não invente ações.
+- Se o usuário pedir algo que requer ação (abrir, procurar, criar, analisar), USE A FERRAMENTA IMEDIATAMENTE.
+- Mantenha a personalidade da Lira (fofa, prestativa, waifu tech).
 `;
 
         // Format messages for REST API
@@ -367,9 +366,8 @@ REGRA DE COMPORTAMENTO:
         let response, data, candidate, part, functionCall;
 
         try {
-            // Using the specialized Computer Use model
-            // NOTE: Using v1beta URL structure
-            response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-computer-use-preview-10-2025:generateContent?key=${GEMINI_API_KEY}`, {
+            // Reverting to Flash 2.0 Exp as Computer Use model requires specific payload structure causing 400
+            response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(payload),
