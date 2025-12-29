@@ -89,7 +89,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogge
   const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
   const oauth = {
     github: `${backendUrl}/auth/github/init?return_to=${encodeURIComponent(origin)}`,
-    patreon: `https://patreon.com/amarinthlira?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink`
+    patreon: `${backendUrl}/auth/patreon/init?return_to=${encodeURIComponent(origin)}`
   };
 
   return (

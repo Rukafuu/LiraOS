@@ -816,7 +816,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                               </div>
                                <p className="text-xs text-gray-400 mb-4 h-8">{t('settings.help.patreon_desc')}</p>
                               <a 
-                                href="https://patreon.com/liraos" 
+                                href="https://patreon.com/amarinthlira?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink" 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="block w-full py-2 bg-[#FF424D] text-white text-xs font-bold rounded-lg hover:bg-[#E63946] transition-colors text-center"
@@ -837,7 +837,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                                 </div>
                               </div>
                               <a 
-                                href="https://forms.google.com/example-feedback" // Replace with real link if available
+                                href="https://forms.google.com/example-feedback" 
                                 target="_blank"
                                 rel="noopener noreferrer" 
                                 className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-2"
@@ -845,6 +845,36 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                                 {t('settings.help.send_feedback')}
                                 <ExternalLink size={12} />
                               </a>
+                           </div>
+
+                           {/* Social Media */}
+                           <div className="col-span-1 md:col-span-2 grid grid-cols-2 gap-4 mt-2">
+                                 <a 
+                                   href="https://www.twitch.tv/amarynth_lira" 
+                                   target="_blank" 
+                                   rel="noopener noreferrer"
+                                   className="p-3 bg-[#9146FF]/10 border border-[#9146FF]/20 hover:bg-[#9146FF]/20 hover:border-[#9146FF]/40 rounded-xl flex items-center gap-3 transition-all group"
+                                 >
+                                    <div className="p-2 bg-[#9146FF] rounded-lg text-white">
+                                       <Zap size={18} fill="currentColor" />
+                                    </div>
+                                    <div>
+                                       <div className="text-xs font-bold text-[#9146FF]">Twitch</div>
+                                       <div className="text-[10px] text-gray-400 group-hover:text-gray-300">Em breve</div>
+                                    </div>
+                                 </a>
+
+                                 <a 
+                                   href="https://www.instagram.com/amarinth_lira?igsh=MTEyY3V2dGV2Y3htMQ==" 
+                                   target="_blank" 
+                                   rel="noopener noreferrer"
+                                   className="p-3 bg-[#E1306C]/10 border border-[#E1306C]/20 hover:bg-[#E1306C]/20 hover:border-[#E1306C]/40 rounded-xl flex items-center gap-3 transition-all group"
+                                 >
+                                    <div className="p-2 bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] rounded-lg text-white">
+                                       <Camera size={18} />
+                                    </div>
+                                    <div className="text-xs font-bold text-[#E1306C] group-hover:text-[#E1306C]/80">Instagram</div>
+                                 </a>
                            </div>
                         </div>
 
