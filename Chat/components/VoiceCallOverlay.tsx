@@ -312,19 +312,30 @@ export const VoiceCallOverlay: React.FC<VoiceCallOverlayProps> = ({
               }
           };
           
-          // ⏳ Wait 500ms for DOM to settle and browser to free resources from previous destroy
-          initTimer = setTimeout(initAvatar, 500);
+          // ⏳ Wait 800ms for DOM to settle and browser to free resources from previous destroy
+          initTimer = setTimeout(initAvatar, 800);
           startCallLogic();
 
           return () => {
               mounted = false;
               clearTimeout(initTimer);
               stopCallLogic();
-              if (requestRef.current) cancelAnimationFrame(requestRef.current);
+              if (requestRef.current) {
+                  cancelAnimationFrame(requestRef.current);
+                  requestRef.current = undefined;
+              }
               window.removeEventListener('mousemove', handleMouseMove);
-              audioServiceRef.current.stop();
-              liraRef.current?.destroy();
-              liraRef.current = null;
+              try { audioServiceRef.current.stop(); } catch (e) {}
+              
+              try {
+                  if (liraRef.current) {
+                      // Force visual cleanup first?
+                      liraRef.current.destroy();
+                      liraRef.current = null;
+                  }
+              } catch (e) {
+                  console.warn("[LiraCleanup] Destroy error (harmless):", e);
+              }
           };
       }
   }, [isOpen]);
