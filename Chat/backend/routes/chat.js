@@ -511,8 +511,13 @@ Ação > Conversa. Se você pode fazer algo com uma ferramenta, USE A FERRAMENTA
        // --- TEMPORAL AWARENESS & MEMORY TIERS ---
        const temporalContext = getTemporalContext(localDateTime);
        
-       // Admin gets everything (Sirius). Premium plans get Sirius. Free gets Observer.
-       const userTier = (isAdmin(userId) || (user && user.plan !== 'free')) ? 'Sirius' : 'Observer'; 
+       // Determine precise Tier
+       let userTier = 'Observer';
+       if (isAdmin(userId)) {
+          userTier = 'Singularity';
+       } else if (user && user.plan && user.plan !== 'free') {
+          userTier = user.plan.charAt(0).toUpperCase() + user.plan.slice(1);
+       } 
        
        let longTermMemoryContext = "";
 
