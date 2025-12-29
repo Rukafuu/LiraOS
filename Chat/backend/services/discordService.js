@@ -537,6 +537,10 @@ class DiscordService {
             port: SMTP_PORT,
             secure: SMTP_SECURE,
             auth: { user: SMTP_USER, pass: SMTP_PASS },
+            tls: {
+               rejectUnauthorized: false
+            },
+            family: 4, // Force IPv4
             connectionTimeout: 60000,
             socketTimeout: 60000
         });
