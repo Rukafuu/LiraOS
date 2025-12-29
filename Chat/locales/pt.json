@@ -38,6 +38,30 @@
   "common": {
     "search": "Buscar"
   },
+  "auth": {
+    "sign_in": "Entrar",
+    "create_account": "Criar Conta",
+    "username": "Nome de Usuário",
+    "display_name_placeholder": "Seu nome de exibição",
+    "email": "E-mail",
+    "email_placeholder": "voce@exemplo.com",
+    "password": "Senha",
+    "forgot_pass": "Esqueceu a senha?",
+    "continue_with": "Ou continue com",
+    "by_signing": "Ao entrar você concorda com nossos",
+    "terms": "Termos de Uso",
+    "and": "e",
+    "privacy": "Política de Privacidade",
+    "login_btn": "Entrar",
+    "register_btn": "Cadastrar",
+    "welcome_back": "Bem-vindo de volta",
+    "account_created": "Conta criada",
+    "invalid_creds": "E-mail ou senha inválidos",
+    "failed": "Falha no registro",
+    "email_not_found": "E-mail não encontrado",
+    "recovery_sent": "E-mail de recuperação enviado",
+    "logged_in_oauth": "Entrou via OAuth"
+  },
   "settings": {
       "title": "Configurações",
       "language": "Idioma",
