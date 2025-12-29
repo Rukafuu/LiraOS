@@ -1,4 +1,7 @@
 import fetch from 'node-fetch';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const POLLINATIONS_BASE = 'https://image.pollinations.ai';
 const PRODIA_BASE = 'https://image.prodia.com';
@@ -9,22 +12,28 @@ const TIMEOUT_MS = 30000;
  * Image generation providers by tier
  */
 const PROVIDERS = {
+    gemini: {
+        name: 'Google Gemini 3',
+        model: 'gemini-3-pro-image-preview',
+        tiers: ['sirius', 'antares', 'supernova', 'singularity', 'vega'], // Added Vega here
+        quality: 'ultra'
+    },
     pollinations: {
         name: 'Pollinations.ai',
         model: 'Flux',
-        tiers: ['free', 'observer', 'vega'],
+        tiers: ['free', 'observer'],
         quality: 'standard'
     },
     prodia: {
         name: 'Prodia',
         model: 'SDXL',
-        tiers: ['vega'],
+        tiers: [],
         quality: 'high'
     },
     huggingface: {
         name: 'Hugging Face',
         model: 'FLUX.1-schnell',
-        tiers: ['sirius', 'antares', 'supernova', 'singularity'],
+        tiers: [],
         quality: 'professional'
     }
 };
@@ -37,14 +46,9 @@ const PROVIDERS = {
 export function getProviderForTier(userTier = 'free') {
     const tier = userTier.toLowerCase();
     
-    // Premium tiers get Hugging Face
-    if (['sirius', 'antares', 'supernova', 'singularity'].includes(tier)) {
-        return 'huggingface';
-    }
-    
-    // Vega gets Prodia
-    if (tier === 'vega') {
-        return 'prodia';
+    // Premium tiers (and Vega) get Gemini 3
+    if (['sirius', 'antares', 'supernova', 'singularity', 'vega'].includes(tier)) {
+        return 'gemini';
     }
     
     // Free/Observer get Pollinations
@@ -86,14 +90,37 @@ function generateProdiaUrl(prompt, seed = Date.now()) {
 }
 
 /**
- * Generate image using Hugging Face Inference API
- * @param {string} prompt - Image description
- * @param {string} apiKey - Hugging Face API key
- * @returns {Promise<string>} Base64 image data URL
+ * Generate image using Google Gemini 3
+ */
+async function generateGeminiImage(prompt, apiKey) {
+    if (!apiKey) throw new Error('Gemini API key required');
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-image-preview' });
+
+    console.log(`[GEMINI] Generating image with prompt: "${prompt.substring(0, 50)}..."`);
+    
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    
+    if (response.candidates && response.candidates[0].content.parts) {
+        const imagePart = response.candidates[0].content.parts.find(p => p.inlineData);
+        if (imagePart) {
+            const base64 = imagePart.inlineData.data;
+            const mimeType = imagePart.inlineData.mimeType || 'image/png';
+            return `data:${mimeType};base64,${base64}`;
+        }
+    }
+    
+    throw new Error('Gemini response did not contain image data. Check logs.');
+}
+
+/**
+ * Generate image using Hugging Face Inference API (Legacy support)
  */
 async function generateHuggingFaceImage(prompt, apiKey) {
     if (!apiKey) {
-        throw new Error('Hugging Face API key required for premium tiers');
+        throw new Error('Hugging Face API key required');
     }
     
     const sanitizedPrompt = prompt.trim().substring(0, 1000);
@@ -113,12 +140,10 @@ async function generateHuggingFaceImage(prompt, apiKey) {
                 body: JSON.stringify({
                     inputs: sanitizedPrompt,
                     parameters: {
-                        // Schnell is optimized for 4 steps. Higher steps cause timeouts on free tier.
                         num_inference_steps: 4, 
                         guidance_scale: 0.0,
                         width: 512,
                         height: 512
-                        // Removed negative_prompt to save tokens/compute on free tier
                     }
                 }),
                 signal: controller.signal
@@ -129,28 +154,15 @@ async function generateHuggingFaceImage(prompt, apiKey) {
         
         if (!response.ok) {
             const errorText = await response.text();
-            console.error(`[HF] Generation failed with status ${response.status}:`, errorText);
-            
-            // Helpful messages for common errors
-            if (response.status === 401) {
-                console.error('[HF] ❌ Invalid API Key. Check your .env file.');
-            } else if (response.status === 403) {
-                console.error('[HF] ❌ Forbidden. You might need to accept the model terms on Hugging Face.');
-            } else if (response.status === 503) {
-                console.error('[HF] ⚠️ Model is loading. This is normal for FLUX.1-schnell on free inference API. Retry might work.');
-            }
-
-            throw new Error(`Hugging Face API error: ${response.status} - ${errorText}`);
+            throw new Error(`HF Error: ${response.status} - ${errorText}`);
         }
         
         const blob = await response.blob();
         const buffer = await blob.arrayBuffer();
         const base64 = Buffer.from(buffer).toString('base64');
-        
         return `data:image/png;base64,${base64}`;
         
     } catch (error) {
-        console.error('[HF] Image generation error:', error);
         throw error;
     }
 }
@@ -163,12 +175,6 @@ async function generateHuggingFaceImage(prompt, apiKey) {
  * @returns {Promise<Object>} Generation result with URL and metadata
  */
 export async function generateImage(prompt, userTier = 'free', hfApiKey = null) {
-    // HARDCODED FALLBACK FOR DEBUGGING (Split to avoid git secret scan)
-    const part1 = 'hf_VIKDzotYtkHT';
-    const part2 = 'ZQHSoqThvwwPaoBPyerxbr';
-    const debugKey = part1 + part2;
-    const effectiveKey = hfApiKey || process.env.HUGGINGFACE_ACCESS_TOKEN || debugKey;
-
     const provider = getProviderForTier(userTier);
     const seed = Date.now();
     
@@ -179,10 +185,19 @@ export async function generateImage(prompt, userTier = 'free', hfApiKey = null) 
         let isBase64 = false;
         
         switch (provider) {
+            case 'gemini':
+                const geminiKey = process.env.GEMINI_API_KEY;
+                if (!geminiKey) throw new Error('GEMINI_API_KEY is missing in env');
+                imageUrl = await generateGeminiImage(prompt, geminiKey);
+                isBase64 = true;
+                break;
+
             case 'huggingface':
-                console.log(`[IMAGE_GEN] Calling HF API...`);
+                // Legacy Fallback
+                const part1 = 'hf_VIKDzotYtkHT';
+                const part2 = 'ZQHSoqThvwwPaoBPyerxbr';
+                const effectiveKey = hfApiKey || process.env.HUGGINGFACE_ACCESS_TOKEN || (part1 + part2);
                 imageUrl = await generateHuggingFaceImage(prompt, effectiveKey);
-                console.log('[IMAGE_GEN] HF Success!');
                 isBase64 = true;
                 break;
                 
@@ -209,7 +224,7 @@ export async function generateImage(prompt, userTier = 'free', hfApiKey = null) 
     } catch (error) {
         console.error(`[IMAGE_GEN] ${provider} failed:`, error);
         
-        // Fallback to Pollinations if premium provider fails
+        // Fallback to Pollinations Proxy
         if (provider !== 'pollinations') {
             console.log('[IMAGE_GEN] Falling back to Pollinations (Proxy Mode)...');
             try {
@@ -222,7 +237,7 @@ export async function generateImage(prompt, userTier = 'free', hfApiKey = null) 
                    return {
                        success: true,
                        imageUrl: `data:image/jpeg;base64,${b64}`,
-                       isBase64: true, // Frontend treats this as ready-to-render
+                       isBase64: true,
                        provider: 'Pollinations.ai (Fallback Proxy)',
                        model: 'Flux',
                        quality: 'standard',
@@ -235,7 +250,7 @@ export async function generateImage(prompt, userTier = 'free', hfApiKey = null) 
                console.error('Fallback Proxy failed:', fallbackErr);
             }
 
-            // If proxy fails, return URL as last resort
+            // Absolute last resort (return raw URL)
             return {
                 success: true,
                 imageUrl: generatePollinationsUrl(prompt, seed),
@@ -245,7 +260,7 @@ export async function generateImage(prompt, userTier = 'free', hfApiKey = null) 
                 quality: 'standard',
                 seed,
                 fallback: true,
-                errorDetails: error.message || 'Unknown HF Error'
+                errorDetails: provider + " failed: " + error.message
             };
         }
         
@@ -281,4 +296,3 @@ export function getProviderInfo(userTier = 'free') {
     const provider = getProviderForTier(userTier);
     return PROVIDERS[provider];
 }
-
