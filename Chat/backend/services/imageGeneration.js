@@ -46,10 +46,13 @@ const PROVIDERS = {
 export function getProviderForTier(userTier = 'free') {
     const tier = userTier.toLowerCase();
     
-    // Premium tiers (and Vega) get Gemini 3
-    if (['sirius', 'antares', 'supernova', 'singularity', 'vega'].includes(tier)) {
-        return 'gemini';
-    }
+    // Premium tiers (and Vega) get Gemini 3 -> TEMPORARILY DISABLED due to API unavailability (404)
+    // if (['sirius', 'antares', 'supernova', 'singularity', 'vega'].includes(tier)) {
+    //     return 'gemini';
+    // }
+    
+    // Fallback to Pollinations for everyone (Reliable Flux Model)
+    return 'pollinations';
     
     // Free/Observer get Pollinations
     return 'pollinations';
