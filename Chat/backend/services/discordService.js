@@ -493,17 +493,71 @@ class DiscordService {
     }
 
     async handleHelpCommand(message) {
+        // Check if user is owner for admin commands visibility
+        const isOwner = (DISCORD_OWNER_ID && message.author.id === DISCORD_OWNER_ID);
+        
         const embed = new EmbedBuilder()
-            .setColor(0x0099ff)
-            .setTitle('🤖 Lira - Comandos')
-            .setDescription('Aqui está o que eu posso fazer por você:')
+            .setColor(0xEB00FF) // Lira pink
+            .setTitle('🤖 Lira - Central de Comandos')
+            .setDescription('Aqui está tudo que eu posso fazer por você no Discord!')
             .addFields(
-                { name: '🔐 Vinculação', value: '`.link <email>` - Vincular conta LiraOS\n`.confirm <codigo>` - Confirmar vínculo' },
-                { name: '🧙‍♂️ Perfil', value: '`.perfil` - Ver nível, XP e moedas' },
-                { name: '🎙️ Voz', value: '`@Lira entra` / `sai` - Entrar/Sair do canal de voz' },
-                { name: '💬 Chat', value: 'Apenas me mencione `@Lira <mensagem>` ou envie DM!' },
-                { name: '🎨 Imagens', value: 'Peça "Gere uma imagem de..."' }
+                { 
+                    name: '🔐 **Vinculação de Conta**', 
+                    value: '`.link <email>` - Vincular sua conta LiraOS\n`.confirm <codigo>` - Confirmar vínculo com código\n`.perfil` ou `.profile` - Ver seu perfil, XP, moedas e nível',
+                    inline: false
+                },
+                { 
+                    name: '💬 **Conversação**', 
+                    value: '`@Lira <mensagem>` - Conversar comigo (mencione-me)\n**DM** - Envie mensagem direta (sempre respondo)\n**Anexos** - Envie imagens para eu analisar',
+                    inline: false
+                },
+                { 
+                    name: '🎨 **Geração de Imagens**', 
+                    value: 'Peça: *"Gere uma imagem de..."*\n*"Crie uma arte de..."*\n*"Desenhe..."*\n\n**Qualidade varia por tier:**\n• Free/Observer: Pollinations (Flux)\n• Vega: Prodia (SDXL)\n• Sirius+: Hugging Face (FLUX.1)',
+                    inline: false
+                },
+                { 
+                    name: '🎙️ **Controle de Voz**', 
+                    value: '`@Lira entra` - Entrar no seu canal de voz\n`@Lira sai` - Sair do canal de voz\n**Falo suas mensagens em voz!** 🔊',
+                    inline: false
+                }
             );
+
+        // Add owner-only commands if user is owner
+        if (isOwner) {
+            embed.addFields(
+                { 
+                    name: '🌌 **GENESIS PROTOCOL** (Dono)', 
+                    value: '`.genesis` ou `!lira genesis` - Acesso total ao sistema\n*Controle completo do PC, arquivos e processos*',
+                    inline: false
+                },
+                { 
+                    name: '🎮 **Comandos de Sistema** (Dono)', 
+                    value: '`.osubot` - Ativar bot de osu!\n*Controle via IA de aplicações e jogos*',
+                    inline: false
+                },
+                { 
+                    name: '⚙️ **Admin Commands** (Dono)', 
+                    value: '`!lira create` - Criar canal/role\n`!lira delete` - Deletar canal/role\n`!lira send` - Enviar mensagem\n`!lira announce` - Anúncio global\n`!lira embed` - Criar embed\n`!lira cleanup` - Limpar mensagens\n`!lira give` - Dar XP/moedas\n`!lira remove` - Remover XP/moedas\n`!lira setup` - Configurar servidor\n`!lira commands` - Lista completa admin',
+                    inline: false
+                }
+            );
+        }
+
+        embed.addFields(
+            { 
+                name: '📚 **Recursos Adicionais**', 
+                value: '• Memória de conversas\n• Análise de código\n• Busca na web\n• Cálculos matemáticos\n• Tradução de idiomas',
+                inline: false
+            },
+            { 
+                name: '🎁 **Gamificação**', 
+                value: 'Ganhe **XP** e **moedas** conversando!\nUse `.perfil` para ver seu progresso',
+                inline: false
+            }
+        )
+        .setFooter({ text: isOwner ? '👑 Você tem acesso total como dono' : '💡 Dica: Me mencione para conversar!' })
+        .setTimestamp();
 
         await message.reply({ embeds: [embed] });
     }
