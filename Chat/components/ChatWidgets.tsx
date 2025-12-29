@@ -141,10 +141,12 @@ const SmartProgressiveWidget: React.FC<{ jobId: string; prompt: string }> = ({ j
     const poll = async () => {
       try {
         const res = await fetch(`${API_BASE_URL}/api/images/${jobId}`, {
-           headers: getAuthHeaders()
+           headers: getAuthHeaders(),
+           cache: 'no-cache' // Prevent caching
         });
         if (res.ok) {
            const job = await res.json();
+           console.log(`[POLL] Job ${jobId} status: ${job.status}`);
            if (isMounted) {
                if (job.status === 'completed') {
                    setFinalSrc(job.result);
