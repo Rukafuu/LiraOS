@@ -104,7 +104,14 @@ const StatusWidget: React.FC<{ title: string; status: string; details?: string }
 
 export const ChatWidgetRenderer: React.FC<WidgetRendererProps> = ({ type, data }) => {
   // Safe parsing if data is string
-  const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+  let parsedData;
+  try {
+    parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+  } catch (e) {
+    // If parsing fails (e.g. streaming incomplete json), don't crash
+    console.warn("Widget JSON parse failed:", e);
+    return null;
+  }
 
   switch (type) {
     case 'todo':
