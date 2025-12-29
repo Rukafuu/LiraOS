@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Wrench, Sparkles, Heart } from 'lucide-react';
 // @ts-ignore
-import videoSrc from '../assets/lira-sorry.mp4';
+const videoSrc = '/assets/videos/lira-sorry.mp4';
 
 export const MaintenanceScreen: React.FC = () => {
   return (
