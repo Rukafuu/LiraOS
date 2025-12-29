@@ -52,7 +52,7 @@ router.post('/purchase', async (req, res) => {
     const state = (await getState(userId)) || (await getOrCreateDefault(userId));
     
     // Check if user has enough coins
-    if (state.stats.coins < cost) {
+    if (state.coins < cost) {
       return res.status(400).json({ error: 'Insufficient coins' });
     }
     
@@ -65,13 +65,14 @@ router.post('/purchase', async (req, res) => {
     }
     
     // Deduct coins and add item
-    const updatedStats = { ...state.stats, coins: state.stats.coins - cost };
+    const newCoins = state.coins - cost;
     const updatedThemes = type === 'theme' ? [...(state.unlockedThemes || []), itemId] : state.unlockedThemes;
     const updatedPersonas = type === 'persona' ? [...(state.unlockedPersonas || []), itemId] : state.unlockedPersonas;
     
     // Save to database
     const updated = await saveState(userId, {
-      stats: updatedStats,
+      coins: newCoins,
+      stats: state.stats,
       unlockedThemes: updatedThemes,
       unlockedPersonas: updatedPersonas,
       activePersonaId: state.activePersonaId
