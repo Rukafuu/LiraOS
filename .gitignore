@@ -96,3 +96,10 @@ _assets/
 *.rar
 *.zip
 *.7z
+
+# Large Binaries
+*.dic
+*.exe
+*.dll
+*.bin
+system.dic

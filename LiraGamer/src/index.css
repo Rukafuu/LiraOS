@@ -1,0 +1,39 @@
+:root {
+  --bg-dark: #0f0f13;
+  --bg-card: #1a1a23;
+  --primary: #8b5cf6; /* Violet */
+  --accent: #06b6d4; /* Cyan */
+  --text-main: #ffffff;
+  --text-dim: #a1a1aa;
+  --border: #2d2d3a;
+  --font-family: "Inter", system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: var(--font-family);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar custom */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-card);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+button {
+  font-family: inherit;
+}

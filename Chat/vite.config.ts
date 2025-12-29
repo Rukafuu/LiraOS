@@ -20,6 +20,16 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      build: {
+        rollupOptions: {
+          output: {
+            manualChunks: undefined, // Let Vite handle chunking automatically
+          }
+        },
+        // Generate unique hashes for each build
+        chunkSizeWarningLimit: 1000,
+        sourcemap: false,
       }
     };
 });
