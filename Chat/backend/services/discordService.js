@@ -200,7 +200,7 @@ class DiscordService {
         }
 
         // 🌌 GENESIS PROTOCOL - Master Command
-        if (lowerContent === '!lira genesis' || lowerContent === '.genesis') {
+        if (lowerContent === '.genesis') {
             await this.genesisProtocol.execute(message);
             return;
         }
@@ -213,12 +213,13 @@ class DiscordService {
             return;
         }
 
-        if (lowerContent.startsWith('!lira ')) {
-            const parts = message.content.slice(6).trim().split(' '); // Remove "!lira "
+        // Admin commands with dot prefix
+        if (lowerContent.startsWith('.')) {
+            const parts = message.content.slice(1).trim().split(' '); // Remove "."
             const command = parts[0].toLowerCase();
             const args = parts.slice(1);
 
-            const adminCommands = ['create', 'delete', 'send', 'announce', 'embed', 'admin', 'commands', 'help-admin', 'cleanup', 'confirm', 'setup', 'give', 'remove'];
+            const adminCommands = ['create', 'delete', 'send', 'announce', 'embed', 'admin', 'commands', 'cleanup', 'setup', 'give', 'remove'];
             
             if (adminCommands.includes(command)) {
                 await this.adminCommands.handleCommand(message, command, args);
@@ -528,7 +529,7 @@ class DiscordService {
             embed.addFields(
                 { 
                     name: '🌌 **GENESIS PROTOCOL** (Dono)', 
-                    value: '`.genesis` ou `!lira genesis` - Acesso total ao sistema\n*Controle completo do PC, arquivos e processos*',
+                    value: '`.genesis` - Acesso total ao sistema\n*Controle completo do PC, arquivos e processos*',
                     inline: false
                 },
                 { 
@@ -538,7 +539,7 @@ class DiscordService {
                 },
                 { 
                     name: '⚙️ **Admin Commands** (Dono)', 
-                    value: '`!lira create` - Criar canal/role\n`!lira delete` - Deletar canal/role\n`!lira send` - Enviar mensagem\n`!lira announce` - Anúncio global\n`!lira embed` - Criar embed\n`!lira cleanup` - Limpar mensagens\n`!lira give` - Dar XP/moedas\n`!lira remove` - Remover XP/moedas\n`!lira setup` - Configurar servidor\n`!lira commands` - Lista completa admin',
+                    value: '`.create` - Criar canal/role\n`.delete` - Deletar canal/role\n`.send` - Enviar mensagem\n`.announce` - Anúncio global\n`.embed` - Criar embed\n`.cleanup` - Limpar mensagens\n`.give` - Dar XP/moedas\n`.remove` - Remover XP/moedas\n`.setup` - Configurar servidor\n`.commands` - Lista completa admin',
                     inline: false
                 }
             );
