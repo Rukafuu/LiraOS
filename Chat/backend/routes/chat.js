@@ -822,8 +822,9 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
                                 // Send image with loading indicator
                                 let successMsg = `![Generative Image](${result.imageUrl})\n\n> ✅ *Imagem gerada com sucesso!*`;
                                 if (result.fallback) {
-                                    // Escape error message to prevent JSON break
-                                    const safeError = (result.errorDetails || 'Unknown error').replace(/"/g, "'").replace(/\n/g, " ");
+                                    // Properly escape error message using JSON.stringify
+                                    const rawError = result.errorDetails || 'Unknown error';
+                                    const safeError = JSON.stringify(rawError).slice(1, -1); // Remove outer quotes
                                     successMsg += `\n> ⚠️ **Fallback:** O provedor premium falhou: _${safeError}_\n> *Usando backup gratuito (pode estar instável).*`;
                                 }
                                 res.write(`data: ${JSON.stringify({ content: successMsg + '\n\n' })}\n\n`);
