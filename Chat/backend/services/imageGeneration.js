@@ -96,9 +96,10 @@ async function generateGeminiImage(prompt, apiKey) {
     if (!apiKey) throw new Error('Gemini API key required');
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-image-preview' });
+    // Use correct Imagen 3 model
+    const model = genAI.getGenerativeModel({ model: 'imagen-3.0-generate-001' });
 
-    console.log(`[GEMINI] Generating image with prompt: "${prompt.substring(0, 50)}..."`);
+    console.log(`[GEMINI] Generating image with prompt: "${prompt.substring(0, 50)}..." via imagen-3.0-generate-001`);
     
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -230,7 +231,12 @@ export async function generateImage(prompt, userTier = 'free', hfApiKey = null) 
             try {
                 const fallbackUrl = generatePollinationsUrl(prompt, seed);
                 // Proxy the image: Fetch it here and return Base64 to bypass client-side CORS/Blocks
-                const resp = await fetch(fallbackUrl);
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
+                
+                const resp = await fetch(fallbackUrl, { signal: controller.signal });
+                clearTimeout(timeout);
+
                 if (resp.ok) {
                    const buf = await resp.arrayBuffer();
                    const b64 = Buffer.from(buf).toString('base64');
