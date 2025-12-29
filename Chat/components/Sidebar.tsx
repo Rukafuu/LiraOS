@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MessageSquare, Search, Settings, X, Trash2, Sparkles, Command, LayoutGrid, ShoppingBag, Keyboard, Shield, Video, Crown, Gamepad2 } from 'lucide-react';
+import { Plus, MessageSquare, Search, Settings, X, Trash2, Sparkles, Command, LayoutGrid, ShoppingBag, Keyboard, Shield, Video, Crown, Gamepad2, Gift } from 'lucide-react';
 import { ChatSession } from '../types';
 import { LIRA_AVATAR } from '../constants';
 import { getCurrentUser } from '../services/userService';
@@ -21,6 +21,7 @@ interface SidebarProps {
   onOpenIris: () => void;
   onOpenDiscord: () => void;
   onOpenGamer: () => void;
+  onOpenDailyQuests: () => void;
   onOpenSupporters: () => void;
   isOpen: boolean;
   onCloseMobile: () => void;
@@ -40,6 +41,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenIris,
   onOpenDiscord,
   onOpenGamer,
+  onOpenDailyQuests,
   onOpenSupporters,
   isOpen,
   onCloseMobile
@@ -174,6 +176,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button onClick={onOpenGamer} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
                      <Gamepad2 size={16} className="text-purple-500 group-hover:scale-110 transition-transform" />
                      <span className="text-sm">{t('sidebar.game')}</span>
+                </button>
+
+                <button onClick={onOpenDailyQuests} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
+                     <Gift size={16} className="text-pink-400 group-hover:scale-110 transition-transform" />
+                     <span className="text-sm">Missões Diárias</span>
                 </button>
 
                  <button onClick={onOpenDiscord} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">

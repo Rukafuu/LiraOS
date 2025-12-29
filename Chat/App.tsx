@@ -17,6 +17,7 @@ const CompanionPage = React.lazy(() => import('./components/CompanionPage').then
 import { CookiePreferences } from './components/CookieConsentModal';
 const ShortcutsModal = React.lazy(() => import('./components/ShortcutsModal').then(m => ({ default: m.ShortcutsModal })));
 const GamerModal = React.lazy(() => import('./components/GamerModal').then(m => ({ default: m.GamerModal })));
+const DailyQuestsModal = React.lazy(() => import('./components/DailyQuestsModal').then(m => ({ default: m.DailyQuestsModal })));
 import { ParticleBackground } from './components/ui/ParticleBackground';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { GamificationProvider, useGamification } from './contexts/GamificationContext';
@@ -74,6 +75,7 @@ const LiraAppContent = () => {
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isCookieModalOpen, setIsCookieModalOpen] = useState(false);
   const [isGamerOpen, setIsGamerOpen] = useState(false);
+  const [isDailyQuestsOpen, setIsDailyQuestsOpen] = useState(false);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -146,6 +148,7 @@ const LiraAppContent = () => {
           setIsShortcutsOpen(false);
           setIsCookieModalOpen(false);
           setIsGamerOpen(false);
+          setIsDailyQuestsOpen(false);
       },
       onGodMode: handleGodMode
   });
@@ -985,6 +988,7 @@ const LiraAppContent = () => {
         onOpenIris={() => setIsIrisOpen(true)}
         onOpenDiscord={() => setIsDiscordOpen(true)}
         onOpenGamer={() => setIsGamerOpen(true)}
+        onOpenDailyQuests={() => setIsDailyQuestsOpen(true)}
         onOpenSupporters={() => setIsDashboardOpen(true)} // Map to dashboard for now
         isOpen={isSidebarOpen}
         onCloseMobile={() => setIsSidebarOpen(false)}
@@ -1190,6 +1194,10 @@ const LiraAppContent = () => {
       <GamerModal 
         isOpen={isGamerOpen} 
         onClose={() => setIsGamerOpen(false)} 
+      />
+      <DailyQuestsModal
+        isOpen={isDailyQuestsOpen}
+        onClose={() => setIsDailyQuestsOpen(false)}
       />
       <CookieConsentModal 
         isOpen={isCookieModalOpen} 
