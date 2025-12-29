@@ -1,69 +1,210 @@
 import fetch from 'node-fetch';
 
 const POLLINATIONS_BASE = 'https://image.pollinations.ai';
-const TIMEOUT_MS = 5000;
+const PRODIA_BASE = 'https://image.prodia.com';
+const HUGGINGFACE_MODEL = 'black-forest-labs/FLUX.1-schnell';
+const TIMEOUT_MS = 10000;
 
 /**
- * Check if Pollinations.ai service is available
- * @returns {Promise<boolean>} True if service is healthy
+ * Image generation providers by tier
  */
-export async function checkPollinationsHealth() {
-    try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
-        
-        const response = await fetch(`${POLLINATIONS_BASE}/prompt/test?width=64&height=64&nologo=true`, {
-            signal: controller.signal,
-            method: 'HEAD'
-        });
-        
-        clearTimeout(timeout);
-        return response.ok;
-    } catch (error) {
-        console.error('[IMAGE_GEN] Pollinations health check failed:', error.message);
-        return false;
+const PROVIDERS = {
+    pollinations: {
+        name: 'Pollinations.ai',
+        model: 'Flux',
+        tiers: ['free', 'observer', 'vega'],
+        quality: 'standard'
+    },
+    prodia: {
+        name: 'Prodia',
+        model: 'SDXL',
+        tiers: ['vega'],
+        quality: 'high'
+    },
+    huggingface: {
+        name: 'Hugging Face',
+        model: 'FLUX.1-schnell',
+        tiers: ['sirius', 'antares', 'supernova', 'singularity'],
+        quality: 'professional'
     }
+};
+
+/**
+ * Get the appropriate image provider based on user tier
+ * @param {string} userTier - User's subscription tier
+ * @returns {string} Provider name
+ */
+export function getProviderForTier(userTier = 'free') {
+    const tier = userTier.toLowerCase();
+    
+    // Premium tiers get Hugging Face
+    if (['sirius', 'antares', 'supernova', 'singularity'].includes(tier)) {
+        return 'huggingface';
+    }
+    
+    // Vega gets Prodia
+    if (tier === 'vega') {
+        return 'prodia';
+    }
+    
+    // Free/Observer get Pollinations
+    return 'pollinations';
 }
 
 /**
- * Generate an image URL using Pollinations.ai
- * @param {string} prompt - The image description
- * @param {Object} options - Generation options
- * @returns {string} The generated image URL
+ * Generate image URL using Pollinations.ai
  */
-export function generateImageUrl(prompt, options = {}) {
-    const {
-        nologo = true,
-        private: isPrivate = true,
-        enhance = true,
-        model = 'flux',
-        seed = Date.now(),
-        width = null,
-        height = null
-    } = options;
-    
-    // Sanitize and truncate prompt
+function generatePollinationsUrl(prompt, seed = Date.now()) {
     const sanitizedPrompt = prompt.trim().substring(0, 1000);
-    
     const params = new URLSearchParams({
-        nologo: nologo.toString(),
-        private: isPrivate.toString(),
-        enhance: enhance.toString(),
-        model,
+        nologo: 'true',
+        private: 'true',
+        enhance: 'true',
+        model: 'flux',
         seed: seed.toString()
     });
-    
-    // Add optional dimensions
-    if (width) params.append('width', width.toString());
-    if (height) params.append('height', height.toString());
     
     return `${POLLINATIONS_BASE}/prompt/${encodeURIComponent(sanitizedPrompt)}?${params.toString()}`;
 }
 
 /**
+ * Generate image URL using Prodia
+ */
+function generateProdiaUrl(prompt, seed = Date.now()) {
+    const sanitizedPrompt = prompt.trim().substring(0, 1000);
+    const params = new URLSearchParams({
+        prompt: sanitizedPrompt,
+        model: 'sdxl',
+        seed: seed.toString(),
+        negative_prompt: 'blurry, low quality, distorted',
+        steps: '25',
+        cfg: '7'
+    });
+    
+    return `${PRODIA_BASE}/generate?${params.toString()}`;
+}
+
+/**
+ * Generate image using Hugging Face Inference API
+ * @param {string} prompt - Image description
+ * @param {string} apiKey - Hugging Face API key
+ * @returns {Promise<string>} Base64 image data URL
+ */
+async function generateHuggingFaceImage(prompt, apiKey) {
+    if (!apiKey) {
+        throw new Error('Hugging Face API key required for premium tiers');
+    }
+    
+    const sanitizedPrompt = prompt.trim().substring(0, 1000);
+    
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+        
+        const response = await fetch(
+            `https://api-inference.huggingface.co/models/${HUGGINGFACE_MODEL}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    inputs: sanitizedPrompt,
+                    parameters: {
+                        num_inference_steps: 4,
+                        guidance_scale: 0
+                    }
+                }),
+                signal: controller.signal
+            }
+        );
+        
+        clearTimeout(timeout);
+        
+        if (!response.ok) {
+            const error = await response.text();
+            console.error('[HF] Generation failed:', error);
+            throw new Error(`Hugging Face API error: ${response.status}`);
+        }
+        
+        const blob = await response.blob();
+        const buffer = await blob.arrayBuffer();
+        const base64 = Buffer.from(buffer).toString('base64');
+        
+        return `data:image/png;base64,${base64}`;
+        
+    } catch (error) {
+        console.error('[HF] Image generation error:', error);
+        throw error;
+    }
+}
+
+/**
+ * Generate image based on user tier
+ * @param {string} prompt - Image description
+ * @param {string} userTier - User's subscription tier
+ * @param {string} hfApiKey - Hugging Face API key (optional)
+ * @returns {Promise<Object>} Generation result with URL and metadata
+ */
+export async function generateImage(prompt, userTier = 'free', hfApiKey = null) {
+    const provider = getProviderForTier(userTier);
+    const seed = Date.now();
+    
+    try {
+        let imageUrl;
+        let isBase64 = false;
+        
+        switch (provider) {
+            case 'huggingface':
+                imageUrl = await generateHuggingFaceImage(prompt, hfApiKey);
+                isBase64 = true;
+                break;
+                
+            case 'prodia':
+                imageUrl = generateProdiaUrl(prompt, seed);
+                break;
+                
+            case 'pollinations':
+            default:
+                imageUrl = generatePollinationsUrl(prompt, seed);
+                break;
+        }
+        
+        return {
+            success: true,
+            imageUrl,
+            isBase64,
+            provider: PROVIDERS[provider].name,
+            model: PROVIDERS[provider].model,
+            quality: PROVIDERS[provider].quality,
+            seed
+        };
+        
+    } catch (error) {
+        console.error(`[IMAGE_GEN] ${provider} failed:`, error);
+        
+        // Fallback to Pollinations if premium provider fails
+        if (provider !== 'pollinations') {
+            console.log('[IMAGE_GEN] Falling back to Pollinations...');
+            return {
+                success: true,
+                imageUrl: generatePollinationsUrl(prompt, seed),
+                isBase64: false,
+                provider: 'Pollinations.ai (Fallback)',
+                model: 'Flux',
+                quality: 'standard',
+                seed,
+                fallback: true
+            };
+        }
+        
+        throw error;
+    }
+}
+
+/**
  * Validate an image generation prompt
- * @param {string} prompt - The prompt to validate
- * @returns {Object} Validation result with isValid flag and optional error message
  */
 export function validatePrompt(prompt) {
     if (!prompt || typeof prompt !== 'string') {
@@ -84,22 +225,10 @@ export function validatePrompt(prompt) {
 }
 
 /**
- * Get service status and statistics
- * @returns {Promise<Object>} Service status information
+ * Get provider information for a tier
  */
-export async function getServiceStatus() {
-    const isHealthy = await checkPollinationsHealth();
-    
-    return {
-        provider: 'Pollinations.ai',
-        model: 'Flux',
-        healthy: isHealthy,
-        endpoint: POLLINATIONS_BASE,
-        features: {
-            nologo: true,
-            private: true,
-            enhance: true,
-            customSeed: true
-        }
-    };
+export function getProviderInfo(userTier = 'free') {
+    const provider = getProviderForTier(userTier);
+    return PROVIDERS[provider];
 }
+

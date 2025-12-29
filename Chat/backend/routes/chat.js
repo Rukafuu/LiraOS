@@ -803,14 +803,26 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
                            
                            // Show user feedback with truncated prompt preview
                            const promptPreview = finalPrompt.length > 100 ? finalPrompt.substring(0, 100) + '...' : finalPrompt;
-                           res.write(`data: ${JSON.stringify({ content: `\n> 🎨 Criando arte: "${promptPreview}"\n> *Usando modelo Flux (Pollinations)*\n\n` })}\n\n`);
                            
-                           // Generate image URL with unique seed to prevent caching issues
-                           const timestamp = Date.now();
-                           const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?nologo=true&private=true&enhance=true&model=flux&seed=${timestamp}`;
+                           // Import image generation service
+                           const { generateImage, getProviderInfo } = await import('../services/imageGeneration.js');
                            
-                           // Send image with loading indicator
-                           res.write(`data: ${JSON.stringify({ content: `![Generative Image](${imageUrl})\n\n> ⏳ *Aguarde alguns segundos para a imagem carregar completamente...*\n\n` })}\n\n`);
+                           // Get user tier (already calculated earlier in the request)
+                           const userPlanLower = userPlan.toLowerCase();
+                           const providerInfo = getProviderInfo(userPlanLower);
+                           
+                           res.write(`data: ${JSON.stringify({ content: `\n> 🎨 Criando arte: "${promptPreview}"\n> *Usando ${providerInfo.model} (${providerInfo.name}) - Qualidade: ${providerInfo.quality}*\n\n` })}\n\n`);
+                           
+                           // Generate image with tier-based provider
+                           const HF_API_KEY = process.env.HUGGINGFACE_API_KEY;
+                           const result = await generateImage(finalPrompt, userPlanLower, HF_API_KEY);
+                           
+                           if (result.success) {
+                               // Send image with loading indicator
+                               res.write(`data: ${JSON.stringify({ content: `![Generative Image](${result.imageUrl})\n\n> ✅ *Imagem gerada com sucesso!*${result.fallback ? ' (Fallback usado)' : ''}\n\n` })}\n\n`);
+                           } else {
+                               res.write(`data: ${JSON.stringify({ content: `\n> ❌ **Erro ao gerar imagem.** Tente novamente.\n\n` })}\n\n`);
+                           }
                            
                        } catch (parseError) {
                            console.error('[IMAGE_GEN] Error processing image generation:', parseError);
