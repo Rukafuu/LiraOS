@@ -116,9 +116,9 @@ async function generateHuggingFaceImage(prompt, apiKey) {
                         // Schnell is optimized for 4 steps. Higher steps cause timeouts on free tier.
                         num_inference_steps: 4, 
                         guidance_scale: 0.0,
-                        width: 1024,
-                        height: 1024,
-                        negative_prompt: "blurry, low resolution, deformed, extra limbs, bad anatomy, text, watermark"
+                        width: 512,
+                        height: 512
+                        // Removed negative_prompt to save tokens/compute on free tier
                     }
                 }),
                 signal: controller.signal
