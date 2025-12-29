@@ -494,8 +494,8 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
 
                         const HF_KEY = process.env.HUGGINNGFACE_ACCESS_TOKEN;
                         
-                        // Add 60s Global Timeout
-                        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Global Generation Timeout (60s)")), 60000));
+                        // Add 120s Global Timeout
+                        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Global Generation Timeout (120s)")), 120000));
                         
                         const imgResult = await Promise.race([
                             generateImage(prompt, 'singularity', HF_KEY),
