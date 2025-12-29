@@ -503,7 +503,8 @@ router.get('/patreon/callback', async (req, res) => {
           const amountCents = activeMembership.attributes.currently_entitled_amount_cents;
           let tier = 'free';
           
-          if (amountCents >= 10000) tier = 'supernova';
+          if (amountCents >= 20000) tier = 'singularity';
+          else if (amountCents >= 10000) tier = 'supernova';
           else if (amountCents >= 5000) tier = 'antares';
           else if (amountCents >= 2000) tier = 'sirius';
           else if (amountCents >= 500) tier = 'vega';
