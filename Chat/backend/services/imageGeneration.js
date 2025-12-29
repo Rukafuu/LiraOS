@@ -55,7 +55,8 @@ export function getProviderForTier(userTier = 'free') {
  * Generate image URL using Pollinations.ai
  */
 function generatePollinationsUrl(prompt, seed = Date.now()) {
-    const sanitizedPrompt = prompt.trim().substring(0, 1000);
+    // Truncate to 500 chars to avoid URL length errors in some browsers/proxies
+    const sanitizedPrompt = prompt.trim().substring(0, 500);
     const params = new URLSearchParams({
         nologo: 'true',
         private: 'true',
