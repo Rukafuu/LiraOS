@@ -202,6 +202,50 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                             tr: ({ children }) => <tr className="hover:bg-white/5 transition-colors">{children}</tr>,
                             th: ({ children }) => <th className="px-4 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">{children}</th>,
                             td: ({ children }) => <td className="px-4 py-3 whitespace-nowrap text-gray-300">{children}</td>,
+                            img: ({ src, alt }) => {
+                              const [imageError, setImageError] = useState(false);
+                              const [imageLoading, setImageLoading] = useState(true);
+                              
+                              return imageError ? (
+                                <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 my-4 text-red-400 max-w-md">
+                                  <p className="text-sm font-semibold flex items-center gap-2">
+                                    ❌ Falha ao carregar imagem gerada
+                                  </p>
+                                  <p className="text-xs mt-2 text-red-300/80">
+                                    O serviço de geração pode estar temporariamente indisponível. Tente novamente em alguns instantes.
+                                  </p>
+                                  {src && (
+                                    <a 
+                                      href={src} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="text-xs mt-2 inline-block underline hover:text-red-200"
+                                    >
+                                      Tentar abrir link direto
+                                    </a>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="relative my-4 rounded-lg overflow-hidden border border-white/10 max-w-2xl">
+                                  {imageLoading && (
+                                    <div className="absolute inset-0 bg-white/5 flex items-center justify-center">
+                                      <div className="flex flex-col items-center gap-2">
+                                        <div className="w-8 h-8 border-2 border-lira-pink border-t-transparent rounded-full animate-spin" />
+                                        <span className="text-xs text-white/40">Carregando imagem...</span>
+                                      </div>
+                                    </div>
+                                  )}
+                                  <img 
+                                    src={src} 
+                                    alt={alt || "Generated Image"} 
+                                    onError={() => setImageError(true)}
+                                    onLoad={() => setImageLoading(false)}
+                                    className="w-full h-auto"
+                                    loading="lazy"
+                                  />
+                                </div>
+                              );
+                            },
                           }}
                         >
                           {part}

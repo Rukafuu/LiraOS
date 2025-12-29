@@ -785,12 +785,37 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
                   if (currentToolCall.name === 'generate_image') {
                        try {
                            const args = JSON.parse(toolArgsBuffer);
-                           if (args.prompt) {
-                               res.write(`data: ${JSON.stringify({ content: `\n> 🎨 Criando arte: "${args.prompt}"...\n> *Usando modelo Flux (Pollinations)*\n\n` })}\n\n`);
-                               const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(args.prompt)}?nologo=true&private=true&enhance=true&model=flux`;
-                               res.write(`data: ${JSON.stringify({ content: `![Generative Image](${imageUrl})\n\n` })}\n\n`);
+                           
+                           // Validate prompt exists and is not empty
+                           if (!args.prompt || args.prompt.trim().length === 0) {
+                               res.write(`data: ${JSON.stringify({ content: `\n> ❌ **Erro:** Prompt vazio. Por favor, descreva a imagem que deseja gerar.\n\n` })}\n\n`);
+                               currentToolCall = null;
+                               toolArgsBuffer = '';
+                               continue;
                            }
-                       } catch (e) { }
+                           
+                           // Validate and truncate prompt length
+                           let finalPrompt = args.prompt.trim();
+                           if (finalPrompt.length > 1000) {
+                               res.write(`data: ${JSON.stringify({ content: `\n> ⚠️ **Aviso:** Prompt muito longo (${finalPrompt.length} caracteres). Reduzindo para 1000 caracteres...\n\n` })}\n\n`);
+                               finalPrompt = finalPrompt.substring(0, 1000);
+                           }
+                           
+                           // Show user feedback with truncated prompt preview
+                           const promptPreview = finalPrompt.length > 100 ? finalPrompt.substring(0, 100) + '...' : finalPrompt;
+                           res.write(`data: ${JSON.stringify({ content: `\n> 🎨 Criando arte: "${promptPreview}"\n> *Usando modelo Flux (Pollinations)*\n\n` })}\n\n`);
+                           
+                           // Generate image URL with unique seed to prevent caching issues
+                           const timestamp = Date.now();
+                           const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?nologo=true&private=true&enhance=true&model=flux&seed=${timestamp}`;
+                           
+                           // Send image with loading indicator
+                           res.write(`data: ${JSON.stringify({ content: `![Generative Image](${imageUrl})\n\n> ⏳ *Aguarde alguns segundos para a imagem carregar completamente...*\n\n` })}\n\n`);
+                           
+                       } catch (parseError) {
+                           console.error('[IMAGE_GEN] Error processing image generation:', parseError);
+                           res.write(`data: ${JSON.stringify({ content: `\n> ❌ **Erro ao processar solicitação de imagem.** Tente novamente ou reformule sua descrição.\n\n` })}\n\n`);
+                       }
                        currentToolCall = null; 
                        toolArgsBuffer = '';
                   }
