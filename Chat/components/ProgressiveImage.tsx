@@ -36,16 +36,16 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = React.memo(({
     }
   }, [status, imageLoaded]);
 
-  // Overlay Component for Focus Mode
+  // Overlay Component for Inline Loading
   const LoadingOverlay = () => (
     <motion.div 
         initial={{ opacity: 0 }} 
         animate={{ opacity: 1 }} 
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+        className="absolute inset-0 z-10 flex items-center justify-center bg-[#0c0c0e]/90 backdrop-blur-sm"
     >
-        <div className="relative w-full max-w-md mx-4 rounded-2xl overflow-hidden shadow-2xl border border-white/20 bg-[#0c0c0e]">
-             <div style={{ aspectRatio }} className="w-full relative">
+        <div className="w-full h-full relative">
+             <div className="w-full h-full relative">
                  {/* Shimmer Effect */}
                   <motion.div 
                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12"
@@ -93,14 +93,15 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = React.memo(({
 
   return (
     <>
-        <AnimatePresence>
-            {showOverlay && <LoadingOverlay />}
-        </AnimatePresence>
-
         <div className="relative w-full max-w-md my-4 rounded-xl overflow-hidden border border-white/10 shadow-2xl bg-[#0c0c0e]">
         {/* Placeholder within chat flow to reserve space */}
         <div style={{ aspectRatio }} className="w-full relative bg-white/5 flex items-center justify-center">
             
+            {/* Inline Loading Overlay */}
+            <AnimatePresence>
+                {showOverlay && <LoadingOverlay />}
+            </AnimatePresence>
+
             <AnimatePresence mode="wait">
                 {/* ERROR STATE */}
                 {status === 'error' && (
