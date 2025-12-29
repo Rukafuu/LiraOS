@@ -211,12 +211,36 @@ export async function generateImage(prompt, userTier = 'free', hfApiKey = null) 
         
         // Fallback to Pollinations if premium provider fails
         if (provider !== 'pollinations') {
-            console.log('[IMAGE_GEN] Falling back to Pollinations...');
+            console.log('[IMAGE_GEN] Falling back to Pollinations (Proxy Mode)...');
+            try {
+                const fallbackUrl = generatePollinationsUrl(prompt, seed);
+                // Proxy the image: Fetch it here and return Base64 to bypass client-side CORS/Blocks
+                const resp = await fetch(fallbackUrl);
+                if (resp.ok) {
+                   const buf = await resp.arrayBuffer();
+                   const b64 = Buffer.from(buf).toString('base64');
+                   return {
+                       success: true,
+                       imageUrl: `data:image/jpeg;base64,${b64}`,
+                       isBase64: true, // Frontend treats this as ready-to-render
+                       provider: 'Pollinations.ai (Fallback Proxy)',
+                       model: 'Flux',
+                       quality: 'standard',
+                       seed,
+                       fallback: true,
+                       errorDetails: error.message
+                   };
+                }
+            } catch (fallbackErr) {
+               console.error('Fallback Proxy failed:', fallbackErr);
+            }
+
+            // If proxy fails, return URL as last resort
             return {
                 success: true,
                 imageUrl: generatePollinationsUrl(prompt, seed),
                 isBase64: false,
-                provider: 'Pollinations.ai (Fallback)',
+                provider: 'Pollinations.ai (Fallback URL)',
                 model: 'Flux',
                 quality: 'standard',
                 seed,
