@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { liraVoice } from '../../services/lira_voice';
 
 interface BootSequenceProps {
   onComplete: () => void;
@@ -18,39 +19,42 @@ export const BootSequence: React.FC<BootSequenceProps> = ({ onComplete }) => {
   ];
 
   useEffect(() => {
-    // Progress bar animation
-    const timer = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(timer);
-          return 100;
+    const runBootSequence = async () => {
+        // 0% - Start
+        setProgress(10);
+        setText("INITIALIZING LIRA KERNEL...");
+        await new Promise(r => setTimeout(r, 800));
+
+        // 30% - Modules
+        setProgress(30);
+        setText("LOADING NEURAL MODULES...");
+        await new Promise(r => setTimeout(r, 600));
+
+        // 50% - Voice Check
+        setProgress(50);
+        setText("CONNECTING TO VOICE DRIVER (LOCALHOST:5002)...");
+        
+        const isVoiceUp = await liraVoice.checkXTTSAvailability(1500); // Fast check
+        
+        if (isVoiceUp) {
+            setProgress(80);
+            setText("✅ VOICE DRIVER DETECTED & READY.");
+        } else {
+            setProgress(70);
+            setText("⚠️ VOICE DRIVER OFFLINE (FALLBACK ENABLED).");
         }
-        // Random increment for realistic effect
-        return prev + Math.random() * 5;
-      });
-    }, 100);
+        await new Promise(r => setTimeout(r, 1200)); // Let user read status
 
-    // Text cycling
-    let lineIndex = 0;
-    const textTimer = setInterval(() => {
-      lineIndex++;
-      if (lineIndex < systemLines.length) {
-        setText(systemLines[lineIndex]);
-      } else {
-        clearInterval(textTimer);
-      }
-    }, 600);
-
-    // Completion
-    const completeTimer = setTimeout(() => {
-      onComplete();
-    }, 3500);
-
-    return () => {
-      clearInterval(timer);
-      clearInterval(textTimer);
-      clearTimeout(completeTimer);
+        // 100% - Done
+        setProgress(100);
+        setText("LIRA OS v2.5.0 ONLINE");
+        
+        setTimeout(() => {
+            onComplete();
+        }, 600);
     };
+
+    runBootSequence();
   }, [onComplete]);
 
   return (
