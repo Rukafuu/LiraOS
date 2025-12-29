@@ -190,8 +190,8 @@ class DiscordService {
                 );
             }
 
-            await this.client.application.commands.set(commands);
-            console.log('[DISCORD] ✅ Slash commands registered successfully!');
+            // await this.client.application.commands.set(commands);
+            console.log('[DISCORD] ⚠️ Slash commands registration skipped to prevent Entry Point error.');
         } catch (error) {
             console.error('[DISCORD] ❌ Failed to register slash commands:', error);
         }
