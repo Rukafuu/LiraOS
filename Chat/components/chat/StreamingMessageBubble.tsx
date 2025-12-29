@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTypewriterReveal } from '../../hooks/useTypewriterReveal';
 import { ChatWidgetRenderer } from '../ChatWidgets'; 
@@ -82,7 +81,6 @@ export const StreamingMessageBubble: React.FC<StreamingMessageBubbleProps> = ({
 const MemoizedMarkdown = React.memo(({ content, showCursor }: { content: string, showCursor: boolean }) => {
     return (
         <ReactMarkdown 
-            remarkPlugins={[remarkGfm]}
             components={{
                 code({node, inline, className, children, ...props}: any) {
                         const match = /language-(\w+)/.exec(className || '');
