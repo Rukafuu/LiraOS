@@ -3,7 +3,7 @@ import fetch from 'node-fetch';
 const POLLINATIONS_BASE = 'https://image.pollinations.ai';
 const PRODIA_BASE = 'https://image.prodia.com';
 const HUGGINGFACE_MODEL = 'black-forest-labs/FLUX.1-schnell';
-const TIMEOUT_MS = 10000;
+const TIMEOUT_MS = 30000;
 
 /**
  * Image generation providers by tier
@@ -167,13 +167,17 @@ export async function generateImage(prompt, userTier = 'free', hfApiKey = null) 
     const provider = getProviderForTier(userTier);
     const seed = Date.now();
     
+    console.log(`[IMAGE_GEN] Requesting image. Provider: ${provider}, Tier: ${userTier}`);
+
     try {
         let imageUrl;
         let isBase64 = false;
         
         switch (provider) {
             case 'huggingface':
+                console.log(`[IMAGE_GEN] Calling HF API...`);
                 imageUrl = await generateHuggingFaceImage(prompt, effectiveKey);
+                console.log('[IMAGE_GEN] HF Success!');
                 isBase64 = true;
                 break;
                 
