@@ -442,6 +442,7 @@ Diretrizes de Resposta:
 
     const reader = response.body?.getReader();
     const decoder = new TextDecoder();
+    let buffer = '';
 
     if (!reader) {
       throw new Error('No response body');
@@ -452,12 +453,16 @@ Diretrizes de Resposta:
       
       if (done) break;
       
-      const chunk = decoder.decode(value);
-      const lines = chunk.split('\n');
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      
+      // Keep the last line in the buffer as it might be incomplete
+      buffer = lines.pop() || '';
       
       for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6);
+        const trimmedLine = line.trim();
+        if (trimmedLine.startsWith('data: ')) {
+          const data = trimmedLine.slice(6);
           
           if (data === '[DONE]') {
             return;
@@ -473,7 +478,8 @@ Diretrizes de Resposta:
               return;
             }
           } catch (e) {
-            // Ignore parse errors
+            // Log parse error for debugging but don't crash
+            console.warn('SSE Parse warning:', e);
           }
         }
       }
