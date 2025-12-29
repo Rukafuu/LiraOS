@@ -113,12 +113,25 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
     setCurrentPhrase(randomPhrase);
   };
 
-  // Resize handler
-  const handleResize = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -20 : 20;
-    setSize(prev => Math.max(200, Math.min(600, prev + delta)));
-  };
+  // Resize handler (Non-passive for preventDefault)
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -20 : 20;
+      setSize(prev => Math.max(200, Math.min(600, prev + delta)));
+    };
+
+    const element = document.getElementById('lira-interaction-layer');
+    if (element) {
+      element.addEventListener('wheel', handleWheel, { passive: false });
+    }
+
+    return () => {
+      if (element) {
+        element.removeEventListener('wheel', handleWheel);
+      }
+    };
+  }, []);
 
   return (
     <motion.div
@@ -147,9 +160,10 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
         
         {/* Lira Canvas - Fully transparent background */}
         <div 
+          id="lira-interaction-layer"
           className="absolute inset-0 cursor-pointer"
           onClick={handleLiraClick}
-          onWheel={handleResize}
+          // onWheel removed here, handled by effect above
         >
           <div id={WIDGET_ID} className="w-full h-full" />
         </div>
