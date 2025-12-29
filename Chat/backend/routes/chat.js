@@ -498,8 +498,12 @@ Ação > Conversa. Se você pode fazer algo com uma ferramenta, USE A FERRAMENTA
       }
     }
 
+       // Calculate Tier dynamically (Moved up for XP Calculation)
+       const user = await getUserById(userId);
+       const userPlan = user?.plan || 'free';
+
        try {
-         await award(userId, { xp: 5, coins: 1 });
+         await award(userId, { xp: 5, coins: 1 }, userPlan);
        } catch (e) {
          console.error('Failed to add XP:', e);
        }
@@ -507,8 +511,6 @@ Ação > Conversa. Se você pode fazer algo com uma ferramenta, USE A FERRAMENTA
        // --- TEMPORAL AWARENESS & MEMORY TIERS ---
        const temporalContext = getTemporalContext(localDateTime);
        
-       // Calculate Tier dynamically
-       const user = await getUserById(userId);
        // Admin gets everything (Sirius). Premium plans get Sirius. Free gets Observer.
        const userTier = (isAdmin(userId) || (user && user.plan !== 'free')) ? 'Sirius' : 'Observer'; 
        

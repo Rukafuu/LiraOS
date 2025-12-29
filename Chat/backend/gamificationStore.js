@@ -83,11 +83,22 @@ export const getOrCreateDefault = async (userId) => {
   return def;
 };
 
-export const award = async (userId, rewards) => {
+export const award = async (userId, rewards, plan = 'free') => {
+  const multipliers = {
+    free: 1.0,
+    observer: 1.0, 
+    vega: 1.1,
+    sirius: 1.5,
+    antares: 2.0,
+    supernova: 5.0,
+    singularity: 10.0
+  };
+  const mult = multipliers[plan.toLowerCase()] || 1.0;
+
   const state = await getOrCreateDefault(userId);
   let { xp, coins } = state;
   
-  if (rewards.xp) xp += rewards.xp;
+  if (rewards.xp) xp += Math.round(rewards.xp * mult);
   if (rewards.coins) coins += rewards.coins;
   
   const level = 1 + Math.floor(xp / 1000);
