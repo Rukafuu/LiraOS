@@ -22,6 +22,8 @@ export interface AuthSession {
   expiresAt: number;
 }
 
+import { LIRA_AVATAR } from '../constants';
+
 const SESSION_KEY = 'lira_session';
 const CURRENT_USER_KEY = 'lira_current_user';
 const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
@@ -59,39 +61,7 @@ export function getAuthHeaders() {
 
 // --- Auth Functions ---
 
-export const handleOAuthCallback = (params: URLSearchParams): boolean => {
-  const token = params.get('token');
-  const email = params.get('email');
-  const name = params.get('name');
-  const uid = params.get('uid');
-  const refreshToken = params.get('refreshToken');
-  
-  if (token && (email || uid)) {
-    const userObj: User = {
-      id: uid || `user_${Date.now()}`,
-      email: String(email || '').toLowerCase(),
-      username: name || (email ? String(email).split('@')[0] : 'User'),
-      createdAt: Date.now(),
-      lastLogin: Date.now(),
-      profile: {} // Legacy
-    };
-    
-    try {
-      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userObj));
-      localStorage.setItem(SESSION_KEY, JSON.stringify({
-        userId: userObj.id,
-        token,
-        refreshToken: refreshToken || '',
-        expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000
-      }));
-      return true;
-    } catch (e) {
-      console.error('OAuth Callback Error:', e);
-      return false;
-    }
-  }
-  return false;
-};
+
 
 export const register = async (email: string, username: string, password: string): Promise<{ success: boolean; message: string; user?: User }> => {
   try {
@@ -221,7 +191,7 @@ export const handleOAuthCallback = async (): Promise<boolean> => {
           username: name || 'User',
           avatar: LIRA_AVATAR, // Default avatar for now
           loginCount: 1,
-          lastLogin: new Date().toISOString()
+          lastLogin: Date.now()
       };
       
       // Try to fetch fresher user data
