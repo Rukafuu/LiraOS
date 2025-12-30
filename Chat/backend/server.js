@@ -42,26 +42,14 @@ const PORT = process.env.PORT || 4000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 // Middleware
+// Middleware - NUCLEAR CORS FIX
 app.use(cors({
-  origin: (origin, callback) => {
-    const allowed = [
-      process.env.FRONTEND_URL, 
-      'http://localhost:5173', 
-      'http://localhost:4173',
-      'https://liraos.xyz',
-      'https://www.liraos.xyz'
-    ];
-    if (!origin || allowed.includes(origin) || process.env.NODE_ENV !== 'production') {
-      callback(null, true);
-    } else {
-      // callback(new Error('Not allowed by CORS'));
-      console.warn(`[CORS] Warning: Origin ${origin} not explicitly allowed but proceeding for debug.`);
-      callback(null, true);
-    }
-  }, 
-  credentials: true,
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: true, // Reflect request origin allowed
+  credentials: true, // Allow cookies/auth headers
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
 }));
+app.options('*', cors()); // Force preflight handling for all routes
 app.use(express.json({ limit: '50mb' }));
 
 // Debug Middleware (Less verbose in Production)
