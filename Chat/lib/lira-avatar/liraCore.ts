@@ -111,6 +111,7 @@ export class LiraCore {
         this.app = new window.PIXI.Application({
             view: this.canvas,
             autoStart: true,
+            sharedTicker: false, // ISOLATION FIX: Do not use global shared ticker
             backgroundAlpha: 0, // Transparent background
             resizeTo: this.container,
             antialias: true,
