@@ -334,8 +334,8 @@ export class LiraCore {
 
             this.originalScale = finalScale;
             this.originalY = this.model.y;
-
-            console.log(`✅ Lira redimensionada (Debounced). Scale: ${finalScale.toFixed(4)}`);
+            
+            // console.log(`✅ Lira redimensionada (Debounced). Scale: ${finalScale.toFixed(4)}`);
         }, 100);
     }
 
@@ -439,7 +439,8 @@ export class LiraCore {
         if (this.model) {
             try {
                 // @ts-ignore
-                this.model.destroy({ children: true, baseTexture: true, texture: true });
+                // SAFETY FIX: Do not destroy texture/baseTexture to protect shared cache
+                this.model.destroy({ children: true, baseTexture: false, texture: false });
             } catch (e) {}
             this.model = null;
         }
