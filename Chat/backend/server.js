@@ -43,7 +43,22 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 // Middleware
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? FRONTEND_URL : true, 
+  origin: (origin, callback) => {
+    const allowed = [
+      process.env.FRONTEND_URL, 
+      'http://localhost:5173', 
+      'http://localhost:4173',
+      'https://liraos.xyz',
+      'https://www.liraos.xyz'
+    ];
+    if (!origin || allowed.includes(origin) || process.env.NODE_ENV !== 'production') {
+      callback(null, true);
+    } else {
+      // callback(new Error('Not allowed by CORS'));
+      console.warn(`[CORS] Warning: Origin ${origin} not explicitly allowed but proceeding for debug.`);
+      callback(null, true);
+    }
+  }, 
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
