@@ -26,6 +26,8 @@ interface WidgetRendererProps {
 
 const TodoWidget: React.FC<{ title: string; items: string[] }> = ({ title, items }) => {
   const [checked, setChecked] = React.useState<boolean[]>(new Array(items.length).fill(false));
+  const [saving, setSaving] = React.useState(false);
+  const [saved, setSaved] = React.useState(false);
 
   const toggle = (idx: number) => {
     const next = [...checked];
@@ -33,11 +35,57 @@ const TodoWidget: React.FC<{ title: string; items: string[] }> = ({ title, items
     setChecked(next);
   };
 
+  const saveToPanel = async () => {
+    setSaving(true);
+    try {
+      const newList = {
+        id: `list_${Date.now()}`,
+        title,
+        items: items.map((text, idx) => ({
+          id: `item_${Date.now()}_${idx}`,
+          text,
+          completed: checked[idx],
+          createdAt: Date.now()
+        })),
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/todos`, {
+        method: 'POST',
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify(newList)
+      });
+
+      if (res.ok) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
+      }
+    } catch (e) {
+      console.error('Failed to save to panel:', e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="bg-[#18181b] border border-white/10 rounded-xl overflow-hidden my-4 max-w-sm w-full shadow-lg">
-      <div className="bg-white/5 px-4 py-3 border-b border-white/5 flex items-center gap-2">
-        <CheckSquare size={16} className="text-lira-pink" />
-        <span className="font-semibold text-sm text-gray-200">{title}</span>
+      <div className="bg-white/5 px-4 py-3 border-b border-white/5 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <CheckSquare size={16} className="text-lira-pink" />
+          <span className="font-semibold text-sm text-gray-200">{title}</span>
+        </div>
+        <button
+          onClick={saveToPanel}
+          disabled={saving || saved}
+          className={`px-3 py-1 text-xs rounded-lg transition-all ${
+            saved 
+              ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+              : 'bg-lira-pink/10 text-lira-pink border border-lira-pink/30 hover:bg-lira-pink/20'
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
+        >
+          {saving ? 'Salvando...' : saved ? '✓ Salvo!' : 'Salvar no Painel'}
+        </button>
       </div>
       <div className="p-2">
          {items.map((item, idx) => (
