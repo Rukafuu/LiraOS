@@ -8,6 +8,7 @@ interface LiraCompanionWidgetProps {
   isSpeaking: boolean;
 }
 
+// Widget Version v2.1 (Cache Buster)
 const SILLY_PHRASES = [
   "Oi! Tá precisando de ajuda? 💜",
   "Clicou em mim? Que fofo! 😊",
