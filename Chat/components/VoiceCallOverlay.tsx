@@ -1,7 +1,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { LiraCore } from '../lib/lira-avatar/liraCore';
-import { X, PhoneOff, Settings, Check, User, MessageCircle, Music, Play } from 'lucide-react';
+import { X, PhoneOff, Settings, Check, User, MessageCircle, Music, Play, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { liraVoice, PREMIUM_VOICES } from '../services/lira_voice';
 import { AudioService } from '../services/avatarAudioService';
@@ -19,6 +19,7 @@ interface VoiceCallOverlayProps {
   avatarUrl: string;
   currentResponse?: string;
   messages: Message[];
+  onToggleCompanion?: () => void;
 }
 
 type CallState = 'listening' | 'thinking' | 'speaking' | 'error';
@@ -29,7 +30,8 @@ export const VoiceCallOverlay: React.FC<VoiceCallOverlayProps> = ({
   onSendMessage,
   userName,
   currentResponse,
-  messages
+  messages,
+  onToggleCompanion
 }) => {
   const [callState, setCallState] = useState<CallState>('listening');
   const callStateRef = useRef<CallState>('listening');
@@ -494,6 +496,18 @@ export const VoiceCallOverlay: React.FC<VoiceCallOverlayProps> = ({
                         <PhoneOff size={32} className="text-white group-hover:rotate-12 transition-transform" />
                     </button>
                     
+                    <button 
+                         onClick={() => {
+                            if (onToggleCompanion) onToggleCompanion();
+                            // Force resize in case she's shy
+                            setTimeout(() => window.dispatchEvent(new Event('resize')), 100);
+                         }}
+                         className={`p-4 rounded-full transition-colors bg-white/5 text-lira-pink hover:bg-lira-pink hover:text-white`}
+                         title="Chamar Lira (Widget)"
+                    >
+                        <Sparkles size={24} />
+                    </button>
+
                     <button 
                          onClick={() => setShowChat(!showChat)}
                          className={`p-4 rounded-full transition-colors ${showChat ? 'bg-white text-black' : 'bg-white/5 text-gray-500 hover:text-white'}`}

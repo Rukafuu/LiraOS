@@ -262,6 +262,8 @@ const LiraAppContent = () => {
     // Auto-Show Companion if Voice Call starts
     if (isVoiceActive) {
         setShowCompanion(true);
+        // Force layout refresh to wake up Lira
+        setTimeout(() => window.dispatchEvent(new Event('resize')), 500);
     }
 
     const userId = currentUser?.id;
@@ -1219,6 +1221,7 @@ const LiraAppContent = () => {
         avatarUrl={LIRA_AVATAR}
         currentResponse={streamingText}
         messages={currentSession?.messages || []}
+        onToggleCompanion={() => setShowCompanion(prev => !prev)}
       />
       
       {/* Background Studio for Selfies (Disabled when Voice Call is active to avoid conflicts) */}
