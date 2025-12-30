@@ -4,9 +4,11 @@ import { X, User, Brain, Palette, RefreshCw, Zap, Check, Trash2, Database, Camer
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
 import { useGamification } from '../contexts/GamificationContext';
-import { getCurrentUser, updateProfile, updateAvatar, getSettings, saveSettings, UserSettings } from '../services/userService';
+import { getCurrentUser, updateProfile, updateAvatar, getSettings, saveSettings, UserSettings, getAuthHeaders } from '../services/userService';
 import { useToast } from '../contexts/ToastContext';
 import { MemoryGraph } from './ui/MemoryGraph';
+
+const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:4000';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -127,6 +129,31 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleGoogleConnect = async () => {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/auth/google/connect`, {
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        if (data.url) {
+            // Open popup for OAuth
+            window.open(data.url, 'Google Auth', 'width=600,height=700');
+            
+            // Listen for window close or message to refresh status
+             const messageHandler = (event: MessageEvent) => {
+                if (event.data?.type === 'GOOGLE_AUTH_SUCCESS') {
+                    addToast('Google Calendar conectado com sucesso!', 'success');
+                    window.removeEventListener('message', messageHandler);
+                }
+            };
+            window.addEventListener('message', messageHandler);
+        }
+    } catch (error) {
+        console.error(error);
+        addToast('Erro ao iniciar conexão com Google', 'error');
+    }
   };
 
   // Handle save profile name
@@ -307,6 +334,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                                     <div className="text-[10px] text-gray-500 uppercase font-bold">{t('settings.profile.xp')}</div>
                                     <div className="text-lg font-bold text-white">{stats.currentXp}</div>
                                  </div>
+                              </div>
+                           </div>
+
+                           {/* Integrations */}
+                           <div className="pt-6 border-t border-white/5 space-y-4">
+                              <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Integrations</h4>
+                              
+                              <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
+                                 <div className="flex items-center gap-3">
+                                    <div className="p-1.5 bg-blue-500/20 rounded-md text-blue-500">
+                                       <Activity size={16} />
+                                    </div>
+                                    <div>
+                                       <div className="text-sm font-medium text-white">Google Calendar</div>
+                                       <div className="text-xs text-gray-500">Connect to manage events</div>
+                                    </div>
+                                 </div>
+                                 <button
+                                    onClick={handleGoogleConnect}
+                                    className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-lg transition-colors border border-white/10"
+                                 >
+                                    Connect
+                                 </button>
                               </div>
                            </div>
 
