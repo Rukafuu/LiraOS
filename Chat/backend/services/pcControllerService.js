@@ -278,6 +278,96 @@ class PCControllerService {
             return `Erro ao listar: ${e.message}`;
         }
     }
+
+    async getSystemStats() {
+        // ... (existing code)
+        const psCmd = `powershell -c "
+            $cpu = (Get-CimInstance Win32_Processor).LoadPercentage;
+            $mem = Get-CimInstance Win32_OperatingSystem;
+            $totalRam = [math]::Round($mem.TotalVisibleMemorySize / 1KB, 1);
+            $freeRam = [math]::Round($mem.FreePhysicalMemory / 1KB, 1);
+            $usedRam = $totalRam - $freeRam;
+            $batt = (Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue).EstimatedChargeRemaining;
+            if (!$batt) { $batt = 'AC/Desktop' };
+            Write-Output \"CPU:$cpu|RAM:$usedRam/$totalRam|BATT:$batt\"
+        "`;
+        
+        try {
+            const output = await execAsync(psCmd);
+            const [cpuStr, ramStr, battStr] = output.split('|');
+            
+            return {
+                cpu_load: `${cpuStr.split(':')[1]}%`,
+                ram_usage: `${ramStr.split(':')[1]} MB`,
+                battery: battStr.split(':')[1],
+                platform: os.platform(),
+                uptime: `${Math.round(os.uptime() / 60)} min`
+            };
+        } catch (e) {
+            console.error("Stats Error:", e);
+            return { error: "Failed to retrieve stats" };
+        }
+    }
+
+    async organizeFolder(folderName) {
+        const targetPath = this.aliases[folderName.toLowerCase()] || folderName;
+        
+        // Safety Checks
+        if (!fs.existsSync(targetPath)) return { error: "Pasta não encontrada." };
+        if (targetPath.length < 10 && !targetPath.includes('Users')) return { error: "Por segurança, não organizo pastas raiz ou de sistema." };
+
+        const categories = {
+            '_Images': ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'],
+            '_Docs': ['.pdf', '.doc', '.docx', '.txt', '.md', '.xlsx', '.csv', '.pptx'],
+            '_Installers': ['.exe', '.msi', '.iso', '.bat'],
+            '_Archives': ['.zip', '.rar', '.7z', '.tar', '.gz'],
+            '_Audio': ['.mp3', '.wav', '.ogg', '.flac'],
+            '_Video': ['.mp4', '.mkv', '.avi', '.mov']
+        };
+
+        const movedLog = [];
+        let count = 0;
+
+        try {
+            const files = await fs.promises.readdir(targetPath);
+
+            for (const file of files) {
+                const filePath = path.join(targetPath, file);
+                const stat = await fs.promises.stat(filePath).catch(() => null);
+                
+                if (!stat || !stat.isFile()) continue; // Skip directories
+                
+                const ext = path.extname(file).toLowerCase();
+                let destFolder = null;
+
+                // Determine category
+                for (const [cat, exts] of Object.entries(categories)) {
+                    if (exts.includes(ext)) {
+                        destFolder = cat;
+                        break;
+                    }
+                }
+
+                if (destFolder) {
+                    const destPath = path.join(targetPath, destFolder);
+                    // Create subfolder if needed
+                    if (!fs.existsSync(destPath)) {
+                        await fs.promises.mkdir(destPath);
+                    }
+                    
+                    const newFilePath = path.join(destPath, file);
+                    await fs.promises.rename(filePath, newFilePath);
+                    movedLog.push(file);
+                    count++;
+                }
+            }
+            
+            return { success: true, count, moved: movedLog.slice(0, 5), message: `Organizei ${count} arquivos em subpastas!` };
+
+        } catch (e) {
+            return { error: `Erro ao organizar: ${e.message}` };
+        }
+    }
 }
 
 export const pcController = new PCControllerService();

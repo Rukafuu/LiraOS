@@ -432,6 +432,25 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                    }
                 },
                 {
+                   name: 'get_system_stats',
+                   description: 'Get current PC stats (CPU, RAM, Battery, Uptime). Use this if user asks for system status.',
+                   parameters: {
+                      type: "object",
+                      properties: {}
+                   }
+                },
+                {
+                   name: 'organize_folder',
+                   description: 'Organizes files in a directory into subfolders (Images, Docs, etc). Use for "clean up downloads" or "organize desktop".',
+                   parameters: {
+                      type: "object",
+                      required: ["folder_name"],
+                      properties: {
+                         folder_name: { type: "string", description: "Name of the folder (Downloads, Documents, Desktop) or path." }
+                      }
+                   }
+                },
+                {
                    name: 'create_calendar_event',
                   description: 'Creates an event in Google Calendar. IMPORTANT: If user gives minimal info (e.g. "meeting at 5pm"), INFER the rest. Use the text prompt as the Summary. Use today\'s date combined with the time provided. Assume 1 hour duration if not specified. Do NOT ask for more info, just create it.',
                   parameters: {
@@ -787,6 +806,23 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                     functionResult = { success: true, lists: simpleLists };
                 } catch(e) {
                     functionResult = { success: false, error: e.message };
+                }
+                break;
+
+            case 'get_system_stats':
+                try {
+                    functionResult = await pcController.getSystemStats();
+                } catch(e) {
+                    functionResult = { error: e.message };
+                }
+                break;
+
+            case 'organize_folder':
+                try {
+                    const { folder_name } = functionCall.args;
+                    functionResult = await pcController.organizeFolder(folder_name);
+                } catch(e) {
+                    functionResult = { error: e.message };
                 }
                 break;
 
