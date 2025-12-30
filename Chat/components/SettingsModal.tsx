@@ -146,9 +146,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
   const menuItems = [
     { id: 'profile', label: t('settings.tabs.profile'), icon: User },
     { id: 'security', label: t('settings.tabs.security'), icon: Shield },
-    { id: 'intelligence', label: t('settings.tabs.intelligence'), icon: Brain },
-    { id: 'shortcuts', label: t('settings.tabs.shortcuts'), icon: Keyboard },
-    { id: 'memories', label: t('settings.tabs.memories'), icon: Database },
+    { id: 'intelligence', label: t('settings.intelligence.title'), icon: Brain },
+    { id: 'memories', label: t('settings.memories.title'), icon: Database },
     { id: 'appearance', label: t('settings.tabs.appearance'), icon: Palette },
     { id: 'help', label: t('settings.tabs.help'), icon: LifeBuoy },
   ];
@@ -531,53 +530,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                   </motion.div>
                 )}
 
-                {/* Shortcuts Tab */}
-                {activeTab === 'shortcuts' && (
-                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
-                     <div>
-                        <h3 className="text-xl font-semibold text-white mb-2">{t('settings.shortcuts.title')}</h3>
-                        <p className="text-gray-500 text-sm mb-6">{t('settings.shortcuts.desc')}</p>
-                        
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="p-4 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between">
-                                <span className="text-sm text-gray-300">{t('settings.shortcuts.new_chat')}</span>
-                                <div className="flex gap-1">
-                                    <kbd className="px-2 py-1 bg-white/10 rounded-md text-xs text-gray-400 font-mono">{navigator.platform.includes('Mac') ? 'Cmd' : 'Ctrl'}</kbd>
-                                    <kbd className="px-2 py-1 bg-white/10 rounded-md text-xs text-gray-400 font-mono">N</kbd>
-                                </div>
-                            </div>
-                            <div className="p-4 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between">
-                                <span className="text-sm text-gray-300">{t('settings.shortcuts.open_settings')}</span>
-                                <div className="flex gap-1">
-                                    <kbd className="px-2 py-1 bg-white/10 rounded-md text-xs text-gray-400 font-mono">{navigator.platform.includes('Mac') ? 'Cmd' : 'Ctrl'}</kbd>
-                                    <kbd className="px-2 py-1 bg-white/10 rounded-md text-xs text-gray-400 font-mono">I</kbd>
-                                </div>
-                            </div>
-                            <div className="p-4 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between">
-                                <span className="text-sm text-gray-300">{t('settings.shortcuts.toggle_sidebar')}</span>
-                                <div className="flex gap-1">
-                                    <kbd className="px-2 py-1 bg-white/10 rounded-md text-xs text-gray-400 font-mono">{navigator.platform.includes('Mac') ? 'Cmd' : 'Ctrl'}</kbd>
-                                    <kbd className="px-2 py-1 bg-white/10 rounded-md text-xs text-gray-400 font-mono">\</kbd>
-                                </div>
-                            </div>
-                            <div className="p-4 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between">
-                                <span className="text-sm text-gray-300">{t('settings.shortcuts.focus_input')}</span>
-                                <div className="flex gap-1">
-                                    <kbd className="px-2 py-1 bg-white/10 rounded-md text-xs text-gray-400 font-mono">/</kbd>
-                                </div>
-                            </div>
-                             <div className="p-4 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between">
-                                <span className="text-sm text-gray-300">{t('settings.shortcuts.close_modals')}</span>
-                                <div className="flex gap-1">
-                                    <kbd className="px-2 py-1 bg-white/10 rounded-md text-xs text-gray-400 font-mono">Esc</kbd>
-                                </div>
-                            </div>
-                        </div>
-                     </div>
-                  </motion.div>
-                )}
+                {/* Shortcuts Tab Removed (Moved to Sidebar only) */}
 
-              {/* Memories Tab */}
+                {/* Memories Tab */}
               {activeTab === 'memories' && (
                  <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
                     <div>
