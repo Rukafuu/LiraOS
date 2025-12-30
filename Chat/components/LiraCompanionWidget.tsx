@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LiraCore } from '../lib/lira-avatar/liraCore';
-import { X, Music, Sparkles } from 'lucide-react';
+import { X, Music, Sparkles, ZoomIn, ZoomOut } from 'lucide-react';
 
 interface LiraCompanionWidgetProps {
   onClose: () => void;
@@ -29,7 +29,6 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
   const liraRef = useRef<LiraCore | null>(null);
   const [isDancing, setIsDancing] = useState(false);
   const [currentPhrase, setCurrentPhrase] = useState<string | null>(null);
-  const [showControls, setShowControls] = useState(false);
   const [size, setSize] = useState(350);
   const WIDGET_ID = 'lira-companion-widget-canvas';
 
@@ -62,7 +61,8 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
     return () => {
       if (liraRef.current) {
         console.log('[Companion] Destroying Lira...');
-        liraRef.current.destroy();
+        // SAFETY: Do not destroy shared textures
+        liraRef.current.destroy(); 
         liraRef.current = null;
       }
     };
@@ -113,26 +113,6 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
     setCurrentPhrase(randomPhrase);
   };
 
-  // Resize handler (Non-passive for preventDefault)
-  useEffect(() => {
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const delta = e.deltaY > 0 ? -20 : 20;
-      setSize(prev => Math.max(200, Math.min(600, prev + delta)));
-    };
-
-    const element = document.getElementById('lira-interaction-layer');
-    if (element) {
-      element.addEventListener('wheel', handleWheel, { passive: false });
-    }
-
-    return () => {
-      if (element) {
-        element.removeEventListener('wheel', handleWheel);
-      }
-    };
-  }, []);
-
   return (
     <motion.div
       drag
@@ -152,8 +132,6 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
       exit={{ opacity: 0, scale: 0.8 }}
       style={{ width: size, height: size }}
       className="fixed z-50 group"
-      onMouseEnter={() => setShowControls(true)}
-      onMouseLeave={() => setShowControls(false)}
     >
       {/* Transparent container - ONLY the avatar visible */}
       <div className="relative w-full h-full">
@@ -163,38 +141,44 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
           id="lira-interaction-layer"
           className="absolute inset-0 cursor-pointer"
           onClick={handleLiraClick}
-          // onWheel removed here, handled by effect above
         >
           <div id={WIDGET_ID} className="w-full h-full" />
         </div>
 
-        {/* Floating Controls (only on hover) */}
-        <AnimatePresence>
-          {showControls && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="absolute -top-12 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md rounded-full px-3 py-2 shadow-2xl flex items-center gap-2"
+        {/* CONTROLS BAR (Bottom) */}
+        <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-[#121214]/90 border border-white/10 p-2 rounded-2xl backdrop-blur-md shadow-xl z-[60]">
+             <button 
+                onClick={(e) => { e.stopPropagation(); setSize(prev => Math.min(600, prev + 30)); }}
+                className="p-2 hover:bg-white/10 rounded-xl text-white/70 hover:text-white transition-colors"
+                title="Aumentar"
             >
-              <button
-                onClick={() => setIsDancing(!isDancing)}
-                className={`p-1.5 rounded-full transition-all ${isDancing ? 'bg-pink-500/30 text-pink-300' : 'hover:bg-white/10 text-white/70'}`}
-                title="Dance Mode"
-              >
-                <Music size={14} />
-              </button>
-              <div className="w-px h-4 bg-white/20" />
-              <button
-                onClick={onClose}
-                className="p-1.5 hover:bg-red-500/20 rounded-full transition-colors text-white/70 hover:text-red-400"
-                title="Close"
-              >
-                <X size={14} />
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                <ZoomIn size={18} />
+            </button>
+            <button 
+                onClick={(e) => { e.stopPropagation(); setSize(prev => Math.max(150, prev - 30)); }}
+                className="p-2 hover:bg-white/10 rounded-xl text-white/70 hover:text-white transition-colors"
+                title="Diminuir"
+            >
+                <ZoomOut size={18} />
+            </button>
+            
+            <div className="w-px h-4 bg-white/10 mx-1" />
+
+            <button 
+                onClick={(e) => { e.stopPropagation(); setIsDancing(!isDancing); }}
+                className={`p-2 hover:bg-white/10 rounded-xl transition-colors ${isDancing ? 'text-lira-pink bg-lira-pink/10' : 'text-white/70 hover:text-white'}`}
+                title="Modo Dança"
+            >
+                <Music size={18} />
+            </button>
+            <button 
+                onClick={onClose} 
+                className="p-2 hover:bg-red-500/20 rounded-xl text-white/70 hover:text-red-400 transition-colors"
+                title="Fechar"
+            >
+                <X size={18} />
+            </button>
+        </div>
 
         {/* Speech Bubble */}
         <AnimatePresence>
@@ -208,7 +192,6 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
               <div className="text-sm text-gray-800 font-medium text-center">
                 {currentPhrase}
               </div>
-              {/* Speech bubble arrow */}
               <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white/95 rotate-45" />
             </motion.div>
           )}
@@ -247,18 +230,6 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
           <div className="absolute inset-0 -z-10 blur-2xl opacity-50">
             <div className="absolute inset-0 bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 animate-pulse" />
           </div>
-        )}
-
-        {/* Subtle hint for resize */}
-        {showControls && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute -bottom-12 left-1/2 -translate-x-1/2 text-xs text-white/40 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1"
-          >
-            Scroll para redimensionar
-          </motion.div>
         )}
       </div>
     </motion.div>
