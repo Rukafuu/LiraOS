@@ -164,6 +164,7 @@ export const VoiceCallOverlay: React.FC<VoiceCallOverlayProps> = ({
   useEffect(() => {
       let mounted = true;
       let initTimer: NodeJS.Timeout;
+      let localStream: MediaStream | null = null;
 
       if (isOpen) {
           const initAudio = async () => {
@@ -172,8 +173,10 @@ export const VoiceCallOverlay: React.FC<VoiceCallOverlayProps> = ({
                // Lightweight Init - No Live2D
                try {
                     await audioServiceRef.current.startMicrophone();
-                    const stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: selectedAudioDeviceId } });
-                    setUserStream(stream);
+                    // Just use the audio service stream instead of opening a second one
+                    // const stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: selectedAudioDeviceId } });
+                    // localStream = stream;
+                    // setUserStream(stream);
                } catch (e) { console.error("Mic failed", e); }
           };
           
@@ -185,6 +188,9 @@ export const VoiceCallOverlay: React.FC<VoiceCallOverlayProps> = ({
               clearTimeout(initTimer);
               stopCallLogic();
               try { audioServiceRef.current.stop(); } catch (e) {}
+              if (localStream) {
+                  localStream.getTracks().forEach(t => t.stop());
+              }
           };
       }
   }, [isOpen]);
@@ -291,6 +297,9 @@ export const VoiceCallOverlay: React.FC<VoiceCallOverlayProps> = ({
 
   const stopRecognition = () => {
     if (recognitionRef.current) {
+        // Prevent auto-restart logic
+        recognitionRef.current.onend = null;
+        recognitionRef.current.onerror = null;
         try { recognitionRef.current.abort(); } catch {}
         recognitionRef.current = null;
     }
