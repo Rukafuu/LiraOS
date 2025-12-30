@@ -116,6 +116,15 @@ export const LiraFloatingWidget: React.FC<LiraFloatingWidgetProps> = ({ onClose,
 
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
+    document.addEventListener('mouseup', onUp);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+      // Allow scroll resizing
+      const delta = e.deltaY * -0.2; // Sensitivity factor
+      const newSize = Math.max(150, Math.min(600, size + delta));
+      setSize(newSize);
+      onInteraction('resize');
   };
 
   return (
@@ -123,6 +132,7 @@ export const LiraFloatingWidget: React.FC<LiraFloatingWidgetProps> = ({ onClose,
         drag
         dragMomentum={false}
         onDragEnd={() => onInteraction('drag')}
+        onWheel={handleWheel}
         initial={{ x: window.innerWidth - 350, y: window.innerHeight - 400, opacity: 0, scale: 0.8 }}
         animate={{ 
             opacity: 1, 
