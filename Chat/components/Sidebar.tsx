@@ -23,6 +23,7 @@ interface SidebarProps {
   onOpenGamer: () => void;
   onOpenDailyQuests: () => void;
   onOpenSupporters: () => void;
+  onOpenAdminPanel: () => void;
   isOpen: boolean;
   onCloseMobile: () => void;
 }
@@ -43,6 +44,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenGamer,
   onOpenDailyQuests,
   onOpenSupporters,
+  onOpenAdminPanel,
   isOpen,
   onCloseMobile
 }) => {
@@ -359,6 +361,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     <Shield size={16} className="text-gray-400" />
                                 </div>
                                 <span className="text-[13px] font-medium">{t('sidebar.legal')}</span>
+                            </button>
+
+                            <button 
+                                onClick={onOpenAdminPanel} 
+                                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors group"
+                            >
+                                <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
+                                    <Command size={16} className="text-red-400 group-hover:scale-110 transition-transform" />
+                                </div>
+                                <span className="text-[13px] font-medium">Admin Panel</span>
                             </button>
                         </motion.div>
                     ) : (

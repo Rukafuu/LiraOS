@@ -43,6 +43,7 @@ import { IrisModal } from './components/IrisModal';
 import { DiscordModal } from './components/DiscordModal';
 import { MaintenanceScreen } from './components/MaintenanceScreen';
 import { PhotoBooth } from './components/PhotoBooth';
+import { AdminPanel } from './components/AdminPanel';
 
 const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
 const LOCAL_STORAGE_KEY = 'lira_chat_sessions';
@@ -77,6 +78,7 @@ const LiraAppContent = () => {
   const [isCookieModalOpen, setIsCookieModalOpen] = useState(false);
   const [isGamerOpen, setIsGamerOpen] = useState(false);
   const [isDailyQuestsOpen, setIsDailyQuestsOpen] = useState(false);
+  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -999,6 +1001,7 @@ const LiraAppContent = () => {
         onOpenGamer={() => setIsGamerOpen(true)}
         onOpenDailyQuests={() => setIsDailyQuestsOpen(true)}
         onOpenSupporters={() => setIsDashboardOpen(true)} // Map to dashboard for now
+        onOpenAdminPanel={() => setIsAdminPanelOpen(true)}
         isOpen={isSidebarOpen}
         onCloseMobile={() => setIsSidebarOpen(false)}
       />
@@ -1250,6 +1253,11 @@ const LiraAppContent = () => {
         isReturning={isReturningUser}
         onClose={() => setShowWelcome(false)}
         onNewChat={createNewChat}
+      />
+
+      <AdminPanel 
+        isOpen={isAdminPanelOpen}
+        onClose={() => setIsAdminPanelOpen(false)}
       />
 
       </Suspense>
