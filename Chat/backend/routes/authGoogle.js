@@ -68,7 +68,8 @@ router.get('/callback', async (req, res) => {
      
   } catch (e) {
     console.error('Google Auth Error:', e);
-    res.status(500).send('Authentication failed');
+    // Show exact error to user for debugging
+    res.status(500).send(`Authentication failed: ${e.message || JSON.stringify(e)}`);
   }
 });
 
