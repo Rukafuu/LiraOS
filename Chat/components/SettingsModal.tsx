@@ -131,9 +131,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
     reader.readAsDataURL(file);
   };
 
-  const handleGoogleConnect = async () => {
+    const handleGoogleConnect = async () => {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/google-calendar/connect`, {
+        if (!currentUser?.id) return;
+        const response = await fetch(`${API_BASE_URL}/api/auth/google-calendar/connect?userId=${encodeURIComponent(currentUser.id)}`, {
             headers: getAuthHeaders()
         });
         const data = await response.json();

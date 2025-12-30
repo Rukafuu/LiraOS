@@ -18,7 +18,7 @@ const oauth2Client = new google.auth.OAuth2(
   REDIRECT_URI
 );
 
-export const getAuthUrl = () => {
+export const getAuthUrl = (userId) => {
   const scopes = [
     'https://www.googleapis.com/auth/calendar',
     'https://www.googleapis.com/auth/calendar.events'
@@ -27,7 +27,8 @@ export const getAuthUrl = () => {
   return oauth2Client.generateAuthUrl({
     access_type: 'offline', // Request refresh_token
     scope: scopes,
-    prompt: 'consent' // Force user to re-authorize to ensure we get a refresh token
+    prompt: 'consent', // Force user to re-authorize
+    state: userId // Pass userId through OAuth flow
   });
 };
 

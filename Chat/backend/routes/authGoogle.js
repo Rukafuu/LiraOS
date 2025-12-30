@@ -7,7 +7,9 @@ const router = express.Router();
 // GET /api/auth/google/connect
 // Redirects user to Google OAuth consent screen
 router.get('/connect', (req, res) => {
-  const url = getAuthUrl();
+  const userId = req.query.userId;
+  if (!userId) return res.status(400).json({ error: 'Missing userId' });
+  const url = getAuthUrl(userId);
   res.json({ url });
 });
 
