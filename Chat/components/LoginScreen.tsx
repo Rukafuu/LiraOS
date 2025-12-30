@@ -10,17 +10,13 @@ interface LoginScreenProps {
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
-  const [isForgotPassword, setIsForgotPassword] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [isScanning, setIsScanning] = useState(false);
-  const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [isTermsOpen, setIsTermsOpen] = useState(false);
-  
+  const [isVerifyingCode, setIsVerifyingCode] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     username: '',
-    password: ''
+    password: '',
+    code: '',
+    newPassword: ''
   });
   const BACKEND_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
 
@@ -34,7 +30,55 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     setError('');
     setSuccessMessage('');
     
-    // Forgot password flow
+    // Phase 2: Verify Code & Set New Password
+    if (isVerifyingCode) {
+        if (!formData.code || !formData.newPassword) {
+            setError('Please enter the code and your new password');
+            return;
+        }
+
+        setIsScanning(true);
+        (async () => {
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/recovery/complete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        email: formData.email, 
+                        code: formData.code, 
+                        newPassword: formData.newPassword 
+                    })
+                });
+
+                setIsScanning(false);
+
+                if (res.ok) {
+                    setSuccessMessage('Password changed successfully! Signing you in...');
+                    // Auto login logic or redirect
+                    setTimeout(async () => {
+                         // Try to auto-login with new password
+                         const result = await login(formData.email, formData.newPassword);
+                         if (result.success && result.user) {
+                             onLogin(result.user.username, result.user.id);
+                         } else {
+                             setIsVerifyingCode(false);
+                             setIsForgotPassword(false);
+                             setIsLogin(true);
+                         }
+                    }, 1500);
+                } else {
+                    const data = await res.json();
+                    setError(data.error || 'Failed to verify code');
+                }
+            } catch (e) {
+                setIsScanning(false);
+                setError('Network error during verification.');
+            }
+        })();
+        return;
+    }
+
+    // Forgot password flow (Phase 1: Send Email)
     if (isForgotPassword) {
       if (!formData.email) {
         setError('Please enter your email');
@@ -60,24 +104,31 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           if (res.ok) {
             const data = await res.json();
             if (data.devMode && data.code) {
-                 setSuccessMessage(`DEV MODE: Your code is ${data.code}`);
+                 setSuccessMessage(`DEV CODE: ${data.code}`);
+                 // Auto-fill for dev convenience
+                 setFormData(prev => ({ ...prev, code: data.code }));
             } else {
-                 setSuccessMessage('Password reset email sent! Check your inbox.');
+                 setSuccessMessage('Code sent! Check your email.');
             }
+            // Switch to Verification Phase
             setTimeout(() => {
-              setIsForgotPassword(false);
-              setIsLogin(true);
-              setFormData({ email: formData.email, username: '', password: '' });
-            }, 6000); // Longer timeout to read code
+              setSuccessMessage('');
+              setIsVerifyingCode(true); // <--- Switch to Phase 2
+            }, 1500);
           } else {
             const errorData = await res.json().catch(() => ({}));
             console.error('[LOGIN] Recovery error:', errorData);
 
             if (errorData.devCode) {
-                // Emergency bypass for SMTP failures
+                // Emergency bypass
                 setError(`SMTP Error. EMERGENCY CODE: ${errorData.devCode}`);
-                // Allow copying code
-                console.log('Emergency Code:', errorData.devCode);
+                setFormData(prev => ({ ...prev, code: errorData.devCode }));
+                
+                // Switch to Verification Phase automatically after delay
+                setTimeout(() => {
+                   setError('');
+                   setIsVerifyingCode(true);
+                }, 3000);
             } else {
                 const errorMessage = errorData?.detail || errorData?.message || errorData?.error || 'Failed to send reset email';
                 setError(errorMessage);
@@ -165,10 +216,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                <img src={LIRA_AVATAR} alt="Lira" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-center text-xl font-semibold text-white tracking-tight">
-              {isForgotPassword ? 'Reset Password' : isLogin ? 'Sign in to LiraOS' : 'Create Account'}
+              {isVerifyingCode ? 'Verify Code' : isForgotPassword ? 'Reset Password' : isLogin ? 'Sign in to LiraOS' : 'Create Account'}
             </h1>
             <p className="text-gray-500 text-xs mt-1.5">
-              {isForgotPassword ? 'Enter your email to reset password' : isLogin ? 'Welcome back, please enter your details.' : 'Join the network and sync your mind.'}
+              {isVerifyingCode ? 'Enter the code and your new password.' : isForgotPassword ? 'Enter your email to reset password' : isLogin ? 'Welcome back, please enter your details.' : 'Join the network and sync your mind.'}
             </p>
           </div>
 
@@ -199,6 +250,51 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
 
           <form onSubmit={handleSubmit} className="mt-2 space-y-4">
             <AnimatePresence mode='wait'>
+                {isVerifyingCode ? (
+                    <motion.div
+                        key="verification"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                        transition={{ duration: 0.2 }}
+                    >
+                         {/* Code Field */}
+                         <div className="mb-4">
+                            <label htmlFor="code" className="block text-xs font-medium text-gray-400 mb-1.5 ml-1">Recovery Code</label>
+                            <input 
+                                type="text" 
+                                id="code" 
+                                placeholder="123456" 
+                                value={formData.code}
+                                onChange={handleChange}
+                                className="w-full bg-[#15151a] border border-white/5 rounded-xl py-2.5 px-4 text-white text-sm placeholder-gray-600 outline-none focus:border-white/20 focus:bg-[#1a1a20] transition-all text-center tracking-widest font-mono text-lg" 
+                            />
+                        </div>
+
+                        {/* New Password Field */}
+                        <div className="mb-4">
+                            <label htmlFor="newPassword" className="block text-xs font-medium text-gray-400 mb-1.5 ml-1">New Password</label>
+                            <div className="relative group">
+                                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-white transition-colors" />
+                                <input 
+                                    type={showPassword ? "text" : "password"} 
+                                    id="newPassword" 
+                                    placeholder="New Password" 
+                                    value={formData.newPassword}
+                                    onChange={handleChange}
+                                    className="w-full bg-[#15151a] border border-white/5 rounded-xl py-2.5 pl-10 pr-10 text-white text-sm placeholder-gray-600 outline-none focus:border-white/20 focus:bg-[#1a1a20] transition-all" 
+                                />
+                                <button 
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                                >
+                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                ) : (
                 <motion.div
                     key={isLogin ? 'login' : 'signup'}
                     initial={{ opacity: 0, x: isLogin ? -10 : 10 }}
@@ -218,13 +314,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                                 autoComplete="email"
                                 value={formData.email}
                                 onChange={handleChange}
-                                className="w-full bg-[#15151a] border border-white/5 rounded-xl py-2.5 pl-10 pr-4 text-white text-sm placeholder-gray-600 outline-none focus:border-white/20 focus:bg-[#1a1a20] transition-all" 
+                                disabled={isVerifyingCode} // Disable if validating
+                                className="w-full bg-[#15151a] border border-white/5 rounded-xl py-2.5 pl-10 pr-4 text-white text-sm placeholder-gray-600 outline-none focus:border-white/20 focus:bg-[#1a1a20] transition-all disabled:opacity-50" 
                             />
                         </div>
                     </div>
 
                     {/* Username Field (Signup Only) */}
-                    {!isLogin && (
+                    {!isLogin && !isForgotPassword && (
                         <div className="mb-4">
                             <label htmlFor="username" className="block text-xs font-medium text-gray-400 mb-1.5 ml-1">Username</label>
                             <div className="relative group">
@@ -242,7 +339,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                         </div>
                     )}
 
-                    {/* Password Field */}
+                    {/* Password Field (Login/Signup Only) */}
+                    {!isForgotPassword && (
                     <div className="mb-4">
                         <label htmlFor="password" className="block text-xs font-medium text-gray-400 mb-1.5 ml-1">Password</label>
                         <div className="relative group">
@@ -264,11 +362,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                             </button>
                         </div>
-                        {isLogin && !isForgotPassword && (
+                        {isLogin && (
                              <div className="mt-2 text-right">
                                 <button
                                   type="button"
-                                  onClick={() => { setIsForgotPassword(true); setIsLogin(true); setFormData({ email: formData.email, username: '', password: '' }); setError(''); setSuccessMessage(''); }}
+                                  onClick={() => { setIsForgotPassword(true); setIsLogin(true); setFormData({ email: formData.email, username: '', password: '', code: '', newPassword: '' }); setError(''); setSuccessMessage(''); }}
                                   className="text-xs text-gray-500 hover:text-white transition-colors"
                                 >
                                   Forgot password?
@@ -276,7 +374,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                             </div>
                         )}
                     </div>
+                    )}
                 </motion.div>
+                )}
             </AnimatePresence>
 
             <button
@@ -289,7 +389,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                         <ScanLine size={16} className="animate-spin-slow" />
                         <span>Connecting...</span>
                      </div>
-                ) : isForgotPassword ? 'Reset Password' : (isLogin ? 'Sign In' : 'Create account')}
+                ) : isVerifyingCode ? 'Set New Password' : isForgotPassword ? 'Send Recovery Email' : (isLogin ? 'Sign In' : 'Create account')}
             </button>
           </form>
         
