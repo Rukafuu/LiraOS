@@ -228,21 +228,34 @@ export class LiraCore {
             const screenW = this.app.screen.width;
             const screenH = this.app.screen.height;
 
-            // 2. Linear Scaling (Stable)
-            // Instead of unreliable 'getBounds', we use fixed proportion.
-            // Height 500px -> Scale ~0.22
-            const scale = screenH * 0.00045; 
+            // 2. SAFE FIT SCALING
+            // Attempt to get the real model height, fallback to 4000px if unknown
+            // @ts-ignore
+            const baseHeight = this.model.internalModel?.originalHeight || 4000;
+            const baseWidth = this.model.internalModel?.originalWidth || 4000;
+            
+            // We want the model to occupy roughly 85% of the screen vertical space
+            const targetHeight = screenH * 0.85;
+            let scale = targetHeight / baseHeight;
+            
+            // Safety Clamp: Never let it get absurdly huge or tiny
+            // Assuming 4k texture, 0.5 scale = 2000px height. That's usually plenty max.
+            scale = Math.max(0.02, Math.min(scale, 0.8));
             
             this.model.scale.set(scale);
             this.originalScale = scale;
 
             this.model.x = screenW / 2;
             
-            // Anchor at upper chest/neck to focus on face during zoom
-            this.model.anchor.set(0.5, 0.2);
+            // ANCHOR: High up (Face/Neck)
+            this.model.anchor.set(0.5, 0.15);
             
-            // Position slightly above center to fit body
-            this.model.y = screenH * 0.4;
+            // Y-POS: Place that anchor at 25% of screen height.
+            // visual head (15%) goes up to 10% screen (0.25 - 0.15).
+            // visual body (85%) goes down to 110% ?? Wait.
+            // 0.85 * TargetH = 0.85 * 0.85 ScreenH = 0.72 ScreenH.
+            // 0.25 + 0.72 = 0.97. FEET FIT!
+            this.model.y = screenH * 0.25;
             
             this.originalY = this.model.y;
         }, 50); // Faster debounce
