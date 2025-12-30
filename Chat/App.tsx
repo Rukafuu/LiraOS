@@ -1269,9 +1269,17 @@ const LiraAppContent = () => {
         userTier={(() => {
           const currentUser = getCurrentUser();
           if (!currentUser) return 'Observer';
-          if (currentUser.plan && currentUser.plan !== 'free') {
-            return currentUser.plan.charAt(0).toUpperCase() + currentUser.plan.slice(1);
+          
+          // Check if admin first
+          if (currentUser.id === 'user_1734661833589' || currentUser.username?.toLowerCase().includes('admin')) {
+            return 'Singularity';
           }
+          
+          // Then check plan
+          if ((currentUser as any).plan && (currentUser as any).plan !== 'free') {
+            return (currentUser as any).plan.charAt(0).toUpperCase() + (currentUser as any).plan.slice(1);
+          }
+          
           return 'Observer';
         })()}
       />
