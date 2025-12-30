@@ -133,7 +133,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
 
   const handleGoogleConnect = async () => {
     try {
-        const response = await fetch(`${API_BASE_URL}/api/auth/google/connect`, {
+        const response = await fetch(`${API_BASE_URL}/api/auth/google-calendar/connect`, {
             headers: getAuthHeaders()
         });
         const data = await response.json();

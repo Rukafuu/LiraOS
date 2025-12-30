@@ -79,6 +79,7 @@ app.use('/api/auth/recover', recoveryRoutes); // Fix for frontend path mismatch
 app.use('/auth', authRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/memories', memoryRoutes);
+app.use('/api/auth/google-calendar', googleAuthRoutes);
 app.use('/api/chat', chatRoutes);
 // Mount specific routes BEFORE the generic /api fallback
 app.use('/api/vision', visionRoutes);

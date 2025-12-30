@@ -4,7 +4,7 @@ import prisma from '../prismaClient.js';
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 
-                     (process.env.OAUTH_REDIRECT_BASE ? `${process.env.OAUTH_REDIRECT_BASE}/api/auth/google/callback` : 'http://localhost:4000/api/auth/google/callback');
+                     (process.env.OAUTH_REDIRECT_BASE ? `${process.env.OAUTH_REDIRECT_BASE}/api/auth/google-calendar/callback` : 'http://localhost:4000/api/auth/google-calendar/callback');
 
 console.log('[Google Auth Config] Client ID:', CLIENT_ID ? 'Set' : 'Missing');
 console.log('[Google Auth Config] Redirect URI:', REDIRECT_URI);
