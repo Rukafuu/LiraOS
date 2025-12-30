@@ -142,27 +142,22 @@ export class LiraCore {
             // CACHE BUSTER: Force unique URL to prevent texture reuse across WebGL contexts
             const uniquePath = `${modelPath}?t=${Date.now()}`;
 
-            // DUMMY TICKER: Trick the Live2D plugin into initializing without crashing on 'add'/'remove'
-            // We will handle the updates manually via our isolated app ticker regardless.
-            const dummyTicker = { 
-                add: (_fn: any) => {}, 
-                remove: (_fn: any) => {},
-                start: () => {},
-                stop: () => {},
-                destroy: () => {}
-            };
-
-            this.model = await Live2DModel.from(uniquePath, {
-                ticker: dummyTicker,
-                autoUpdate: true, // Let it "think" it's updating
-                onError: (e: any) => console.error("Model internal load error:", e)
-            });
-            
-            // MANUAL CONTROL: Now disable internal updater if needed, or just let it use our ticker
-            // if (this.model) {
+            // SAFEGUARD: Ensure PIXI.Ticker.shared exists because the plugin blindly relies on it.
+            // If it's missing (v7+), we polyfill it with our app's ticker to prevent the crash.
+            // @ts-ignore
+            if (!window.PIXI.Ticker.shared) {
                  // @ts-ignore
-                 // this.model.autoUpdate = false; 
-            // }
+                 window.PIXI.Ticker.shared = this.app.ticker;
+            }
+
+            // LOAD: Using defaults, relying on the Safeguard above to provide the ticker
+            this.model = await Live2DModel.from(uniquePath);
+            
+            // MANUAL CONTROL: Disable internal updater immediately
+            if (this.model) {
+                // @ts-ignore
+                this.model.autoUpdate = false; 
+            }
 
             if (this.model) {
                 this.app.stage.addChild(this.model);
