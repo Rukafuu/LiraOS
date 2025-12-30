@@ -16,17 +16,22 @@ const oauth2Client = new google.auth.OAuth2(
 );
 
 export const getAuthUrl = (userId) => {
-  const scopes = [
-    'https://www.googleapis.com/auth/calendar',
-    'https://www.googleapis.com/auth/calendar.events'
-  ];
+  const rootUrl = "https://accounts.google.com/o/oauth2/v2/auth";
+  const options = {
+    redirect_uri: REDIRECT_URI,
+    client_id: CLIENT_ID,
+    access_type: "offline",
+    response_type: "code",
+    prompt: "consent",
+    scope: [
+      "https://www.googleapis.com/auth/calendar",
+      "https://www.googleapis.com/auth/calendar.events"
+    ].join(" "),
+    state: userId
+  };
 
-  return oauth2Client.generateAuthUrl({
-    access_type: 'offline', // Request refresh_token
-    scope: scopes,
-    prompt: 'consent', // Force user to re-authorize
-    state: userId // Pass userId through OAuth flow
-  });
+  const qs = new URLSearchParams(options);
+  return `${rootUrl}?${qs.toString()}`;
 };
 
 export const getToken = async (code) => {
