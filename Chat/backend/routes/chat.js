@@ -14,6 +14,7 @@ import { checkModeration, handleInfraction, getUserStatus } from '../utils/moder
 import * as projectTools from '../projectTools.js';
 import { pcController } from '../services/pcControllerService.js';
 import { getTemporalContext } from '../utils/timeUtils.js';
+import { getCalendarClient } from '../services/googleAuthService.js';
 
 dotenv.config();
 
@@ -589,28 +590,44 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                };
                break;
             case 'create_calendar_event':
-               // Google Calendar Integration
-               // TODO: Implement OAuth2 flow and actual Google Calendar API integration
-               const { summary, description, start_time, end_time, attendees } = functionCall.args;
-               
-               // For now, return a placeholder response
-               // In production, this would:
-               // 1. Check if user has authorized Google Calendar
-               // 2. Use OAuth2 tokens to call Google Calendar API
-               // 3. Create the actual event
-               
-               functionResult = {
-                 success: true,
-                 message: `Evento "${summary}" agendado para ${start_time}`,
-                 note: "⚠️ Google Calendar integration requires OAuth2 setup. This is a placeholder response.",
-                 event: {
-                   summary,
-                   description,
-                   start_time,
-                   end_time: end_time || new Date(new Date(start_time).getTime() + 3600000).toISOString(),
-                   attendees: attendees || []
-                 }
-               };
+               try {
+                   const { summary, description, start_time, end_time, attendees } = functionCall.args;
+                   const calendar = await getCalendarClient(userId); // Throws if not connected
+
+                   const event = {
+                       summary,
+                       description,
+                       start: { dateTime: start_time },
+                       end: { dateTime: end_time || new Date(new Date(start_time).getTime() + 3600000).toISOString() },
+                       attendees: attendees ? attendees.map(email => ({ email })) : [],
+                   };
+
+                   const res = await calendar.events.insert({
+                       calendarId: 'primary',
+                       requestBody: event,
+                   });
+
+                   functionResult = {
+                       success: true,
+                       message: `Agendado! 🎉 Evento criado: "${res.data.summary}"`,
+                       link: res.data.htmlLink,
+                       id: res.data.id
+                   };
+               } catch (error) {
+                   console.error("Calendar Error:", error);
+                   if (error.message.includes('User not connected')) {
+                       functionResult = {
+                           success: false,
+                           error: "USER_NOT_CONNECTED",
+                           message: "Você precisa conectar seu Google Calendar nas Configurações > Perfil > Integrações para eu poder agendar eventos."
+                       };
+                   } else {
+                       functionResult = {
+                           success: false,
+                           error: error.message || "Failed to create event"
+                       };
+                   }
+               }
                break;
             case 'execute_system_command':
                functionResult = await pcController.handleInstruction(functionCall.args.command);
