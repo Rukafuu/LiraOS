@@ -143,14 +143,28 @@ export class LiraCore {
             const uniquePath = `${modelPath}?t=${Date.now()}`;
 
             // SAFEGUARD: Ensure PIXI.Ticker.shared exists because the plugin blindly relies on it.
-            // If it's missing (v7+), we polyfill it with our app's ticker to prevent the crash.
             // @ts-ignore
             if (!window.PIXI.Ticker.shared) {
                  // @ts-ignore
                  window.PIXI.Ticker.shared = this.app.ticker;
             }
 
-            // LOAD: Using defaults, relying on the Safeguard above to provide the ticker
+            // CRITICAL FIX: Monkey-patch the prototype to kill the 'autoUpdate' setter logic entirely.
+            // The plugin's internal setter is bugged and tries to access undefined tickers.
+            // We disable it here so init() runs smoothly, and we update manually anyway.
+            // @ts-ignore
+            const Live2DModel = window.PIXI.live2d.Live2DModel as any;
+            try {
+                Object.defineProperty(Live2DModel.prototype, 'autoUpdate', {
+                    get: function() { return false; },
+                    set: function(val) { /* NO-OP: Ignore internal attempts to set autoUpdate */ },
+                    configurable: true
+                });
+            } catch (e) {
+                console.warn("[LiraCore] Failed to patch autoUpdate:", e);
+            }
+
+            // LOAD: Now load safely
             this.model = await Live2DModel.from(uniquePath);
             
             // MANUAL CONTROL: Disable internal updater immediately
