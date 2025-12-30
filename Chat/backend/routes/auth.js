@@ -127,7 +127,7 @@ router.get('/google/init', (req, res) => {
   const state = Buffer.from(JSON.stringify(stateObj)).toString('base64url');
   const params = {
     client_id: GOOGLE_CLIENT_ID,
-    redirect_uri: `${OAUTH_REDIRECT_BASE}/auth/google/callback`,
+    redirect_uri: `${OAUTH_REDIRECT_BASE}/api/auth/google/callback`,
     response_type: 'code',
     scope: 'openid email profile',
     access_type: 'offline',
@@ -157,7 +157,7 @@ router.get('/google/callback', async (req, res) => {
         code,
         client_id: GOOGLE_CLIENT_ID,
         client_secret: GOOGLE_CLIENT_SECRET,
-        redirect_uri: `${OAUTH_REDIRECT_BASE}/auth/google/callback`,
+        redirect_uri: `${OAUTH_REDIRECT_BASE}/api/auth/google/callback`,
         grant_type: 'authorization_code'
       })
     });

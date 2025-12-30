@@ -409,14 +409,27 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             <span className="relative z-10 bg-[#0a0a0f] px-3 text-xs text-gray-500">Or continue with</span>
           </div>
         
-          <div className="flex items-center justify-center">
+          <div className="grid grid-cols-2 gap-3">
              <button 
                type="button"
                onClick={() => {
                  const returnTo = window.location.origin;
-                 window.location.href = `${BACKEND_URL}/auth/github/init?return_to=${encodeURIComponent(returnTo)}`;
+                 // Use /api/auth path for consistency with redirect_uri
+                 window.location.href = `${BACKEND_URL}/api/auth/google/init?return_to=${encodeURIComponent(returnTo)}`;
                }}
-               className="w-[70%] flex items-center justify-center gap-2 py-2 rounded-xl bg-[#15151a] border border-white/5 text-gray-200 hover:text-white hover:border-white/10 hover:bg-[#1a1a20] transition-all"
+               className="flex items-center justify-center gap-2 py-2 rounded-xl bg-[#15151a] border border-white/5 text-gray-200 hover:text-white hover:border-white/10 hover:bg-[#1a1a20] transition-all"
+             >
+               <Globe size={16} />
+               <span className="text-xs font-medium">Google</span>
+             </button>
+
+             <button 
+               type="button"
+               onClick={() => {
+                 const returnTo = window.location.origin;
+                 window.location.href = `${BACKEND_URL}/api/auth/github/init?return_to=${encodeURIComponent(returnTo)}`;
+               }}
+               className="flex items-center justify-center gap-2 py-2 rounded-xl bg-[#15151a] border border-white/5 text-gray-200 hover:text-white hover:border-white/10 hover:bg-[#1a1a20] transition-all"
              >
                <Github size={16} />
                <span className="text-xs font-medium">Github</span>

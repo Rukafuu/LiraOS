@@ -198,6 +198,50 @@ export const isAuthenticated = (): boolean => {
   }
 };
 
+export const handleOAuthCallback = async (): Promise<boolean> => {
+  const params = new URLSearchParams(window.location.search);
+  const oauth = params.get('oauth');
+  const token = params.get('token');
+  const refreshToken = params.get('refreshToken');
+  const uid = params.get('uid');
+  const email = params.get('email');
+  const name = params.get('name');
+
+  if (oauth && token && uid) {
+      const session: AuthSession = {
+          userId: uid,
+          token: token,
+          refreshToken: refreshToken || undefined,
+          expiresAt: Date.now() + (7 * 24 * 3600 * 1000)
+      };
+      
+      const user: User = {
+          id: uid,
+          email: email || '',
+          username: name || 'User',
+          avatar: LIRA_AVATAR, // Default avatar for now
+          loginCount: 1,
+          lastLogin: new Date().toISOString()
+      };
+      
+      // Try to fetch fresher user data
+      try {
+          const freshRes = await fetch(`${API_URL}/me`, {
+             headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (freshRes.ok) {
+             const freshUser = await freshRes.json();
+             Object.assign(user, freshUser);
+          }
+      } catch {}
+
+      localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+      return true;
+  }
+  return false;
+};
+
 // --- Profile Functions ---
 
 export const updateProfile = async (userId: string, updates: Partial<User>): Promise<{ success: boolean; message: string; user?: User }> => {

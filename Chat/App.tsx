@@ -61,6 +61,23 @@ const LiraAppContent = () => {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isGodMode, setIsGodMode] = useState(false);
 
+  // Handle OAuth Callback on Load
+  useEffect(() => {
+    const checkOAuth = async () => {
+       const success = await handleOAuthCallback();
+       if (success) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          const user = getCurrentUser();
+          setIsLoggedIn(true);
+          // If fresh user (loginCount <= 1), show onboarding
+          if (user && user.loginCount <= 1) {
+              setShowOnboarding(true);
+          }
+       }
+    };
+    checkOAuth();
+  }, []);
+
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [memories, setMemories] = useState<Memory[]>([]);
