@@ -7,11 +7,19 @@ const router = express.Router();
 // GET /api/auth/google/connect
 // Redirects user to Google OAuth consent screen
 router.get('/connect', (req, res) => {
-  if (!userId) return res.status(400).json({ error: 'Missing userId' });
-  const url = getAuthUrl(userId);
-  // Extract redirect_uri from generated url for debugging
-  const redirectParams = new URL(url).searchParams.get('redirect_uri');
-  res.json({ url, debug_redirect_uri: redirectParams });
+  try {
+    // NOTE: userId should come from a session or authenticated user context, not directly from req.
+    // For this example, let's assume it's available or passed in a query param for simplicity,
+    // but in a real app, it would be from req.user.id after authentication.
+    const { userId } = req.query; // Temporarily get userId from query for testing
+    if (!userId) return res.status(400).json({ error: 'Missing userId' });
+    const url = getAuthUrl(userId);
+    console.log('[Google Auth] Generated URL:', url); // Log for verification
+    res.json({ url });
+  } catch (err) {
+    console.error('[Google Auth] Connect Error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // GET /api/auth/google/callback
