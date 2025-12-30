@@ -23,6 +23,7 @@ model User {
   isBanned      Int?      @default(0) @map("is_banned")
   plan          String?   @default("free")
   discordId     String?   @unique
+  googleRefreshToken String? @map("google_refresh_token")
 
   @@map("users")
 }
