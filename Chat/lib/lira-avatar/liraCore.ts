@@ -417,8 +417,9 @@ export class LiraCore {
         if (this.model) {
             try {
                 // @ts-ignore
-                // SAFETY FIX: Do not destroy texture/baseTexture to protect shared cache
-                this.model.destroy({ children: true, baseTexture: false, texture: false });
+                // REVERT: Aggressively destroy textures to prevent "bindTexture" errors on reload.
+                // Reusing textures across different WebGL contexts is forbidden.
+                this.model.destroy({ children: true, baseTexture: true, texture: true });
             } catch (e) {}
             this.model = null;
         }
@@ -426,14 +427,18 @@ export class LiraCore {
         // 3. Destroy App
         if (this.app) {
             try {
-                // ⚠️ SAFETY FIX: Do NOT destroy baseTexture/texture here regarding Live2D.
-                // The Live2D plugin caches textures globally. If we nuke them from GPU, 
-                // other Lira instances (e.g. main page) will crash with WebGL errors.
-                this.app.destroy(true, { children: true, texture: false, baseTexture: false });
+                // FORCE CLEANUP: Destroy everything. New Lira = New Context = New Textures needed.
+                this.app.destroy(true, { children: true, texture: true, baseTexture: true });
             } catch (e) {}
             // @ts-ignore
             this.app = null;
         }
+
+        // 4. Global Cache Nuke (Nuclear Option ☢️)
+        try {
+            // @ts-ignore
+            window.PIXI.utils.clearTextureCache();
+        } catch (e) {}
 
         if (this.canvas) {
           this.canvas.remove();
