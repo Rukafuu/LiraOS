@@ -9,7 +9,7 @@ const REDIRECT_URI = 'https://liraos-production.up.railway.app/api/auth/google-c
 console.log('[Google Auth Config] Client ID:', CLIENT_ID ? 'Set' : 'Missing');
 console.log('[Google Auth Config] Redirect URI:', REDIRECT_URI);
 
-const oauth2Client = new google.auth.OAuth2(
+export const oauth2Client = new google.auth.OAuth2(
   CLIENT_ID,
   CLIENT_SECRET,
   REDIRECT_URI

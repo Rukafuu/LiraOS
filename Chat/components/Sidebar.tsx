@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MessageSquare, Search, Settings, X, Trash2, Sparkles, Command, LayoutGrid, ShoppingBag, Keyboard, Shield, Video, Crown, Gamepad2, Gift, CheckSquare } from 'lucide-react';
+import { Plus, MessageSquare, Search, Settings, X, Trash2, Sparkles, Command, LayoutGrid, ShoppingBag, Keyboard, Shield, Video, Crown, Gamepad2, Gift, CheckSquare, Calendar } from 'lucide-react';
 import { ChatSession } from '../types';
 import { LIRA_AVATAR } from '../constants';
 import { getCurrentUser } from '../services/userService';
@@ -25,6 +25,7 @@ interface SidebarProps {
   onOpenSupporters: () => void;
   onOpenAdminPanel: () => void;
   onOpenTodoPanel: () => void;
+  onOpenCalendar: () => void;
   isOpen: boolean;
   onCloseMobile: () => void;
 }
@@ -47,6 +48,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenSupporters,
   onOpenAdminPanel,
   onOpenTodoPanel,
+  onOpenCalendar,
   isOpen,
   onCloseMobile
 }) => {
@@ -383,6 +385,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     <CheckSquare size={16} className="text-purple-400 group-hover:scale-110 transition-transform" />
                                 </div>
                                 <span className="text-[13px] font-medium">To-Do Lists</span>
+                            </button>
+
+                            <button 
+                                onClick={onOpenCalendar} 
+                                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors group"
+                            >
+                                <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                                    <Calendar size={16} className="text-orange-400 group-hover:scale-110 transition-transform" />
+                                </div>
+                                <span className="text-[13px] font-medium">Calendar</span>
                             </button>
                         </motion.div>
                     ) : (

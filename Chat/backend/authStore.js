@@ -17,7 +17,8 @@ function mapUser(user) {
     loginCount: user.loginCount || 0,
     preferences: user.preferences || {},
     plan: user.plan || 'free',
-    discordId: user.discordId
+    discordId: user.discordId,
+    googleRefreshToken: user.googleRefreshToken // Internal use, do not leak to frontend generally
   };
 }
 

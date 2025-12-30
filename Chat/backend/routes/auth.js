@@ -100,7 +100,15 @@ router.get('/me', async (req, res) => {
   if (!payload) return res.status(401).json({ error: 'invalid_token' });
   const u = await getUserByEmail(payload.email || '');
   if (!u) return res.status(404).json({ error: 'not_found' });
-  res.json({ id: u.id, email: u.email, username: u.username, avatar: u.avatar, loginCount: u.loginCount, lastLogin: u.lastLogin });
+  res.json({ 
+    id: u.id, 
+    email: u.email, 
+    username: u.username, 
+    avatar: u.avatar, 
+    loginCount: u.loginCount, 
+    lastLogin: u.lastLogin,
+    hasGoogleCalendar: !!u.googleRefreshToken 
+  });
 });
 
 router.put('/me', async (req, res) => {

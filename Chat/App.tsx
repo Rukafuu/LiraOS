@@ -6,7 +6,9 @@ import { MessageList } from './components/MessageList';
 import { ChatInput } from './components/ChatInput';
 const SettingsModal = React.lazy(() => import('./components/SettingsModal').then(m => ({ default: m.SettingsModal })));
 const DashboardModal = React.lazy(() => import('./components/DashboardModal').then(m => ({ default: m.DashboardModal })));
+const CalendarApp = React.lazy(() => import('./components/CalendarApp').then(m => ({ default: m.CalendarApp })));
 const StoreModal = React.lazy(() => import('./components/StoreModal').then(m => ({ default: m.StoreModal })));
+const TodoPanel = React.lazy(() => import('./components/TodoPanel').then(m => ({ default: m.TodoPanel })));
 import { BootSequence } from './components/ui/BootSequence';
 import { LoginScreen } from './components/LoginScreen';
 import { OnboardingTour } from './components/OnboardingTour';
@@ -44,7 +46,7 @@ import { DiscordModal } from './components/DiscordModal';
 import { MaintenanceScreen } from './components/MaintenanceScreen';
 import { PhotoBooth } from './components/PhotoBooth';
 import { AdminPanel } from './components/AdminPanel';
-import { TodoPanel } from './components/TodoPanel';
+
 
 const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
 const LOCAL_STORAGE_KEY = 'lira_chat_sessions';
@@ -98,6 +100,7 @@ const LiraAppContent = () => {
   const [isDailyQuestsOpen, setIsDailyQuestsOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isTodoPanelOpen, setIsTodoPanelOpen] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -1022,6 +1025,7 @@ const LiraAppContent = () => {
         onOpenSupporters={() => setIsDashboardOpen(true)} // Map to dashboard for now
         onOpenAdminPanel={() => setIsAdminPanelOpen(true)}
         onOpenTodoPanel={() => setIsTodoPanelOpen(true)}
+        onOpenCalendar={() => setIsCalendarOpen(true)}
         isOpen={isSidebarOpen}
         onCloseMobile={() => setIsSidebarOpen(false)}
       />
@@ -1301,6 +1305,11 @@ const LiraAppContent = () => {
         })()}
       />
 
+      {isCalendarOpen && (
+        <CalendarApp 
+            onClose={() => setIsCalendarOpen(false)}
+        />
+      )}
       </Suspense>
     </div>
   );
