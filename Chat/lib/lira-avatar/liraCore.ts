@@ -67,7 +67,7 @@ export class LiraCore {
             console.log("[LiraCore] Reusing Global Singleton Context (Resurrection)");
             this.app = globalApp;
             this.canvas = globalCanvas;
-            this.model = globalModel;
+            // this.model = globalModel; // DISABLED: We want fresh model on new mount
             
             // FIX: Disable Pixi auto-resize which might catch the container at 0x0 during animation
             // and corrupt the mask buffers. We handle resize manually via Observer.
@@ -147,8 +147,8 @@ export class LiraCore {
                 this.app.stage.removeChildren();
                 this.app.stage.addChild(this.model);
                 
-                // Save to global
-                globalModel = this.model;
+                // Save to global -> DISABLED (Transient Model)
+                // globalModel = this.model;
 
                 // Simple Setup
                 // @ts-ignore
@@ -310,14 +310,25 @@ export class LiraCore {
     }
 
     destroy() {
-        console.log("[LiraCore] Sleeping (Singleton Preserved)...");
+        console.log("[LiraCore] Cleaning up Model but Preserving Context...");
         
-        // DO NOT DESTROY APP OR TEXTURES.
-        // MEMORY LEAK? NO, because we reuse them next time.
-        // It's a Single Page App feature, not a bug.
+        // TRANSITION TO "APP SINGLETON, MODEL TRANSIENT"
+        // We destroy the model to reset all masks/buffers, fixing "Headless" bug.
+        // But we keep the App/Context alive to prevent WebGL crashes.
         
+        if (this.model) {
+             try {
+                 this.app.stage.removeChild(this.model);
+                 this.model.destroy(); // Hard destroy model
+             } catch (e) {
+                 console.warn("Failed to destroy model", e);
+             }
+             this.model = null;
+             globalModel = null;
+        }
+
         if (this.app) {
-            this.app.stop(); // Stop rendering to save battery
+            this.app.stop(); // Stop rendering
             
             // Remove from DOM but keep Alive in memory
             if (this.canvas && this.canvas.parentNode) {
