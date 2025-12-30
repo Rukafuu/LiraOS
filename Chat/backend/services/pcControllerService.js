@@ -41,30 +41,45 @@ class PCControllerService {
         
         const lower = instruction.toLowerCase().trim();
 
-        // 1. Media Controls
-        if (this.containsKeywords(lower, ['play', 'pause', 'pausar', 'tocar', 'parar música', 'continuar música'])) {
-            return await this.sendMediaKey('play_pause');
-        }
-        if (this.containsKeywords(lower, ['next', 'próxima', 'avançar', 'pular'])) {
-            return await this.sendMediaKey('next');
-        }
-        if (this.containsKeywords(lower, ['prev', 'anterior', 'voltar música', 'retroceder'])) {
-            return await this.sendMediaKey('prev');
+        // 0. Smart YouTube / Google (High Priority)
+        // Handles: "abrir youtube no video X", "pesquisar X no youtube", "tocar X no youtube"
+        if (lower.includes('youtube')) {
+             const query = lower.replace(/abrir|tocar|ouvir|assistir|pesquisar|procurar|no|no|youtube|o|a|video|música/gi, '').trim();
+             if (query.length > 2) {
+                 const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+                 await this.openWebsite(url);
+                 return `Abrindo YouTube com: "${query}"`;
+             } else {
+                 await this.openWebsite('youtube');
+                 return "Abrindo YouTube...";
+             }
         }
         
-        // 2. Volume Controls
-        if (this.containsKeywords(lower, ['mudo', 'mute', 'silenciar'])) {
-            return await this.sendMediaKey('mute');
-        }
-        if (this.containsKeywords(lower, ['aumentar volume', 'subir volume', 'mais alto', 'aumenta'])) {
-            return await this.changeVolume('up');
-        }
-        if (this.containsKeywords(lower, ['diminuir volume', 'baixar volume', 'mais baixo', 'diminui'])) {
-            return await this.changeVolume('down');
+        if (lower.includes('google') && (lower.includes('pesquisar') || lower.includes('procurar') || lower.includes('buscar'))) {
+             const query = lower.replace(/pesquisar|procurar|buscar|no|google|sobre|por|o|a/gi, '').trim();
+             const url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+             await this.openWebsite(url);
+             return `Pesquisando no Google: "${query}"`;
         }
 
+
+        // 1. Media Controls
+        if (this.containsKeywords(lower, ['play', 'pause', 'pausar', 'tocar', 'parar música', 'continuar música'])) {
+            // Se tiver "tocar X", assume que é busca genérica se não for mídia
+            // Mas vamos manter media key simples por enquanto ou tentar abrir spotify?
+            // Se for só "tocar" ou "pausar", usa media key.
+            if (lower.split(' ').length <= 2) return await this.sendMediaKey('play_pause');
+        }
+        if (this.containsKeywords(lower, ['next', 'próxima', 'avançar', 'pular'])) return await this.sendMediaKey('next');
+        if (this.containsKeywords(lower, ['prev', 'anterior', 'voltar música', 'retroceder'])) return await this.sendMediaKey('prev');
+        
+        // 2. Volume Controls
+        if (this.containsKeywords(lower, ['mudo', 'mute', 'silenciar'])) return await this.sendMediaKey('mute');
+        if (this.containsKeywords(lower, ['aumentar', 'subir', 'mais alto', 'aumenta'])) return await this.changeVolume('up');
+        if (this.containsKeywords(lower, ['diminuir', 'baixar', 'abaixar', 'mais baixo', 'diminui'])) return await this.changeVolume('down');
+
         // 3. System Apps & Navigation
-        if (this.containsKeywords(lower, ['abrir', 'abre', 'open', 'start'])) {
+        if (this.containsKeywords(lower, ['abrir', 'abre', 'open', 'start', 'iniciar'])) {
             return await this.handleOpen(lower);
         }
         if (this.containsKeywords(lower, ['procurar', 'buscar', 'pesquisar', 'search', 'find'])) {
@@ -84,11 +99,13 @@ class PCControllerService {
     extractTarget(instruction, keywords) {
         let target = instruction;
         keywords.forEach(k => {
-            target = target.replace(k, '');
+            // Replace keyword case-insensitive
+            const regex = new RegExp(k, 'gi');
+            target = target.replace(regex, '');
         });
         
         // Remove common prepositions
-        const preps = ['de', 'do', 'da', 'dos', 'das', 'em', 'no', 'na', 'nos', 'nas', 'por', 'sobre', 'the', 'a', 'an'];
+        const preps = ['de', 'do', 'da', 'dos', 'das', 'em', 'no', 'na', 'nos', 'nas', 'por', 'sobre', 'the', 'a', 'an', 'o', 'video', 'programa', 'app', 'aplicativo'];
         target = target.split(' ').filter(w => !preps.includes(w)).join(' ');
         
         return target.trim();
@@ -97,10 +114,6 @@ class PCControllerService {
     // --- Media & Volume Implementation ---
 
     async sendMediaKey(action) {
-        // keybd_event works better via PowerShell than SendKeys for specialized keys
-        // But WScript.Shell SendKeys is the easiest 'no dependency' way if char codes work.
-        // 179 = Play/Pause, 176 = Next, 177 = Prev, 173 = Mute
-        
         let key = 0;
         let msg = "";
 
@@ -112,7 +125,6 @@ class PCControllerService {
         }
 
         if (key > 0) {
-            // Using WScript.Shell via PowerShell
             const cmd = `powershell -c "$ws = New-Object -ComObject WScript.Shell; $ws.SendKeys([char]${key})"`;
             try {
                 await execAsync(cmd);
@@ -126,9 +138,7 @@ class PCControllerService {
     }
 
     async changeVolume(direction) {
-        // 175 = Vol Up, 174 = Vol Down
         const key = direction === 'up' ? 175 : 174;
-        // Send 5 times for noticeable change
         const cmd = `powershell -c "$ws = New-Object -ComObject WScript.Shell; for($i=0;$i-lt 5;$i++){ $ws.SendKeys([char]${key}) }"`;
         
         try {
@@ -142,21 +152,22 @@ class PCControllerService {
     // --- System Actions ---
 
     async handleOpen(instruction) {
-        const target = this.extractTarget(instruction, ['abrir', 'abre', 'open', 'start']);
+        const target = this.extractTarget(instruction, ['abrir', 'abre', 'open', 'start', 'iniciar']);
         if (!target) return "O que você quer abrir?";
 
-        // Alias
+        // 1. Check Smart Aliases first
+        const programResult = await this.openProgram(target);
+        if (programResult) return programResult;
+
+        // 2. Check Paths
         if (this.aliases[target]) {
             return await this.openPath(this.aliases[target]);
         }
-        // Path
         if (fs.existsSync(target)) {
             return await this.openPath(target);
         }
-        // Program
-        const programResult = await this.openProgram(target);
-        if (programResult) return programResult;
-        // Website
+
+        // 3. Fallback to Website
         const siteResult = await this.openWebsite(target);
         if (siteResult) return siteResult;
 
@@ -173,25 +184,49 @@ class PCControllerService {
     }
 
     async openProgram(target) {
+        // Expanded Dictionary
         const common = {
             'calculadora': 'calc',
             'bloco de notas': 'notepad',
             'paint': 'mspaint',
             'explorer': 'explorer',
             'vscode': 'code',
+            'visual studio code': 'code',
             'chrome': 'chrome',
             'firefox': 'firefox',
+            'edge': 'msedge',
             'discord': 'discord',
             'spotify': 'spotify',
-            'obs': 'obs64'
+            'obs': 'obs64',
+            'obs studio': 'obs64',
+            'steam': 'steam',
+            'fl studio': 'fl64', // or FL64.exe
+            'fl': 'fl64',
+            'fruity loops': 'fl64',
+            'word': 'winword',
+            'excel': 'excel',
+            'powerpoint': 'powerpnt',
+            'photoshop': 'photoshop',
+            'illustrator': 'illustrator',
+            'premiere': 'Adobe Premiere Pro.exe', // Tricky without full path, often needs shortcut or registry
+            'after effects': 'AfterFX',
+            'terminal': 'wt',
+            'cmd': 'cmd',
+            'powershell': 'powershell'
         };
         
-        let exe = common[target] || target;
+        const key = Object.keys(common).find(k => target.includes(k) || k.includes(target));
+        let exe = key ? common[key] : target;
+        
+        // Special case for complex names that might fail 'run'
+        if (exe === 'fl64' && os.platform() === 'win32') exe = 'FL64.exe'; 
+        // Need to rely on PATH or App Paths in registry. 
+        // For FL64 usually it works if in path, otherwise might fail.
+        
         try {
             await open.openApp(exe).catch(() => open(exe)); 
             return `Programa iniciado: ${exe}`;
         } catch {
-             // Fallback
              try {
                 await execAsync(`start "" "${exe}"`);
                 return `Programa iniciado (fallback): ${exe}`;
