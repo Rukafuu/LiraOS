@@ -487,7 +487,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         )}
         
         <p className="mt-8 text-center text-[10px] text-gray-600">
-           © 2024 LiraOS Inc. All rights reserved.
+           © 2024 LiraOS Inc. All rights reserved. (v1.2.0)
         </p>
       </motion.div>
     </div>
