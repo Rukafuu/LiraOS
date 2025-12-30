@@ -1,14 +1,15 @@
+// Force deploy: fix middleware import
 import express from 'express';
 import { google } from 'googleapis';
 import { getAuthUrl, getToken, saveGoogleToken, oauth2Client } from '../services/googleAuthService.js';
 import { getUserById } from '../authStore.js';
-import { authenticate } from '../middlewares/authMiddleware.js';
+import { verifyToken, requireAuth } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
 // GET /api/auth/google-calendar/events
 // Helper route to list calendar events for the connected user
-router.get('/events', authenticate, async (req, res) => {
+router.get('/events', requireAuth, async (req, res) => {
     try {
         const userId = req.user.sub || req.user.id;
         const user = await getUserById(userId);
