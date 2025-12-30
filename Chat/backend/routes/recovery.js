@@ -1,6 +1,7 @@
 import express from 'express';
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+import { Resend } from 'resend';
 import { getUserByEmail, createRecoverCode, consumeRecoverCode, setPassword } from '../authStore.js';
 import { requireAuth } from '../middlewares/authMiddleware.js';
 
@@ -34,6 +35,42 @@ router.post(['/init', '/init-new'], async (req, res) => {
   console.log(`[Recovery] User found: ${user.email} (ID: ${user.id})`);
   const { code } = await createRecoverCode(user.email);
   
+  const htmlContent = `
+    <div style="font-family: sans-serif; color: #fff; background: #000; padding: 20px; border-radius: 10px;">
+      <h2 style="color: #fff;">Password Recovery</h2>
+      <p style="color: #ccc;">You requested a password reset for LiraOS.</p>
+      <p style="color: #ccc;">Your code is:</p>
+      <h1 style="color: #a855f7; font-size: 32px; letter-spacing: 2px;">${code}</h1>
+      <p style="color: #666; font-size: 12px; margin-top: 20px;">If you didn't request this, please ignore.</p>
+    </div>
+  `;
+
+  // 1. Try Resend API (HTTP - Reliable)
+  if (process.env.RESEND_API_KEY) {
+      console.log('[Recovery] Attempting to send via Resend API...');
+      try {
+          const resend = new Resend(process.env.RESEND_API_KEY);
+          const { data, error } = await resend.emails.send({
+              from: process.env.EMAIL_FROM || 'LiraOS <onboarding@resend.dev>',
+              to: email,
+              subject: 'LiraOS Password Recovery',
+              html: htmlContent
+          });
+
+          if (error) {
+              console.error('[Recovery] Resend API Error:', error);
+              throw new Error(error.message);
+          }
+
+          console.log(`[Recovery] Email sent via Resend to ${email} (ID: ${data?.id})`);
+          return res.json({ success: true });
+      } catch (e) {
+          console.error('[Recovery] Resend Failed, falling back to SMTP...', e);
+          // Continue to SMTP fallback below
+      }
+  }
+
+  // 2. SMTP Logic (Legacy/Fallback)
   // If no SMTP configured, return code in response for DEV purposes
   if (!SMTP_HOST || !SMTP_USER) {
     console.log(`[Recovery] No SMTP configured. Dev Code: ${code}`);
@@ -49,7 +86,6 @@ router.post(['/init', '/init-new'], async (req, res) => {
       tls: {
           rejectUnauthorized: false
       }
-      // Removed 'family: 4' to let Cloud/Docker decide best route (IPv6 might be faster/available)
   };
 
   const transporter = nodemailer.createTransport({
@@ -64,20 +100,13 @@ router.post(['/init', '/init-new'], async (req, res) => {
        to: email,
        subject: "LiraOS Password Recovery",
        text: `Your recovery code is: ${code}\n\nUse this code to reset your password.`,
-       html: `
-         <div style="font-family: sans-serif; color: #fff; background: #000; padding: 20px;">
-           <h2>Password Recovery</h2>
-           <p>You requested a password reset for LiraOS.</p>
-           <p>Your code is:</p>
-           <h1 style="color: #a855f7;">${code}</h1>
-         </div>
-       `
+       html: htmlContent
      });
-     console.log(`[Recovery] Email sent to ${email}`);
+     console.log(`[Recovery] Email sent via SMTP to ${email}`);
      res.json({ success: true });
   } catch (e) {
      console.error('[Recovery] SMTP Error:', e);
-     // Fallback for dev if SMTP fails: return code so user isn't stuck
+     // Fallback for dev if delivery fails: return code so user isn't stuck
      res.status(500).json({ error: 'email_send_failed', devCode: code, details: e.message });
   }
 });
