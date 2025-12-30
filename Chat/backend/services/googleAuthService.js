@@ -3,8 +3,11 @@ import prisma from '../prismaClient.js';
 
 const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 
-                     (process.env.OAUTH_REDIRECT_BASE ? `${process.env.OAUTH_REDIRECT_BASE}/api/auth/google-calendar/callback` : 'http://localhost:4000/api/auth/google-calendar/callback');
+// Helper to strip trailing slash
+const stripSlash = (str) => str && str.endsWith('/') ? str.slice(0, -1) : str;
+
+const BASE_URL = stripSlash(process.env.OAUTH_REDIRECT_BASE) || 'https://liraos-production.up.railway.app';
+const REDIRECT_URI = `${BASE_URL}/api/auth/google-calendar/callback`;
 
 console.log('[Google Auth Config] Client ID:', CLIENT_ID ? 'Set' : 'Missing');
 console.log('[Google Auth Config] Redirect URI:', REDIRECT_URI);
