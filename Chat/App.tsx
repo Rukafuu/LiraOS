@@ -258,6 +258,12 @@ const LiraAppContent = () => {
   useEffect(() => {
     if (!isLoggedIn) return;
     const currentUser = getCurrentUser();
+    
+    // Auto-Show Companion if Voice Call starts
+    if (isVoiceActive) {
+        setShowCompanion(true);
+    }
+
     const userId = currentUser?.id;
     (async () => {
       try {

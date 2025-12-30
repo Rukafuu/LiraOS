@@ -120,13 +120,7 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
       initial={{ x: window.innerWidth - size - 20, y: window.innerHeight - size - 20, opacity: 0, scale: 0.8 }}
       animate={{ 
         opacity: 1, 
-        scale: 1,
-        rotate: isDancing ? [0, -3, 3, -3, 3, 0] : 0,
-        y: isDancing ? [0, -15, 0] : 0
-      }}
-      transition={{
-        rotate: isDancing ? { repeat: Infinity, duration: 0.6, ease: "easeInOut" } : {},
-        y: isDancing ? { repeat: Infinity, duration: 0.5, ease: "easeInOut" } : {}
+        scale: 1
       }}
       exit={{ opacity: 0, scale: 0.8 }}
       style={{ width: size, height: size }}
