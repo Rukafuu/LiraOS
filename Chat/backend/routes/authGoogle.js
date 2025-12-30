@@ -7,10 +7,11 @@ const router = express.Router();
 // GET /api/auth/google/connect
 // Redirects user to Google OAuth consent screen
 router.get('/connect', (req, res) => {
-  const userId = req.query.userId;
   if (!userId) return res.status(400).json({ error: 'Missing userId' });
   const url = getAuthUrl(userId);
-  res.json({ url });
+  // Extract redirect_uri from generated url for debugging
+  const redirectParams = new URL(url).searchParams.get('redirect_uri');
+  res.json({ url, debug_redirect_uri: redirectParams });
 });
 
 // GET /api/auth/google/callback
