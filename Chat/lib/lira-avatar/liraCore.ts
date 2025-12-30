@@ -142,14 +142,17 @@ export class LiraCore {
             // CACHE BUSTER: Force unique URL to prevent texture reuse across WebGL contexts
             const uniquePath = `${modelPath}?t=${Date.now()}`;
 
-            // SAFE LOAD: Load without options first to prevent 'remove' error in internal init
-            this.model = await Live2DModel.from(uniquePath);
+            // SAFE LOAD: Load with explicit ticker but default autoUpdate to avoid 'remove'/'add' init crashes
+            this.model = await Live2DModel.from(uniquePath, {
+                ticker: this.app.ticker,
+                onError: (e: any) => console.error("Model internal load error:", e)
+            });
             
-            // MANUAL CONTROL: Now disable internal updater
-            if (this.model) {
-                // @ts-ignore
-                this.model.autoUpdate = false; 
-            }
+            // MANUAL CONTROL: Now disable internal updater if needed, or just let it use our ticker
+            // if (this.model) {
+                 // @ts-ignore
+                 // this.model.autoUpdate = false; 
+            // }
 
             if (this.model) {
                 this.app.stage.addChild(this.model);
