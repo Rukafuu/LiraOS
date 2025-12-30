@@ -8,6 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 console.log(`[SERVER] Starting LiraOS Backend... (${new Date().toISOString()})`);
+console.log(`[SERVER] Validating deployment integrity...`);
 console.log(`[SERVER] Vision Module loaded from: ${path.resolve(__dirname, './routes/vision.js')}`);
 
 // Routes Imports
