@@ -8,9 +8,10 @@ interface WelcomeModalProps {
   username: string;
   isReturning: boolean;
   onClose: () => void;
+  onNewChat: () => void;
 }
 
-export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, username, isReturning, onClose }) => {
+export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, username, isReturning, onClose, onNewChat }) => {
   const { t } = useTranslation();
 
   return (
@@ -36,9 +37,15 @@ export const WelcomeModal: React.FC<WelcomeModalProps> = ({ isOpen, username, is
                     <button onClick={onClose} className="px-4 py-2.5 bg-white text-black text-sm font-semibold rounded-xl hover:bg-gray-200 transition-colors">
                       {t('welcome_modal.resume')}
                     </button>
-                    <a href="#" className="px-4 py-2.5 bg-white/10 text-white text-sm rounded-xl hover:bg-white/20 border border-white/10 transition-colors">
+                    <button 
+                      onClick={() => {
+                        onNewChat();
+                        onClose();
+                      }} 
+                      className="px-4 py-2.5 bg-white/10 text-white text-sm rounded-xl hover:bg-white/20 border border-white/10 transition-colors"
+                    >
                       {t('welcome_modal.new_chat')}
-                    </a>
+                    </button>
                   </div>
                 </div>
               </div>

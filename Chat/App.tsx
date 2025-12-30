@@ -1251,6 +1251,7 @@ const LiraAppContent = () => {
         })()}
         isReturning={isReturningUser}
         onClose={() => setShowWelcome(false)}
+        onNewChat={createNewChat}
       />
     </div>
   );
