@@ -43,7 +43,7 @@ export class LiraCore {
 
         // SINGLETON INIT LOGIC
         if (!globalApp || !globalCanvas) {
-            console.log("[LiraCore] Creating NEW Global Singleton Context (Genesis)");
+            console.log("[LiraCore] Creating NEW Global Singleton Context (Genesis v3.1 Zoom Fix)");
             
             this.canvas = document.createElement('canvas');
             this.canvas.id = 'lira-canvas';
@@ -141,6 +141,20 @@ export class LiraCore {
                 // @ts-ignore
                 this.model.blendMode = window.PIXI.BLEND_MODES.NORMAL;
                 
+                // 🚫 Remove Watermark (Restored)
+                try {
+                    // Try generic parameter set
+                    this.setParameter('Param', 1);
+                    // Try direct core model set (Nuclear option)
+                    // @ts-ignore
+                    if (this.model.internalModel?.coreModel) {
+                        // @ts-ignore
+                         this.model.internalModel.coreModel.setParameterValueById('Param', 1);
+                    }
+                } catch (e) {
+                    console.warn('[LiraCore] Failed to remove watermark:', e);
+                }
+                
                 // Setup Interaction
                 // @ts-ignore
                 this.model.interactive = true; 
@@ -200,12 +214,18 @@ export class LiraCore {
     handleResize() {
         if (this.resizeTimeout) clearTimeout(this.resizeTimeout);
         this.resizeTimeout = window.setTimeout(() => {
-            if (!this.model) return;
-            // Force app resize to match container
-            this.app.resize();
-            
+            if (!this.model || !this.app || !this.app.renderer) return;
+
+            // 1. Force App/Renderer Resize (Fixes Black Square / Clipping Masks)
+            // The renderer needs to know the exact pixel size of the canvas to calculate masks correctly.
+            const w = this.container.clientWidth;
+            const h = this.container.clientHeight;
+            this.app.renderer.resize(w, h); // CRITICAL FIX 
+
+            // 2. Calculate Model Scale
             const screenW = this.app.screen.width;
             const screenH = this.app.screen.height;
+
             // @ts-ignore
             const bounds = this.model.getBounds();
             
@@ -218,13 +238,23 @@ export class LiraCore {
             if (!isFinite(scale) || scale === 0) {
                  this.model.scale.set(0.2); 
             } else {
-                 this.model.scale.set(scale);
+                 if (this.originalScale === 1 || !this.originalScale) {
+                    this.model.scale.set(scale);
+                    this.originalScale = scale; // Set baseline only once or if reset
+                 } else {
+                    // Respect current zoom level if it deviates significantly? 
+                    // No, handleResize usually implies window change, so we adapt?
+                    // Let's stick to keeping the user's zoom if set?
+                    // For now, reset to fit window to ensure visibility.
+                    this.model.scale.set(scale); 
+                    this.originalScale = scale;
+                 }
             }
             
             this.model.x = screenW / 2;
             this.model.y = screenH / 2;
             this.model.anchor.set(0.5, 0.5);
-            this.originalScale = this.model.scale.x;
+            
             this.originalY = this.model.y;
         }, 100);
     }
@@ -241,6 +271,38 @@ export class LiraCore {
     lookAt(x: number, y: number) { /* Keep simple or empty if not used frequently */ }
     setExpression(name: string) { if (this.model) this.model.expression(name); }
     takeSnapshot() { return null; } // Snapshot might fail with preserved buffers
+
+    /**
+     * Set a specific model parameter (e.g. ParamMouthOpenY, Param, etc)
+     */
+    setParameter(paramId: string, value: number) {
+        if (this.model && this.model.internalModel && this.model.internalModel.coreModel) {
+            try {
+                // @ts-ignore
+                this.model.internalModel.coreModel.setParameterValueById(paramId, value);
+            } catch (e) {
+                console.warn(`[LiraCore] Failed to set parameter ${paramId}:`, e);
+            }
+        }
+    }
+
+    /**
+     * Applies a zoom info relative to current scale
+     * @param delta +0.1 for zoom in, -0.1 for zoom out
+     */
+    zoom(delta: number) {
+        if (!this.model) return;
+        const newScale = Math.max(0.05, Math.min(2.0, this.model.scale.x + delta));
+        this.model.scale.set(newScale);
+        
+        // Update originalScale so animations/idle use the new baseline
+        this.originalScale = newScale;
+        
+        // Disable automatic zoom while manual override is active?
+        // Or just let it float.
+        // Reset zoom state to prevent fight
+        this.isZoomingIn = false;
+    }
 
     destroy() {
         console.log("[LiraCore] Sleeping (Singleton Preserved)...");
