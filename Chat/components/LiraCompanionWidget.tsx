@@ -156,14 +156,14 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
                     className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-[#121214]/90 border border-white/10 p-2 rounded-2xl backdrop-blur-md shadow-xl z-[100000]"
                 >
                     <button 
-                        onClick={(e) => { e.stopPropagation(); setShowControls(true); if (lira) lira.zoom(0.1); }}
+                        onClick={(e) => { e.stopPropagation(); setShowControls(true); setSize(prev => Math.min(800, prev + 50)); }}
                         className="p-2 hover:bg-white/10 rounded-xl text-white/70 hover:text-white transition-colors"
                         title="Aumentar (Zoom)"
                     >
                         <ZoomIn size={18} />
                     </button>
                     <button 
-                        onClick={(e) => { e.stopPropagation(); setShowControls(true); if (lira) lira.zoom(-0.1); }}
+                        onClick={(e) => { e.stopPropagation(); setShowControls(true); setSize(prev => Math.max(250, prev - 50)); }}
                         className="p-2 hover:bg-white/10 rounded-xl text-white/70 hover:text-white transition-colors"
                         title="Diminuir (Zoom)"
                     >
