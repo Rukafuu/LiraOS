@@ -69,13 +69,16 @@ export class LiraCore {
             this.canvas = globalCanvas;
             this.model = globalModel;
             
-            // Re-bind resize target manually since app.resizeTo might be stale
-            this.app.resizeTo = this.container;
+            // FIX: Disable Pixi auto-resize which might catch the container at 0x0 during animation
+            // and corrupt the mask buffers. We handle resize manually via Observer.
+            this.app.resizeTo = null as any;
             
             // FIX: Force immediate renderer resize to fix "Disappearing Head" (Masking)
-            // when reconnecting to a new DOM container.
+            // Ensure we NEVER resize to 0x0. Use safe defaults if container is collapsing.
             if (this.app.renderer) {
-                 this.app.renderer.resize(this.container.clientWidth, this.container.clientHeight);
+                 const safeW = Math.max(this.container.clientWidth, 250);
+                 const safeH = Math.max(this.container.clientHeight, 250);
+                 this.app.renderer.resize(safeW, safeH);
             }
         }
 
