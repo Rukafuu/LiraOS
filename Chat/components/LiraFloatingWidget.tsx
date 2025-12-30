@@ -146,7 +146,7 @@ export const LiraFloatingWidget: React.FC<LiraFloatingWidgetProps> = ({ onClose,
         }}
         exit={{ opacity: 0, scale: 0.8 }}
         style={{ width: size, height: size }}
-        className="fixed z-50 rounded-full group"
+        className="fixed z-50 group"
     >
         {/* Container Circular/Recortado */}
         <div className={`
@@ -154,48 +154,50 @@ export const LiraFloatingWidget: React.FC<LiraFloatingWidgetProps> = ({ onClose,
             ${isDancing ? 'border-lira-pink shadow-[0_0_30px_rgba(236,72,153,0.6)]' : 'border-white/5 bg-black/40 shadow-2xl'}
             backdrop-blur-sm hover:border-purple-500/30 transition-all duration-500
         `}>
-            
             {/* ID do Canvas */}
             <div id={WIDGET_ID} className="w-full h-full" />
-
-            {/* Controls Overlay (Always Visible for Accessibility) */}
-            <div className="absolute inset-x-0 top-0 h-auto py-4 bg-gradient-to-b from-black/80 to-transparent opacity-100 transition-opacity flex justify-center gap-4 z-50">
-                <button 
-                    onClick={(e) => { e.stopPropagation(); setSize(Math.min(600, size + 30)); onInteraction('resize'); }}
-                    className="text-white/70 hover:text-white transition-colors bg-black/40 p-2 rounded-full backdrop-blur-md border border-white/10"
-                >
-                    <ZoomIn size={20} />
-                </button>
-                <button 
-                    onClick={(e) => { e.stopPropagation(); setSize(Math.max(150, size - 30)); onInteraction('resize'); }}
-                    className="text-white/70 hover:text-white transition-colors bg-black/40 p-2 rounded-full backdrop-blur-md border border-white/10"
-                >
-                    <ZoomOut size={20} />
-                </button>
-                
-                <button 
-                    onClick={() => setIsDancing(!isDancing)} 
-                    className={`hover:text-lira-pink transition-colors bg-black/40 p-2 rounded-full backdrop-blur-md border border-white/10 ${isDancing ? 'text-lira-pink animate-pulse border-lira-pink/50' : 'text-white/70'}`}
-                    title="Dance Mode!"
-                >
-                    <Music size={20} />
-                </button>
-                <button onClick={onClose} className="text-white/70 hover:text-red-400 bg-black/40 p-2 rounded-full backdrop-blur-md border border-white/10">
-                    <X size={20} />
-                </button>
-            </div>
-
-            {/* Drag Handle (Centro Invisível) */}
-            {/* O próprio componente é draggável, mas podemos por um icone indicador se quiser */}
         </div>
 
-        {/* Resize Handle */}
+        {/* External Controls Bar (Floating Below) */}
+        <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-[#121214]/90 border border-white/10 p-2 rounded-2xl backdrop-blur-md shadow-xl transition-opacity opacity-100 z-[60]">
+             <button 
+                onClick={(e) => { e.stopPropagation(); setSize(Math.min(600, size + 30)); onInteraction('resize'); }}
+                className="p-2 hover:bg-white/10 rounded-xl text-white/70 hover:text-white transition-colors"
+                title="Aumentar"
+            >
+                <ZoomIn size={18} />
+            </button>
+            <button 
+                onClick={(e) => { e.stopPropagation(); setSize(Math.max(150, size - 30)); onInteraction('resize'); }}
+                className="p-2 hover:bg-white/10 rounded-xl text-white/70 hover:text-white transition-colors"
+                title="Diminuir"
+            >
+                <ZoomOut size={18} />
+            </button>
+            
+            <div className="w-px h-4 bg-white/10 mx-1" />
+
+            <button 
+                onClick={() => setIsDancing(!isDancing)} 
+                className={`p-2 hover:bg-white/10 rounded-xl transition-colors ${isDancing ? 'text-lira-pink bg-lira-pink/10' : 'text-white/70 hover:text-white'}`}
+                title="Modo Dança"
+            >
+                <Music size={18} />
+            </button>
+            <button 
+                onClick={onClose} 
+                className="p-2 hover:bg-red-500/20 rounded-xl text-white/70 hover:text-red-400 transition-colors"
+                title="Fechar"
+            >
+                <X size={18} />
+            </button>
+        </div>
+
+        {/* Resize Handle (Optional Visual Indicator) */}
         <div 
             onMouseDown={handleResize}
-            className="absolute bottom-4 right-4 w-6 h-6 bg-white/10 rounded-full cursor-se-resize hover:bg-purple-500 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100"
-        >
-            <Maximize2 size={12} className="text-white" />
-        </div>
+            className="absolute bottom-0 right-0 w-8 h-8 bg-transparent cursor-se-resize z-50"
+        />
     </motion.div>
   );
 };
