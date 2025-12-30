@@ -6,6 +6,7 @@ import { LIRA_AVATAR } from '../constants';
 import { getCurrentUser } from '../services/userService';
 import { useTranslation } from 'react-i18next';
 import { FeedbackModal } from './FeedbackModal';
+import { SystemStatus } from './SystemStatus';
 
 interface SidebarProps {
   sessions: ChatSession[];
@@ -309,6 +310,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             transition={{ duration: 0.2 }}
                             className="space-y-2"
                         >
+                            {/* JARVIS SYSTEM STATUS */}
+                            <SystemStatus />
+
                             {/* Profile Card */}
                             {currentUser && (
                                 <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5 mb-4 group hover:bg-white/10 transition-colors">

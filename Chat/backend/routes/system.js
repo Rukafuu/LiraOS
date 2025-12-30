@@ -7,21 +7,16 @@ const router = express.Router();
 
 router.use(requireAuth);
 
-/**
- * POST /api/system/command
- * Execute a natural language command on the host system
- */
-router.post('/command', async (req, res) => {
-  try {
-    const { command } = req.body;
-    if (!command) return res.status(400).json({ error: 'Command required' });
-
-    const result = await pcController.handleInstruction(command);
-    res.json({ result });
-  } catch (error) {
-    console.error('System command error:', error);
-    res.status(500).json({ error: 'Failed to execute command' });
-  }
+router.get('/stats', async (req, res) => {
+    try {
+        // Only allow if running locally or user has permission (Singularity Tier checking logic here later)
+        // For now, simple pass-through
+        const stats = await pcController.getSystemStats();
+        res.json(stats);
+    } catch (error) {
+        console.error('System Stats Error:', error);
+        res.status(500).json({ error: 'Failed to fetch system stats' });
+    }
 });
 
 export default router;
