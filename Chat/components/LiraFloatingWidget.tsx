@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion, useDragControls } from 'framer-motion';
 import { LiraCore } from '../lib/lira-avatar/liraCore';
-import { X, Maximize2, Move, Music } from 'lucide-react';
+import { X, Maximize2, Move, Music, ZoomIn, ZoomOut } from 'lucide-react';
 
 interface LiraFloatingWidgetProps {
   onClose: () => void;
@@ -160,6 +160,19 @@ export const LiraFloatingWidget: React.FC<LiraFloatingWidgetProps> = ({ onClose,
 
             {/* Controls Overlay (Hover) */}
             <div className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex justify-end p-4 gap-2">
+                <button 
+                    onClick={(e) => { e.stopPropagation(); setSize(Math.min(600, size + 30)); onInteraction('resize'); }}
+                    className="text-white/70 hover:text-white transition-colors"
+                >
+                    <ZoomIn size={20} />
+                </button>
+                <button 
+                    onClick={(e) => { e.stopPropagation(); setSize(Math.max(150, size - 30)); onInteraction('resize'); }}
+                    className="text-white/70 hover:text-white transition-colors"
+                >
+                    <ZoomOut size={20} />
+                </button>
+                
                 <button 
                     onClick={() => setIsDancing(!isDancing)} 
                     className={`hover:text-lira-pink transition-colors ${isDancing ? 'text-lira-pink animate-pulse' : 'text-white/70'}`}
