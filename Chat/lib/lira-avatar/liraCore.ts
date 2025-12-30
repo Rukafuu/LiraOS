@@ -447,7 +447,10 @@ export class LiraCore {
         // 3. Destroy App
         if (this.app) {
             try {
-                this.app.destroy(true, { children: true, texture: true, baseTexture: true });
+                // ⚠️ SAFETY FIX: Do NOT destroy baseTexture/texture here regarding Live2D.
+                // The Live2D plugin caches textures globally. If we nuke them from GPU, 
+                // other Lira instances (e.g. main page) will crash with WebGL errors.
+                this.app.destroy(true, { children: true, texture: false, baseTexture: false });
             } catch (e) {}
             // @ts-ignore
             this.app = null;
