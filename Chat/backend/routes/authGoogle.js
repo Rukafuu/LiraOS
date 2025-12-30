@@ -72,4 +72,20 @@ router.get('/callback', async (req, res) => {
   }
 });
 
+// DEBUG ROUTE - REMOVE IN PRODUCTION LATER
+router.get('/debug', (req, res) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID || 'NOT_SET';
+  // Show first 10 chars of Client ID safely
+  const safeClientId = clientId.length > 10 ? clientId.substring(0,10) + '...' : clientId;
+  
+  // HARDCODED URI check
+  const usedUri = 'https://liraos-production.up.railway.app/api/auth/google-calendar/callback';
+  
+  res.json({
+    client_id_prefix: safeClientId,
+    redirect_uri_configured_in_backend: usedUri,
+    message: "Verifique se 'client_id_prefix' bate com o inicio do seu ID no Google Console, e se a 'redirect_uri' está IDÊNTICA na lista de URIs permitidas."
+  });
+});
+
 export default router;
