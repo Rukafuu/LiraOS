@@ -123,8 +123,8 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
         scale: 1
       }}
       exit={{ opacity: 0, scale: 0.8 }}
-      style={{ width: size, height: size }}
-      className="fixed z-[99999]" // Ultra high Z-index to float over Voice Overlay
+      style={{ width: size, height: size, zIndex: 2147483647 }}
+      className="fixed group" // Removed tailwind z-index class to favor inline style
       onMouseEnter={() => setShowControls(true)}
       onClick={() => setShowControls(true)}
     >

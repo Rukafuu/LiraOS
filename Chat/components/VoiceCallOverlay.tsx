@@ -322,7 +322,7 @@ export const VoiceCallOverlay: React.FC<VoiceCallOverlayProps> = ({
   return (
     <div 
       onClick={() => liraVoice.resumeAudioContext()}
-      className="fixed inset-0 z-[100] bg-[#0a0a0b] flex flex-col items-center justify-center font-sans text-white animate-fade-in overflow-hidden select-none"
+      className="fixed inset-0 z-[100] bg-[#0a0a0b]/95 backdrop-blur-sm flex flex-col items-center justify-center font-sans text-white animate-fade-in overflow-hidden select-none"
     >
         {/* Abstract Background Elements */}
         <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
