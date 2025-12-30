@@ -204,12 +204,7 @@ export class LiraCore {
 
                 if (!this.isDancing) {
                     this.model.y = centerY + Math.sin(this.timePassed * 2) * 5; 
-                    
-                    // AUTO ZOOM REMOVED: Stabilize scale to respect manual zoom
-                    if (this.originalScale) {
-                         this.model.scale.set(this.originalScale);
-                         this.model.scale.y = this.model.scale.x;
-                    }
+                    // Scale handled by resize, no auto-zoom or locks here.
                 } else {
                     const beat = this.timePassed * 12;
                     this.model.y = centerY + Math.abs(Math.sin(beat)) * 10;
@@ -225,52 +220,32 @@ export class LiraCore {
         this.resizeTimeout = window.setTimeout(() => {
             if (!this.model || !this.app || !this.app.renderer) return;
 
-            // 1. Force App/Renderer Resize (Fixes Black Square / Clipping Masks)
-            // The renderer needs to know the exact pixel size of the canvas to calculate masks correctly.
+            // 1. Force App/Renderer Resize
             const w = this.container.clientWidth;
             const h = this.container.clientHeight;
-            this.app.renderer.resize(w, h); // CRITICAL FIX 
+            this.app.renderer.resize(w, h); 
 
-            // 2. Calculate Model Scale
             const screenW = this.app.screen.width;
             const screenH = this.app.screen.height;
 
-            // @ts-ignore
-            const bounds = this.model.getBounds();
+            // 2. Linear Scaling (Stable)
+            // Instead of unreliable 'getBounds', we use fixed proportion.
+            // Height 500px -> Scale ~0.22
+            const scale = screenH * 0.00045; 
             
-            // Standard scaling logic
-            const targetW = screenW * 0.8;
-            const targetH = screenH * 0.8;
-            const scale = Math.min(targetW / bounds.width, targetH / bounds.height);
-            
-            // Simple center fallback if bounds are weird (happens on init)
-            if (!isFinite(scale) || scale === 0) {
-                 this.model.scale.set(0.2); 
-            } else {
-                 if (this.originalScale === 1 || !this.originalScale) {
-                    this.model.scale.set(scale);
-                    this.originalScale = scale; // Set baseline only once or if reset
-                 } else {
-                    // Respect current zoom level if it deviates significantly? 
-                    // No, handleResize usually implies window change, so we adapt?
-                    // Let's stick to keeping the user's zoom if set?
-                    // For now, reset to fit window to ensure visibility.
-                    this.model.scale.set(scale); 
-                    this.originalScale = scale;
-                 }
-            }
-            
+            this.model.scale.set(scale);
+            this.originalScale = scale;
+
             this.model.x = screenW / 2;
-            // ANCHOR FIX: Pivot around the upper chest/neck (0.2) instead of waist (0.5).
-            // This ensures that when zooming in, the FACE stays in the viewport.
+            
+            // Anchor at upper chest/neck to focus on face during zoom
             this.model.anchor.set(0.5, 0.2);
             
-            // POSITION FIX: Move the anchor point (neck) higher up the screen (40%) 
-            // to allow more space for the legs (which hang down 80% from the anchor)
-            this.model.y = screenH * 0.35; 
+            // Position slightly above center to fit body
+            this.model.y = screenH * 0.4;
             
             this.originalY = this.model.y;
-        }, 100);
+        }, 50); // Faster debounce
     }
 
     updateMouth(volume: number) {
