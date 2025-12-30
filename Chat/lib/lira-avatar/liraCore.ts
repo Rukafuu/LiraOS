@@ -138,15 +138,18 @@ export class LiraCore {
             // @ts-ignore
             // const currentTicker = window.PIXI?.Ticker?.shared || window.PIXI?.Ticker; // DEPRECATED: Causing conflicts
 
+
             // CACHE BUSTER: Force unique URL to prevent texture reuse across WebGL contexts
             const uniquePath = `${modelPath}?t=${Date.now()}`;
 
-            this.model = await Live2DModel.from(uniquePath, {
-                autoInteract: false,
-                autoUpdate: false, 
-                ticker: this.app.ticker, // FIX: Use the isolated APP ticker 
-                onError: (e: any) => console.error("Model internal load error:", e)
-            });
+            // SAFE LOAD: Load without options first to prevent 'remove' error in internal init
+            this.model = await Live2DModel.from(uniquePath);
+            
+            // MANUAL CONTROL: Now disable internal updater
+            if (this.model) {
+                // @ts-ignore
+                this.model.autoUpdate = false; 
+            }
 
             if (this.model) {
                 this.app.stage.addChild(this.model);
