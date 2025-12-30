@@ -49,10 +49,17 @@ export const StreamingMessageBubble: React.FC<StreamingMessageBubbleProps> = Rea
                     // Split content by Widgets
                     const parts = displayedContent.split(/((?:\[\[)?WIDGET:[^|]+\|[\s\S]+?(?:\]\]|\]))/g);
                     
+                    // DEBUG: Log to see what we're getting
+                    if (displayedContent.includes('WIDGET')) {
+                        console.log('[WIDGET DEBUG] Full content:', displayedContent);
+                        console.log('[WIDGET DEBUG] Parts:', parts);
+                    }
+                    
                     return parts.map((part, idx) => {
                         // Check if part is a Widget
                         const match = part.match(/^(?:\[\[)?WIDGET:([^|]+)\|([\s\S]+?)(?:\]\]|\])$/);
                         if (match) {
+                            console.log('[WIDGET DEBUG] Match found!', { type: match[1], data: match[2] });
                             return <ChatWidgetRenderer key={idx} type={match[1]} data={match[2]} />;
                         }
 

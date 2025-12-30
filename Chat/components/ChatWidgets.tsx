@@ -190,7 +190,8 @@ export const ChatWidgetRenderer: React.FC<WidgetRendererProps> = ({ type, data }
     parsedData = typeof data === 'string' ? JSON.parse(data) : data;
   } catch (e) {
     // If parsing fails (e.g. streaming incomplete json), don't crash
-    console.warn("Widget JSON parse failed:", e);
+    console.error("Widget JSON parse failed:", e);
+    console.error("Malformed JSON data:", data);
     return null;
   }
 
