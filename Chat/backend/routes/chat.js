@@ -12,6 +12,7 @@ import { award, getState } from '../gamificationStore.js';
 import { isAdmin, getUserById } from '../authStore.js';
 import { checkModeration, handleInfraction, getUserStatus } from '../utils/moderation.js';
 import * as projectTools from '../projectTools.js';
+import { todoService } from '../services/todoService.js';
 import { pcController } from '../services/pcControllerService.js';
 import { getTemporalContext } from '../utils/timeUtils.js';
 import { getCalendarClient } from '../services/googleAuthService.js';
@@ -399,7 +400,39 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                   }
                 },
                 {
-                  name: 'create_calendar_event',
+                   name: 'create_todo_list',
+                   description: 'Creates a new persistent Todo/Task list. Use this when user asks to organize tasks or make a checklist.',
+                   parameters: {
+                      type: "object",
+                      required: ["title"],
+                      properties: {
+                         title: { type: "string", description: "Title of the list" },
+                         items: { type: "array", items: { type: "string" }, description: "Initial tasks" }
+                      }
+                   }
+                },
+                {
+                   name: 'add_todo_item',
+                   description: 'Adds an item to an existing todo list.',
+                   parameters: {
+                      type: "object",
+                      required: ["text"],
+                      properties: {
+                         listId: { type: "string", description: "ID of the list. If unknown, leave empty." },
+                         text: { type: "string", description: "Task content" }
+                      }
+                   }
+                },
+                {
+                   name: 'list_todos',
+                   description: 'Lists all todo lists.',
+                   parameters: {
+                      type: "object",
+                      properties: {}
+                   }
+                },
+                {
+                   name: 'create_calendar_event',
                   description: 'Creates an event in Google Calendar. IMPORTANT: If user gives minimal info (e.g. "meeting at 5pm"), INFER the rest. Use the text prompt as the Summary. Use today\'s date combined with the time provided. Assume 1 hour duration if not specified. Do NOT ask for more info, just create it.',
                   parameters: {
                     type: "object",
@@ -708,11 +741,61 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                     functionResult = { success: false, error: error.message };
                 }
                 break;
+                break;
+
+            case 'create_todo_list':
+                try {
+                    const { title, items } = functionCall.args;
+                    const newList = await todoService.createList(userId, title);
+                    
+                    if (items && Array.isArray(items)) {
+                        for (const itemText of items) {
+                            await todoService.addItem(userId, newList.id, itemText);
+                        }
+                    }
+                    
+                    functionResult = { 
+                        success: true, 
+                        message: `Lista "${title}" criada com sucesso!`, 
+                        listId: newList.id 
+                    };
+                } catch(e) {
+                    functionResult = { success: false, error: e.message };
+                }
+                break;
+
+            case 'add_todo_item':
+                try {
+                    const { listId, text } = functionCall.args;
+                    // If listId is missing, service handles fallback to default list
+                    const item = await todoService.addItem(userId, listId, text);
+                    functionResult = { success: true, message: `Adicionado: "${text}"`, itemId: item.id };
+                } catch(e) {
+                    functionResult = { success: false, error: e.message };
+                }
+                break;
+
+            case 'list_todos':
+                try {
+                    const lists = await todoService.getLists(userId);
+                    // Simplify output for AI context
+                    const simpleLists = lists.map(l => ({
+                        id: l.id, 
+                        title: l.title,
+                        items: l.items.map(i => `${i.completed ? '[x]' : '[ ]'} ${i.text}`).join(', ')
+                    }));
+                    functionResult = { success: true, lists: simpleLists };
+                } catch(e) {
+                    functionResult = { success: false, error: e.message };
+                }
+                break;
+
             case 'execute_system_command':
-               functionResult = await pcController.handleInstruction(functionCall.args.command);
-               break;
+                functionResult = await pcController.handleInstruction(functionCall.args.command);
+                break;
+
             default:
-              functionResult = { error: `Unknown function: ${functionCall.name}` };
+                functionResult = { error: `Unknown function: ${functionCall.name}` };
           }
           
           console.log(`[ADMIN] ✅ Function result success: ${!!functionResult}`);
