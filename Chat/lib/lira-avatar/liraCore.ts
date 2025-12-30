@@ -142,9 +142,19 @@ export class LiraCore {
             // CACHE BUSTER: Force unique URL to prevent texture reuse across WebGL contexts
             const uniquePath = `${modelPath}?t=${Date.now()}`;
 
-            // SAFE LOAD: Load with explicit ticker but default autoUpdate to avoid 'remove'/'add' init crashes
+            // DUMMY TICKER: Trick the Live2D plugin into initializing without crashing on 'add'/'remove'
+            // We will handle the updates manually via our isolated app ticker regardless.
+            const dummyTicker = { 
+                add: (_fn: any) => {}, 
+                remove: (_fn: any) => {},
+                start: () => {},
+                stop: () => {},
+                destroy: () => {}
+            };
+
             this.model = await Live2DModel.from(uniquePath, {
-                ticker: this.app.ticker,
+                ticker: dummyTicker,
+                autoUpdate: true, // Let it "think" it's updating
                 onError: (e: any) => console.error("Model internal load error:", e)
             });
             
