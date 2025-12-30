@@ -152,10 +152,9 @@ export class LiraCore {
             // CRITICAL FIX: Monkey-patch the prototype to kill the 'autoUpdate' setter logic entirely.
             // The plugin's internal setter is bugged and tries to access undefined tickers.
             // We disable it here so init() runs smoothly, and we update manually anyway.
-            // @ts-ignore
-            const Live2DModel = window.PIXI.live2d.Live2DModel as any;
             try {
-                Object.defineProperty(Live2DModel.prototype, 'autoUpdate', {
+                // @ts-ignore
+                Object.defineProperty((Live2DModel as any).prototype, 'autoUpdate', {
                     get: function() { return false; },
                     set: function(val) { /* NO-OP: Ignore internal attempts to set autoUpdate */ },
                     configurable: true
