@@ -252,8 +252,10 @@ export class LiraCore {
             }
             
             this.model.x = screenW / 2;
-            this.model.y = screenH / 2;
-            this.model.anchor.set(0.5, 0.5);
+            // ANCHOR FIX: Pivot around the upper chest/neck (0.2) instead of waist (0.5).
+            // This ensures that when zooming in, the FACE stays in the viewport.
+            this.model.anchor.set(0.5, 0.2);
+            this.model.y = screenH * 0.5; // Place that pivot (neck) at the center of the screen
             
             this.originalY = this.model.y;
         }, 100);
