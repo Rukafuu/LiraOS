@@ -1,56 +1,6 @@
 import { PixiApp, Live2DModelType } from './types';
 
-// ☢️ MODO GIGA-NUCLEAR: MONKEY-PATCH NO INIT (V4)
-if (typeof window !== 'undefined') {
-    const applyGigaFix = () => {
-        // @ts-ignore
-        const PIXI = window.PIXI;
-        // @ts-ignore
-        const live2d = PIXI?.live2d;
 
-        if (PIXI && live2d && live2d.Live2DModel) {
-            try {
-                const Live2DModel = live2d.Live2DModel as any;
-                
-                // 1. Garantir Ticker Global
-                if (!PIXI.Ticker) PIXI.Ticker = { shared: { add: () => {}, remove: () => {}, elapsedMS: 0 } };
-                if (!PIXI.Ticker.shared) PIXI.Ticker.shared = { add: () => {}, remove: () => {}, elapsedMS: 0 };
-                
-                const safeTicker = PIXI.Ticker.shared;
-
-                // 2. Patch no Prototype para interceptar o 'this.ticker'
-                Live2DModel.prototype.ticker = safeTicker;
-
-                // 3. MONKEY-PATCH NO INIT (O CORAÇÃO DO ERRO)
-                const originalInit = Live2DModel.prototype.init;
-                Live2DModel.prototype.init = function(options: any) {
-                    this.ticker = safeTicker; // Força antes de qualquer coisa
-                    if (originalInit) {
-                        return originalInit.call(this, options);
-                    }
-                };
-
-                // 4. Bloquear 'autoUpdate' para não tentar remover/adicionar via setter bugado
-                Object.defineProperty(Live2DModel.prototype, 'autoUpdate', {
-                    get: () => false,
-                    set: () => {}, // Ignora tentativas do plugin de se auto-gerenciar
-                    configurable: true
-                });
-
-                console.log("[LiraCore] Giga-Nuclear Fix applied to Prototype & Init.");
-                return true;
-            } catch (e) {
-                console.warn("[LiraCore] Giga-Nuclear Fix failed:", e);
-            }
-        }
-        return false;
-    };
-
-    if (!applyGigaFix()) {
-        const itv = setInterval(() => { if (applyGigaFix()) clearInterval(itv); }, 100);
-        setTimeout(() => clearInterval(itv), 5000);
-    }
-}
 
 export class LiraCore {
     private app: PixiApp;
@@ -186,12 +136,15 @@ export class LiraCore {
             console.log(`[LiraCore] Loading model from: ${modelPath}`);
 
             // @ts-ignore
-            const currentTicker = window.PIXI?.Ticker?.shared || window.PIXI?.Ticker;
+            // const currentTicker = window.PIXI?.Ticker?.shared || window.PIXI?.Ticker; // DEPRECATED: Causing conflicts
 
-            this.model = await Live2DModel.from(modelPath, {
+            // CACHE BUSTER: Force unique URL to prevent texture reuse across WebGL contexts
+            const uniquePath = `${modelPath}?t=${Date.now()}`;
+
+            this.model = await Live2DModel.from(uniquePath, {
                 autoInteract: false,
                 autoUpdate: false, 
-                ticker: currentTicker, 
+                ticker: this.app.ticker, // FIX: Use the isolated APP ticker 
                 onError: (e: any) => console.error("Model internal load error:", e)
             });
 
