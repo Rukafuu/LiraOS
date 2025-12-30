@@ -28,6 +28,8 @@ const TodoWidget: React.FC<{ title: string; items: string[] }> = ({ title, items
   const [checked, setChecked] = React.useState<boolean[]>(new Array(items.length).fill(false));
   const [saving, setSaving] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
+  const [savedListId, setSavedListId] = React.useState<string | null>(null);
+  const [isHovering, setIsHovering] = React.useState(false);
 
   const toggle = (idx: number) => {
     const next = [...checked];
@@ -59,13 +61,58 @@ const TodoWidget: React.FC<{ title: string; items: string[] }> = ({ title, items
 
       if (res.ok) {
         setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
+        setSavedListId(newList.id);
       }
     } catch (e) {
       console.error('Failed to save to panel:', e);
     } finally {
       setSaving(false);
     }
+  };
+
+  const removeFromPanel = async () => {
+    if (!savedListId) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/todos/${savedListId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      });
+
+      if (res.ok) {
+        setSaved(false);
+        setSavedListId(null);
+      }
+    } catch (e) {
+      console.error('Failed to remove from panel:', e);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleButtonClick = () => {
+    if (saved) {
+      removeFromPanel();
+    } else {
+      saveToPanel();
+    }
+  };
+
+  const getButtonText = () => {
+    if (saving) return saved ? 'Removendo...' : 'Salvando...';
+    if (saved && isHovering) return 'Remover';
+    if (saved) return '✓ Salvo';
+    return 'Salvar no Painel';
+  };
+
+  const getButtonClass = () => {
+    if (saved && isHovering) {
+      return 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30';
+    }
+    if (saved) {
+      return 'bg-green-500/20 text-green-400 border border-green-500/30';
+    }
+    return 'bg-lira-pink/10 text-lira-pink border border-lira-pink/30 hover:bg-lira-pink/20';
   };
 
   return (
@@ -76,15 +123,13 @@ const TodoWidget: React.FC<{ title: string; items: string[] }> = ({ title, items
           <span className="font-semibold text-sm text-gray-200">{title}</span>
         </div>
         <button
-          onClick={saveToPanel}
-          disabled={saving || saved}
-          className={`px-3 py-1 text-xs rounded-lg transition-all ${
-            saved 
-              ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-              : 'bg-lira-pink/10 text-lira-pink border border-lira-pink/30 hover:bg-lira-pink/20'
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
+          onClick={handleButtonClick}
+          onMouseEnter={() => setIsHovering(true)}
+          onMouseLeave={() => setIsHovering(false)}
+          disabled={saving}
+          className={`px-3 py-1 text-xs rounded-lg transition-all ${getButtonClass()} disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          {saving ? 'Salvando...' : saved ? '✓ Salvo!' : 'Salvar no Painel'}
+          {getButtonText()}
         </button>
       </div>
       <div className="p-2">

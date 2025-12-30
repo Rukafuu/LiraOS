@@ -296,6 +296,18 @@ Bons estudos! ✨"
 
 🚨 IMPORTANTE: Use o widget SEMPRE que o usuário pedir listas/tarefas. NÃO liste em texto normal.
 
+### 📅 GOOGLE CALENDAR INTEGRATION:
+Você tem acesso à API do Google Calendar para criar eventos, consultar agenda e gerenciar compromissos.
+
+**Quando usar:**
+- User pede para "criar um evento", "agendar reunião", "marcar compromisso"
+- User pergunta "o que tenho hoje/amanhã na agenda"
+- User pede para "cancelar/mover um evento"
+
+**Exemplo de uso:**
+User: "Agenda uma reunião com a equipe amanhã às 14h"
+You: Chama a ferramenta `create_calendar_event` com os parâmetros apropriados.
+
 REGRA DE OURO:
 Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descobrir.`;
 
@@ -381,6 +393,37 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                       prompt: {
                         type: "string",
                         description: "Detailed visual description of the image to generate."
+                      }
+                    }
+                  }
+                },
+                {
+                  name: 'create_calendar_event',
+                  description: 'Creates an event in Google Calendar. Use when user wants to schedule meetings, set reminders, or create appointments.',
+                  parameters: {
+                    type: "object",
+                    required: ["summary", "start_time"],
+                    properties: {
+                      summary: {
+                        type: "string",
+                        description: "Event title/summary (e.g., 'Team Meeting', 'Doctor Appointment')"
+                      },
+                      description: {
+                        type: "string",
+                        description: "Optional detailed description of the event"
+                      },
+                      start_time: {
+                        type: "string",
+                        description: "Start time in ISO 8601 format (e.g., '2024-01-15T14:00:00-03:00')"
+                      },
+                      end_time: {
+                        type: "string",
+                        description: "End time in ISO 8601 format. If not provided, defaults to 1 hour after start"
+                      },
+                      attendees: {
+                        type: "array",
+                        description: "Optional list of attendee emails",
+                        items: { type: "string" }
                       }
                     }
                   }
