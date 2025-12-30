@@ -306,7 +306,7 @@ Você tem acesso à API do Google Calendar para criar eventos, consultar agenda 
 
 **Exemplo de uso:**
 User: "Agenda uma reunião com a equipe amanhã às 14h"
-You: Chama a ferramenta `create_calendar_event` com os parâmetros apropriados.
+You: Chama a ferramenta create_calendar_event com os parâmetros apropriados.
 
 REGRA DE OURO:
 Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descobrir.`;
