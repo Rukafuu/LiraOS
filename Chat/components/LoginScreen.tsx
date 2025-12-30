@@ -391,6 +391,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                      </div>
                 ) : isVerifyingCode ? 'Set New Password' : isForgotPassword ? 'Send Recovery Email' : (isLogin ? 'Sign In' : 'Create account')}
             </button>
+            
+            {/* Manual entry for Code if auto-transition fails */}
+            {isForgotPassword && !isVerifyingCode && (
+                 <button 
+                   type="button"
+                   onClick={() => setIsVerifyingCode(true)}
+                   className="w-full mt-2 py-2 rounded-xl text-xs font-medium text-gray-500 hover:text-white border border-transparent hover:border-white/10 transition-all"
+                 >
+                   I already have a code
+                 </button>
+            )}
           </form>
         
           <div className="relative my-6 text-center">
