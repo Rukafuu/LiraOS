@@ -26,8 +26,14 @@ export const getAuthUrl = () => {
 };
 
 export const getToken = async (code) => {
-  const { tokens } = await oauth2Client.getToken(code);
-  return tokens;
+  try {
+    console.log('[GoogleAuth] Exchanging code for token with URI:', REDIRECT_URI);
+    const { tokens } = await oauth2Client.getToken(code);
+    return tokens;
+  } catch (error) {
+    console.error('[GoogleAuth] Token exchange failed:', error.response?.data || error.message);
+    throw error;
+  }
 };
 
 export const saveGoogleToken = async (userId, tokens) => {
