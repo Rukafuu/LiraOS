@@ -1,4 +1,3 @@
-// Force deploy: fix middleware import
 import express from 'express';
 import { google } from 'googleapis';
 import { getAuthUrl, getToken, saveGoogleToken, oauth2Client } from '../services/googleAuthService.js';
@@ -7,8 +6,9 @@ import { verifyToken, requireAuth } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
+// --- Calendar Operations ---
+
 // GET /api/auth/google-calendar/events
-// Helper route to list calendar events for the connected user
 router.get('/events', requireAuth, async (req, res) => {
     try {
         const userId = req.user.sub || req.user.id;
@@ -24,8 +24,8 @@ router.get('/events', requireAuth, async (req, res) => {
         
         const response = await calendar.events.list({
             calendarId: 'primary',
-            timeMin: (new Date()).toISOString(),
-            maxResults: 20,
+            timeMin: (new Date()).toISOString(), // From now
+            maxResults: 50,
             singleEvents: true,
             orderBy: 'startTime',
         });
@@ -37,14 +37,106 @@ router.get('/events', requireAuth, async (req, res) => {
     }
 });
 
+// POST /api/auth/google-calendar/events (Create)
+router.post('/events', requireAuth, async (req, res) => {
+    try {
+        const userId = req.user.sub || req.user.id;
+        const user = await getUserById(userId);
+        if (!user?.googleRefreshToken) return res.status(400).json({ error: 'not_connected' });
+
+        oauth2Client.setCredentials({ refresh_token: user.googleRefreshToken });
+        const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+        
+        const { summary, description, location, start, end } = req.body;
+        
+        const event = {
+            summary,
+            description,
+            location,
+            start: { dateTime: start }, // IOS String
+            end: { dateTime: end },     // ISO String
+        };
+
+        const response = await calendar.events.insert({
+            calendarId: 'primary',
+            resource: event,
+        });
+
+        res.json(response.data);
+    } catch (e) {
+        console.error('Create event error:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// PUT /api/auth/google-calendar/events/:eventId (Update)
+router.put('/events/:eventId', requireAuth, async (req, res) => {
+    try {
+        const userId = req.user.sub || req.user.id;
+        const user = await getUserById(userId);
+        if (!user?.googleRefreshToken) return res.status(400).json({ error: 'not_connected' });
+
+        oauth2Client.setCredentials({ refresh_token: user.googleRefreshToken });
+        const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+        
+        const { eventId } = req.params;
+        const { summary, description, location, start, end } = req.body;
+        
+        // Ensure we preserve fields if not sent, but google API usually replaces resource.
+        // Better to use PATCH or fetch first. Let's assume frontend sends full object or we use patch.
+        // Google uses 'patch' for partial updates.
+        
+        const patchBody = {};
+        if (summary) patchBody.summary = summary;
+        if (description) patchBody.description = description;
+        if (location) patchBody.location = location;
+        if (start) patchBody.start = { dateTime: start };
+        if (end) patchBody.end = { dateTime: end };
+
+        const response = await calendar.events.patch({
+            calendarId: 'primary',
+            eventId: eventId,
+            resource: patchBody,
+        });
+
+        res.json(response.data);
+    } catch (e) {
+        console.error('Update event error:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// DELETE /api/auth/google-calendar/events/:eventId
+router.delete('/events/:eventId', requireAuth, async (req, res) => {
+    try {
+        const userId = req.user.sub || req.user.id;
+        const user = await getUserById(userId);
+        if (!user?.googleRefreshToken) return res.status(400).json({ error: 'not_connected' });
+
+        oauth2Client.setCredentials({ refresh_token: user.googleRefreshToken });
+        const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+        
+        const { eventId } = req.params;
+
+        await calendar.events.delete({
+            calendarId: 'primary',
+            eventId: eventId,
+        });
+
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Delete event error:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// --- OAuth Flow ---
+
 // GET /api/auth/google-calendar/connect
-// Redirects user to Google OAuth consent screen
 router.get('/connect', (req, res) => {
   try {
     const { userId } = req.query; 
     if (!userId) return res.status(400).json({ error: 'Missing userId' });
-    
-    // We pass userId via state to persist it across the OAuth flow
     const url = getAuthUrl(userId);
     console.log('[Google Auth] Generated URL:', url); 
     res.json({ url });
@@ -55,9 +147,8 @@ router.get('/connect', (req, res) => {
 });
 
 // GET /api/auth/google-calendar/callback
-// Handles the code returned by Google
 router.get('/callback', async (req, res) => {
-  const { code, state } = req.query; // state contains userId
+  const { code, state } = req.query;
   
   try {
      if (!state) {
@@ -65,11 +156,9 @@ router.get('/callback', async (req, res) => {
      }
      
      const userId = state;
-
      const tokens = await getToken(code);
      await saveGoogleToken(userId, tokens);
 
-     // Redirect back to frontend success page
      res.send(`
        <script>
          if (window.opener) {
@@ -84,12 +173,11 @@ router.get('/callback', async (req, res) => {
      
   } catch (e) {
     console.error('Google Auth Error:', e);
-    // Show exact error to user for debugging
     res.status(500).send(`Authentication failed: ${e.message || JSON.stringify(e)}`);
   }
 });
 
-// DEBUG ROUTE - REMOVE IN PRODUCTION LATER
+// DEBUG ROUTE
 router.get('/debug', (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID || 'NOT_SET';
   const safeClientId = clientId.length > 10 ? clientId.substring(0,10) + '...' : clientId;

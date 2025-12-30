@@ -629,6 +629,85 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                    }
                }
                break;
+
+            case 'list_calendar_events':
+                try {
+                    const { max_results } = functionCall.args;
+                    const calendar = await getCalendarClient(userId);
+                    const res = await calendar.events.list({
+                        calendarId: 'primary',
+                        timeMin: new Date().toISOString(),
+                        maxResults: max_results || 10,
+                        singleEvents: true,
+                        orderBy: 'startTime',
+                    });
+                    
+                    const events = res.data.items.map(e => ({ 
+                        id: e.id, 
+                        summary: e.summary, 
+                        start: e.start.dateTime || e.start.date,
+                        status: e.status 
+                    }));
+                    
+                    functionResult = { 
+                        success: true, 
+                        events: events,
+                        message: `Encontrei ${events.length} eventos futuros.` 
+                    };
+                } catch (error) {
+                    console.error("Calendar List Error:", error);
+                    functionResult = { success: false, error: error.message };
+                }
+                break;
+
+            case 'update_calendar_event':
+                try {
+                    const { eventId, summary, description, start_time, end_time } = functionCall.args;
+                    const calendar = await getCalendarClient(userId);
+
+                    // Build patch object manually to only update provided fields
+                    const patchBody = {};
+                    if(summary) patchBody.summary = summary;
+                    if(description) patchBody.description = description;
+                    if(start_time) patchBody.start = { dateTime: start_time };
+                    if(end_time) patchBody.end = { dateTime: end_time };
+
+                    const res = await calendar.events.patch({
+                        calendarId: 'primary',
+                        eventId: eventId,
+                        requestBody: patchBody
+                    });
+
+                    functionResult = {
+                        success: true,
+                        message: `Evento atualizado: "${res.data.summary}"`,
+                        link: res.data.htmlLink
+                    };
+                } catch (error) {
+                     console.error("Calendar Update Error:", error);
+                     functionResult = { success: false, error: error.message };
+                }
+                break;
+
+            case 'delete_calendar_event':
+                try {
+                    const { eventId } = functionCall.args;
+                    const calendar = await getCalendarClient(userId);
+
+                    await calendar.events.delete({
+                        calendarId: 'primary',
+                        eventId: eventId
+                    });
+
+                    functionResult = {
+                        success: true,
+                        message: "Evento removido do calendário."
+                    };
+                } catch(error) {
+                    console.error("Calendar Delete Error:", error);
+                    functionResult = { success: false, error: error.message };
+                }
+                break;
             case 'execute_system_command':
                functionResult = await pcController.handleInstruction(functionCall.args.command);
                break;
