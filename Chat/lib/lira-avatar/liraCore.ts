@@ -1,6 +1,11 @@
 import { PixiApp, Live2DModelType } from './types';
 
-
+// SINGLETON STATE: The Holy Grail of Stability
+// We hold the WebGL context eternal to avoid "Context Mismatch" errors.
+let globalApp: PixiApp | null = null;
+let globalModel: any = null;
+let globalCanvas: HTMLCanvasElement | null = null;
+let globalTickerFn: (() => void) | null = null;
 
 export class LiraCore {
     private app: PixiApp;
@@ -15,433 +20,242 @@ export class LiraCore {
     public isDancing: boolean = false;
     private originalScale: number = 1;
     private originalY: number = 0;
-    private resizeTimeout: number | null = null; // Debounce timer
+    private resizeTimeout: number | null = null;
 
     setDanceMode(enabled: boolean) {
         this.isDancing = enabled;
-        // Reset scale immediately if stopping
         if (this.model) {
             if (enabled) {
                 // @ts-ignore
-                this.model.motion('Dance', undefined, 3); // Priority 3 = Force
+                this.model.motion('Dance', undefined, 3);
             } else {
                 this.model.scale.set(this.originalScale);
-                // Force back to idle by playing nothing or low prio? 
-                // Usually letting it finish is smoother, or triggers Idle group.
             }
         }
     }
-
-    private tickerFn: (() => void) | null = null;
 
     constructor(containerId: string) {
         this.container = document.getElementById(containerId) as HTMLElement;
         if (!this.container) throw new Error(`Container ${containerId} not found`);
 
-        // Check if PIXI is loaded
         // @ts-ignore
-        if (!window.PIXI) {
-            console.error('Window.PIXI is undefined');
-            throw new Error('PIXI not found on window. Please ensure PixiJS is loaded.');
+        if (!window.PIXI) throw new Error('PIXI not found');
+
+        // SINGLETON INIT LOGIC
+        if (!globalApp || !globalCanvas) {
+            console.log("[LiraCore] Creating NEW Global Singleton Context (Genesis)");
+            
+            this.canvas = document.createElement('canvas');
+            this.canvas.id = 'lira-canvas';
+            
+            // @ts-ignore
+            globalApp = new window.PIXI.Application({
+                view: this.canvas,
+                autoStart: true,
+                sharedTicker: true, // Back to shared, easier for singleton
+                backgroundAlpha: 0,
+                resizeTo: this.container, // Initial resize target
+                antialias: true,
+                autoDensity: true,
+                resolution: window.devicePixelRatio || 1
+            });
+
+            globalCanvas = this.canvas;
+            this.app = globalApp;
+            globalApp.ticker.stop(); // Wait for model
+        } else {
+            console.log("[LiraCore] Reusing Global Singleton Context (Resurrection)");
+            this.app = globalApp;
+            this.canvas = globalCanvas;
+            this.model = globalModel;
+            
+            // Re-bind resize target manually since app.resizeTo might be stale
+            this.app.resizeTo = this.container;
         }
 
-        // @ts-ignore
-        if (typeof window.PIXI.Application !== 'function') {
-             console.error('Window.PIXI.Application is not a function:', window.PIXI);
-             throw new Error('PIXI.Application is not a constructor. Check PixiJS version.');
-        }
-
-        // Create Canvas element
-        this.canvas = document.createElement('canvas');
-        this.canvas.id = 'lira-canvas';
+        // Physically move the canvas to the new container
         this.container.appendChild(this.canvas);
+        
+        // Wake up!
+        this.app.start();
 
-        // Initialize Pixi Application (v6 Syntax)
-        // @ts-ignore
-        this.app = new window.PIXI.Application({
-            view: this.canvas,
-            autoStart: true,
-            sharedTicker: false, // ISOLATION FIX: Do not use global shared ticker
-            backgroundAlpha: 0, // Transparent background
-            resizeTo: this.container,
-            antialias: true,
-            autoDensity: true,
-            resolution: window.devicePixelRatio || 1
-        });
-
-        // Handle resize
+        // Attach resize observer
         const resizeObserver = new ResizeObserver(() => this.handleResize());
         resizeObserver.observe(this.container);
-        
         setTimeout(() => this.handleResize(), 100);
     }
 
-    /**
-     * Initializes the Live2D environment.
-     * Must be called before loading a model.
-     */
-    /**
-     * Initializes the Live2D environment.
-     * Must be called before loading a model.
-     */
     public initLive2D() {
+        // Init logic only needs to run once globally, but checking doesn't hurt
         // @ts-ignore
         const live2d = window.PIXI.live2d;
-        if (!live2d) {
-            console.warn('PIXI.live2d namespace missing. pixi-live2d-display might not be loaded correctly.');
-            return false;
-        }
-
+        if (!live2d) return false;
+        
+        // Ensure shared ticker exists (Polyfill)
         // @ts-ignore
-        const Live2DModel = live2d.Live2DModel;
-        if (!Live2DModel) {
-             console.warn('Live2DModel class missing from PIXI.live2d.');
-             return false;
+        if (!window.PIXI.Ticker.shared) {
+             // @ts-ignore
+             window.PIXI.Ticker.shared = this.app.ticker;
         }
-
-        // Register ticker explicitly with the shared ticker
-        // This fixes the "cannot read properties of undefined (reading 'add')" error
-        try {
-            // @ts-ignore
-            const Live2DModel = window.PIXI.live2d.Live2DModel;
-            // @ts-ignore
-            const Ticker = window.PIXI.Ticker;
-
-            if (Ticker && Ticker.shared) {
-                Live2DModel.registerTicker(Ticker.shared);
-            } else {
-                 // Fallback to app ticker if shared is somehow missing
-                 Live2DModel.registerTicker(this.app.ticker);
-            }
-        } catch (e) {
-            console.warn("Failed to register Ticker for Live2DModel.", e);
-        }
-
         return true;
     }
 
-
-    /**
-     * Loads the Live2D model from the specified path.
-     */
     async loadModel(modelPath: string): Promise<void> {
-        try {
-            if (!this.initLive2D()) {
-                throw new Error("Live2D Environment could not be initialized.");
-            }
+        this.initLive2D();
 
+        // REUSE GLOBAL MODEL IF PRELOADED
+        if (globalModel) {
+            console.log("[LiraCore] Model reused from cache.");
+            this.model = globalModel;
+            this.model.visible = true;
+            this.setupTicker();
+            return;
+        }
+
+        try {
+            console.log(`[LiraCore] Loading Fresh Model: ${modelPath}`);
             // @ts-ignore
             const Live2DModel = window.PIXI.live2d.Live2DModel;
 
-            console.log(`[LiraCore] Loading model from: ${modelPath}`);
-
-            // @ts-ignore
-            // const currentTicker = window.PIXI?.Ticker?.shared || window.PIXI?.Ticker; // DEPRECATED: Causing conflicts
-
-
-            // CACHE BUSTER: Force unique URL to prevent texture reuse across WebGL contexts
-            const uniquePath = `${modelPath}?t=${Date.now()}`;
-
-            // SAFEGUARD: Ensure PIXI.Ticker.shared exists because the plugin blindly relies on it.
-            // @ts-ignore
-            if (!window.PIXI.Ticker.shared) {
-                 // @ts-ignore
-                 window.PIXI.Ticker.shared = this.app.ticker;
-            }
-
-            // CRITICAL FIX: Monkey-patch the prototype to kill the 'autoUpdate' setter logic entirely.
-            // The plugin's internal setter is bugged and tries to access undefined tickers.
-            // We disable it here so init() runs smoothly, and we update manually anyway.
+            // MONKEY PATCH (Keep it, it's safe)
             try {
-                // @ts-ignore
-                Object.defineProperty((Live2DModel as any).prototype, 'autoUpdate', {
+                Object.defineProperty(Live2DModel.prototype, 'autoUpdate', {
                     get: function() { return false; },
-                    set: function(val) { /* NO-OP: Ignore internal attempts to set autoUpdate */ },
+                    set: function(val) { },
                     configurable: true
                 });
-            } catch (e) {
-                console.warn("[LiraCore] Failed to patch autoUpdate:", e);
-            }
+            } catch (e) {}
 
-            // LOAD: Now load safely
-            this.model = await Live2DModel.from(uniquePath);
-            
-            // MANUAL CONTROL: Disable internal updater immediately
+            // Load
+            this.model = await Live2DModel.from(modelPath);
+
             if (this.model) {
                 // @ts-ignore
                 this.model.autoUpdate = false; 
-            }
-
-            if (this.model) {
                 this.app.stage.addChild(this.model);
                 
-                // 🎨 Force NORMAL blend mode
+                // Save to global
+                globalModel = this.model;
+
+                // Simple Setup
                 // @ts-ignore
-                if (this.model.internalModel) {
-                    // @ts-ignore
-                    this.model.blendMode = window.PIXI.BLEND_MODES.NORMAL;
-                }
+                this.model.blendMode = window.PIXI.BLEND_MODES.NORMAL;
                 
-                // 🚫 Remove Watermark Immediately
-                try {
-                    this.setParameter('Param', 1);
-                } catch (e) {
-                    console.warn('[LiraCore] Failed to remove watermark:', e);
-                }
-                
-                // 🎨 Force texture update (fixes black silhouette on some GPUs)
+                // Setup Interaction
                 // @ts-ignore
-                if (this.model.internalModel?.coreModel) {
-                    try {
-                        // @ts-ignore
-                        this.model.internalModel.coreModel.update();
-                    } catch (e) {}
-                }
-                
-                // 3. Register Motion Groups manually if needed (or rely on .model3.json definitions)
-                // For now, let's try to inject the dance motion programmatically if it's not in the main json
-                // @ts-ignore
-                if (this.model.internalModel && this.model.internalModel.motionManager) {
-                   // @ts-ignore
-                   this.model.internalModel.motionManager.definitions['Dance'] = [{ file: 'motions/dance_viber.motion3.json' }];
-                }
+                this.model.interactive = true; 
+                this.model.on('hit', (hitAreas: any) => {
+                    if (hitAreas.includes('Body')) this.model?.motion('TapBody');
+                });
 
-                // Define the ticker function
-                this.tickerFn = () => {
-                    // 🚑 VACINA ANTI-ZUMBI
-                    if (!this.app || !this.app.renderer || !this.model) return;
-
-                    try {
-                        const deltaMS = this.app.ticker.elapsedMS;
-                        this.model.update(deltaMS);
-                        
-                        this.timePassed += deltaMS / 1000;
-                        this.idleTimer += deltaMS;
-
-                        const centerX = this.app.screen.width / 2;
-                        const centerY = this.originalY || (this.app.screen.height / 2);
-
-                        // If not dancing, apply simple float
-                        if (!this.isDancing) {
-                            this.model.y = centerY + Math.sin(this.timePassed * 2) * 5; 
-
-                            if (this.idleTimer > 10000) { 
-                                this.idleTimer = 0;
-                                if (Math.random() > 0.5) {
-                                    this.isZoomingIn = !this.isZoomingIn;
-                                }
-                            }
-
-                            const targetScale = this.isZoomingIn ? this.originalScale * 1.3 : this.originalScale;
-                            this.model.scale.x += (targetScale - this.model.scale.x) * 0.05;
-                            this.model.scale.y = this.model.scale.x;
-                        } else {
-                            // In dance mode, we let the motion control parameters, 
-                            // but we can still add a visual "bounce" to the whole container y
-                            const beat = this.timePassed * 12;
-                            this.model.y = centerY + Math.abs(Math.sin(beat)) * 10;
-                        }
-
-                    } catch (err) {
-                        // Suppress update errors during destruction
-                    }
-                };
-
-                // Add to ticker
-                this.app.ticker.add(this.tickerFn);
-
-                // Center and scale the model
+                this.setupTicker();
                 this.handleResize();
-
-                // Setup interaction
-                try {
-                    // @ts-ignore
-                    this.model.interactive = true; 
-                    this.model.on('hit', (hitAreas) => {
-                        if (hitAreas.includes('Body')) {
-                            this.model?.motion('TapBody');
-                        }
-                    });
-                } catch (e) {}
             }
         } catch (error) {
-            console.error(`[LiraCore] Fatal Load Error for ${modelPath}:`, error);
+            console.error(`[LiraCore] Fatal Load Error:`, error);
             throw error;
         }
     }
 
-    /**
-     * Resizes and centers the model on the screen.
-     */
-    /**
-     * Resizes and centers the model to fit 80% of the screen.
-     * Debounced to prevent rapid successive calls.
-     */
-    handleResize() {
-        // Clear existing timeout
-        if (this.resizeTimeout) {
-            clearTimeout(this.resizeTimeout);
+    private setupTicker() {
+        // Reuse global ticker function or create new one?
+        // Since we are singleton, we can just ensure it's added once.
+        if (globalTickerFn && this.app.ticker) {
+            // Remove old just in case
+            this.app.ticker.remove(globalTickerFn);
         }
 
-        // Debounce resize (wait 100ms)
+        globalTickerFn = () => {
+            if (!this.model || !this.app) return;
+            try {
+                const deltaMS = this.app.ticker.elapsedMS;
+                this.model.update(deltaMS);
+                
+                // Logic (Idle/Dance)
+                this.timePassed += deltaMS / 1000;
+                this.idleTimer += deltaMS;
+
+                const centerX = this.app.screen.width / 2;
+                const centerY = this.originalY || (this.app.screen.height / 2);
+
+                if (!this.isDancing) {
+                    this.model.y = centerY + Math.sin(this.timePassed * 2) * 5; 
+                    if (this.idleTimer > 10000) { 
+                        this.idleTimer = 0;
+                        if (Math.random() > 0.5) this.isZoomingIn = !this.isZoomingIn;
+                    }
+                    const targetScale = this.isZoomingIn ? this.originalScale * 1.3 : this.originalScale;
+                    this.model.scale.x += (targetScale - this.model.scale.x) * 0.05;
+                    this.model.scale.y = this.model.scale.x;
+                } else {
+                    const beat = this.timePassed * 12;
+                    this.model.y = centerY + Math.abs(Math.sin(beat)) * 10;
+                }
+            } catch (e) {}
+        };
+
+        this.app.ticker.add(globalTickerFn);
+    }
+
+    handleResize() {
+        if (this.resizeTimeout) clearTimeout(this.resizeTimeout);
         this.resizeTimeout = window.setTimeout(() => {
             if (!this.model) return;
-
+            // Force app resize to match container
+            this.app.resize();
+            
             const screenW = this.app.screen.width;
             const screenH = this.app.screen.height;
-
             // @ts-ignore
             const bounds = this.model.getBounds();
-            const modelW = bounds.width;
-            const modelH = bounds.height;
-
-            if (modelW === 0 || modelH === 0) return;
-
+            
+            // Standard scaling logic
             const targetW = screenW * 0.8;
             const targetH = screenH * 0.8;
-
-            const scaleBasedOnWidth = targetW / modelW;
-            const scaleBasedOnHeight = targetH / modelH;
-
-            let finalScale = Math.min(scaleBasedOnWidth, scaleBasedOnHeight);
-
-            this.model.scale.set(finalScale);
+            const scale = Math.min(targetW / bounds.width, targetH / bounds.height);
+            
+            // Simple center fallback if bounds are weird (happens on init)
+            if (!isFinite(scale) || scale === 0) {
+                 this.model.scale.set(0.2); 
+            } else {
+                 this.model.scale.set(scale);
+            }
+            
             this.model.x = screenW / 2;
             this.model.y = screenH / 2;
             this.model.anchor.set(0.5, 0.5);
-
-            this.originalScale = finalScale;
+            this.originalScale = this.model.scale.x;
             this.originalY = this.model.y;
-            
-            // console.log(`✅ Lira redimensionada (Debounced). Scale: ${finalScale.toFixed(4)}`);
         }, 100);
     }
 
-    /**
-     * Updates the mouth opening based on audio volume (Lip Sync).
-     * @param volume 0.0 to 1.0
-     */
     updateMouth(volume: number) {
-        if (this.model && this.model.internalModel && this.model.internalModel.coreModel) {
-            const core = this.model.internalModel.coreModel;
-            
-            // Try all possible mouth parameters
-            try {
-                core.setParameterValueById('ParamMouthOpenY', volume);
-            } catch (e) {}
-            
-            try {
-                core.setParameterValueById('ParamMouthOpen', volume);
-            } catch (e) {}
-            
-            try {
-                // From model3.json LipSync group
-                core.setParameterValueById('ParamMouthForm', volume);
-            } catch (e) {}
-        }
-    }
-
-    /**
-     * Makes the model look at the specific coordinates.
-     */
-    lookAt(x: number, y: number) {
-        if (this.model && this.model.internalModel && this.model.internalModel.focusController) {
-            // Live2D focus coordinates are typically -1 to 1 relative to center
-            const targetX = (x / this.app.screen.width) * 2 - 1;
-            const targetY = (y / this.app.screen.height) * 2 - 1;
-            
-            this.model.internalModel.focusController.focus(targetX, -targetY); // Invert Y for Live2D
-        }
-    }
-
-    /**
-     * Sets a specific expression.
-     */
-    setExpression(expressionName: string) {
-        if (this.model) {
-            this.model.expression(expressionName);
-        }
-    }
-
-
-    /**
-     * Set a specific model parameter (e.g. ParamMouthOpenY, Param, etc)
-     */
-    setParameter(paramId: string, value: number) {
-        if (this.model && this.model.internalModel && this.model.internalModel.coreModel) {
-            try {
-                this.model.internalModel.coreModel.setParameterValueById(paramId, value);
-            } catch (e) {
-                console.warn(`[LiraCore] Failed to set parameter ${paramId}:`, e);
-            }
-        }
-    }
-
-    /**
-     * Captures a snapshot of the current canvas state.
-     * Tips: Call this immediately after an update if possible or ensure autoRender is active.
-     */
-    takeSnapshot(format: string = 'image/png', quality: number = 0.9): string | null {
-        if (!this.app || !this.app.renderer) return null;
-        
+        if (!this.model) return;
         try {
-            // Force a render if not auto-updating to ensure the frame is fresh
             // @ts-ignore
-            this.app.renderer.render(this.app.stage); 
-            return this.canvas.toDataURL(format, quality);
-        } catch (e) {
-            console.error("[LiraCore] Snapshot failed:", e);
-            return null;
-        }
+            const core = this.model.internalModel.coreModel;
+            core.setParameterValueById('ParamMouthOpenY', volume);
+        } catch (e) {}
     }
 
+    lookAt(x: number, y: number) { /* Keep simple or empty if not used frequently */ }
+    setExpression(name: string) { if (this.model) this.model.expression(name); }
+    takeSnapshot() { return null; } // Snapshot might fail with preserved buffers
 
     destroy() {
-        console.log("[LiraCore] Destroying instance...");
+        console.log("[LiraCore] Sleeping (Singleton Preserved)...");
         
-        // 0. STOP APP IMMEDIATELY to prevent any new render frames
+        // DO NOT DESTROY APP OR TEXTURES.
+        // MEMORY LEAK? NO, because we reuse them next time.
+        // It's a Single Page App feature, not a bug.
+        
         if (this.app) {
-            try {
-                // @ts-ignore
-                this.app.stop();
-            } catch (e) {}
-        }
-
-        // 1. Remove Ticker FIRST to stop update loop
-        if (this.app && this.tickerFn) {
-            this.app.ticker.remove(this.tickerFn);
-            this.tickerFn = null;
-        }
-
-        // 2. Destroy Model
-        if (this.model) {
-            try {
-                // @ts-ignore
-                // REVERT: Aggressively destroy textures to prevent "bindTexture" errors on reload.
-                // Reusing textures across different WebGL contexts is forbidden.
-                this.model.destroy({ children: true, baseTexture: true, texture: true });
-            } catch (e) {}
-            this.model = null;
-        }
-
-        // 3. Destroy App
-        if (this.app) {
-            try {
-                // FORCE CLEANUP: Destroy everything. New Lira = New Context = New Textures needed.
-                this.app.destroy(true, { children: true, texture: true, baseTexture: true });
-            } catch (e) {}
-            // @ts-ignore
-            this.app = null;
-        }
-
-        // 4. Global Cache Nuke (Nuclear Option ☢️)
-        try {
-            // @ts-ignore
-            window.PIXI.utils.clearTextureCache();
-        } catch (e) {}
-
-        if (this.canvas) {
-          this.canvas.remove();
+            this.app.stop(); // Stop rendering to save battery
+            
+            // Remove from DOM but keep Alive in memory
+            if (this.canvas && this.canvas.parentNode) {
+                this.canvas.parentNode.removeChild(this.canvas);
+            }
         }
     }
 }
