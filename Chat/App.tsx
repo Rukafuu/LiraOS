@@ -1236,8 +1236,6 @@ const LiraAppContent = () => {
           />
       )}
 
-      </Suspense>
-    
       <WelcomeModal
         isOpen={showWelcome}
         username={(() => {
@@ -1253,6 +1251,8 @@ const LiraAppContent = () => {
         onClose={() => setShowWelcome(false)}
         onNewChat={createNewChat}
       />
+
+      </Suspense>
     </div>
   );
 };
