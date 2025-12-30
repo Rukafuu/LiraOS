@@ -526,54 +526,101 @@ class DiscordService {
 
         this.pendingLinks.set(message.author.id, { email, code, expiresAt });
 
-        // Send Email
-        if (!SMTP_HOST || !SMTP_USER) {
-            await message.reply(`⚠️ SMTP não configurado. (DEV MODE) Seu código é: **${code}**`);
-            return;
+        // Email Sending Logic (Resend API + SMTP Fallback)
+        let emailSent = false;
+        const RESEND_API_KEY = process.env.RESEND_API_KEY;
+        
+        // 1. Try Resend API first (Preferred)
+        if (RESEND_API_KEY) {
+            try {
+                // Dynamically import Resend to avoid top-level issues if not needed elsewhere
+                const { Resend } = await import('resend');
+                const resend = new Resend(RESEND_API_KEY);
+                
+                const { error } = await resend.emails.send({
+                    from: process.env.EMAIL_FROM || 'LiraOS <onboarding@resend.dev>',
+                    to: [email],
+                    subject: 'Link Your Discord Account - LiraOS',
+                    html: `
+                        <div style="font-family: sans-serif; padding: 20px; background: #0f172a; color: #fff; border-radius: 10px;">
+                            <h2>Vincular Discord</h2>
+                            <p>Alguém (provavelmente você) solicitou vincular este e-mail ao Discord.</p>
+                            <p>Seu código é:</p>
+                            <h1 style="color: #a855f7; letter-spacing: 5px;">${code}</h1>
+                            <p>Volte ao Discord e digite: <code>.confirm ${code}</code></p>
+                            <p><small>Se não foi você, ignore este e-mail.</small></p>
+                        </div>
+                    `
+                });
+
+                if (error) {
+                    console.error('[DISCORD] Resend API Error:', error);
+                } else {
+                    console.log(`[DISCORD] Link email sent via Resend to ${email}`);
+                    emailSent = true;
+                }
+            } catch (e) {
+                console.error('[DISCORD] Resend Exception:', e);
+            }
         }
 
-        const transportConfig = (SMTP_HOST.includes('gmail')) ? 
-            {
-                service: 'gmail',
-                service: 'gmail',
-                auth: { user: SMTP_USER, pass: SMTP_PASS },
-                family: 4 // Force IPv4 even with service preset
-            } : {
-                host: SMTP_HOST,
-                port: SMTP_PORT,
-                secure: SMTP_SECURE,
-                auth: { user: SMTP_USER, pass: SMTP_PASS },
-                tls: { rejectUnauthorized: false },
-                family: 4
-            };
+        // 2. Fallback to SMTP if Resend didn't work
+        if (!emailSent) {
+            if (!SMTP_HOST || !SMTP_USER) {
+               console.warn('[DISCORD] No SMTP/Resend configured. Dev Mode.');
+               await message.reply(`⚠️ SMTP/Resend não configurado. (DEV MODE) Seu código é: **${code}**`);
+               return;
+            }
 
-        const transporter = nodemailer.createTransport({
-            ...transportConfig,
-            connectionTimeout: 60000,
-            socketTimeout: 60000
-        });
+            const transportConfig = (SMTP_HOST.includes('gmail')) ? 
+                {
+                    service: 'gmail',
+                    auth: { user: SMTP_USER, pass: SMTP_PASS },
+                    family: 4 
+                } : {
+                    host: SMTP_HOST,
+                    port: SMTP_PORT,
+                    secure: SMTP_SECURE,
+                    auth: { user: SMTP_USER, pass: SMTP_PASS },
+                    tls: { rejectUnauthorized: false },
+                    family: 4
+                };
 
-        try {
-            await transporter.sendMail({
-                from: `"LiraOS System" <${SMTP_USER}>`,
-                to: email,
-                subject: "Link Your Discord Account - LiraOS",
-                text: `Seu código de verificação é: ${code}\n\nVolte ao Discord e digite: .confirm ${code}`,
-                html: `
-                    <div style="font-family: sans-serif; padding: 20px; background: #0f172a; color: #fff; border-radius: 10px;">
-                        <h2>Vincular Discord</h2>
-                        <p>Alguém (provavelmente você) solicitou vincular este e-mail ao Discord.</p>
-                        <p>Seu código é:</p>
-                        <h1 style="color: #a855f7; letter-spacing: 5px;">${code}</h1>
-                        <p>Volte ao Discord e digite: <code>.confirm ${code}</code></p>
-                        <p><small>Se não foi você, ignore este e-mail.</small></p>
-                    </div>
-                `
+            const transporter = nodemailer.createTransport({
+                ...transportConfig,
+                connectionTimeout: 5000, // 5s timeout (Fail Fast)
+                socketTimeout: 5000
             });
+
+            try {
+                await transporter.sendMail({
+                    from: `"LiraOS System" <${SMTP_USER}>`,
+                    to: email,
+                    subject: "Link Your Discord Account - LiraOS",
+                    text: `Seu código de verificação é: ${code}\n\nVolte ao Discord e digite: .confirm ${code}`,
+                    html: `
+                        <div style="font-family: sans-serif; padding: 20px; background: #0f172a; color: #fff; border-radius: 10px;">
+                            <h2>Vincular Discord</h2>
+                            <p>Alguém (provavelmente você) solicitou vincular este e-mail ao Discord.</p>
+                            <p>Seu código é:</p>
+                            <h1 style="color: #a855f7; letter-spacing: 5px;">${code}</h1>
+                            <p>Volte ao Discord e digite: <code>.confirm ${code}</code></p>
+                            <p><small>Se não foi você, ignore este e-mail.</small></p>
+                        </div>
+                    `
+                });
+                console.log(`[DISCORD] Link email sent via SMTP to ${email}`);
+                emailSent = true;
+            } catch (error) {
+                console.error('[DISCORD] SMTP Failed to send email:', error);
+            }
+        }
+
+        if (emailSent) {
             await message.reply(`📧 Enviei um código de 6 dígitos para **${email}**.\nVerifique sua caixa de entrada (ou spam) e digite:\n\`.confirm <codigo>\``);
-        } catch (error) {
-            console.error('[DISCORD] Failed to send email:', error);
-            await message.reply('❌ Erro técnico ao enviar e-mail. Por favor, tente novamente mais tarde.');
+        } else {
+             // Ultimate Fallback: Dev Code in Chat if everything fails (so user isn't stuck)
+             await message.reply(`⚠️ Falha no envio de e-mail. (Modo de Emergência)\nSeu código de vínculo é: **${code}**\n\nUse: \`.confirm ${code}\``);
         }
     }
 
