@@ -76,7 +76,7 @@ export const CalendarApp: React.FC<CalendarAppProps> = ({ onClose }) => {
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm pointer-events-auto" onClick={onClose} />
             
             <motion.div 
-                className="pointer-events-auto bg-[#0a0a0f] w-full max-w-2xl h-[600px] rounded-2xl border border-white/10 shadow-2xl flex flex-col overflow-hidden"
+                className="relative z-10 pointer-events-auto bg-[#0a0a0f] w-full max-w-2xl h-[600px] rounded-2xl border border-white/10 shadow-2xl flex flex-col overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
@@ -87,7 +87,7 @@ export const CalendarApp: React.FC<CalendarAppProps> = ({ onClose }) => {
                         </div>
                         <div>
                             <h2 className="text-lg font-semibold text-white">Calendar</h2>
-                            <p className="text-xs text-gray-500">Google Calendar Events</p>
+                            <p className="text-xs text-gray-400">Google Calendar Events</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -141,9 +141,9 @@ export const CalendarApp: React.FC<CalendarAppProps> = ({ onClose }) => {
                                 >
                                     <div className="flex items-start justify-between">
                                         <div className="space-y-1">
-                                            <h3 className="font-medium text-gray-200 group-hover:text-white transition-colors">{evt.summary}</h3>
+                                            <h3 className="font-medium text-white group-hover:text-blue-400 transition-colors">{evt.summary}</h3>
                                             
-                                            <div className="flex flex-wrap gap-4 text-xs text-gray-500">
+                                            <div className="flex flex-wrap gap-4 text-xs text-gray-400">
                                                 <div className="flex items-center gap-1.5">
                                                     <Clock size={12} />
                                                     {evt.start.date ? (
