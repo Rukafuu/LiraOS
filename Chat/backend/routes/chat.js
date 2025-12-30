@@ -400,7 +400,7 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                 },
                 {
                   name: 'create_calendar_event',
-                  description: 'Creates an event in Google Calendar. Use when user wants to schedule meetings, set reminders, or create appointments.',
+                  description: 'Creates an event in Google Calendar. IMPORTANT: If user gives minimal info (e.g. "meeting at 5pm"), INFER the rest. Use the text prompt as the Summary. Use today\'s date combined with the time provided. Assume 1 hour duration if not specified. Do NOT ask for more info, just create it.',
                   parameters: {
                     type: "object",
                     required: ["summary", "start_time"],
