@@ -257,6 +257,7 @@ export const ADMIN_EMAILS = [...envAdmins, 'lucas.frischeisen@gmail.com', 'amari
 
 export async function isAdmin(userId) {
   if (userId === ADMIN_USER_ID) return true;
+  if (userId === 'user_1734661833589') return true; // Pai/Admin override
   const user = await getUserById(userId);
   return user && ADMIN_EMAILS.includes(user.email);
 }
