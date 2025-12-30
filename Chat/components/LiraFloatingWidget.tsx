@@ -158,29 +158,29 @@ export const LiraFloatingWidget: React.FC<LiraFloatingWidgetProps> = ({ onClose,
             {/* ID do Canvas */}
             <div id={WIDGET_ID} className="w-full h-full" />
 
-            {/* Controls Overlay (Hover) */}
-            <div className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex justify-end p-4 gap-2">
+            {/* Controls Overlay (Always Visible for Accessibility) */}
+            <div className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-black/80 to-transparent opacity-100 transition-opacity flex justify-end p-4 gap-2">
                 <button 
                     onClick={(e) => { e.stopPropagation(); setSize(Math.min(600, size + 30)); onInteraction('resize'); }}
-                    className="text-white/70 hover:text-white transition-colors"
+                    className="text-white/70 hover:text-white transition-colors bg-black/20 p-1 rounded-full backdrop-blur-sm"
                 >
                     <ZoomIn size={20} />
                 </button>
                 <button 
                     onClick={(e) => { e.stopPropagation(); setSize(Math.max(150, size - 30)); onInteraction('resize'); }}
-                    className="text-white/70 hover:text-white transition-colors"
+                    className="text-white/70 hover:text-white transition-colors bg-black/20 p-1 rounded-full backdrop-blur-sm"
                 >
                     <ZoomOut size={20} />
                 </button>
                 
                 <button 
                     onClick={() => setIsDancing(!isDancing)} 
-                    className={`hover:text-lira-pink transition-colors ${isDancing ? 'text-lira-pink animate-pulse' : 'text-white/70'}`}
+                    className={`hover:text-lira-pink transition-colors bg-black/20 p-1 rounded-full backdrop-blur-sm ${isDancing ? 'text-lira-pink animate-pulse' : 'text-white/70'}`}
                     title="Dance Mode!"
                 >
                     <Music size={20} />
                 </button>
-                <button onClick={onClose} className="text-white/70 hover:text-red-400">
+                <button onClick={onClose} className="text-white/70 hover:text-red-400 bg-black/20 p-1 rounded-full backdrop-blur-sm">
                     <X size={20} />
                 </button>
             </div>
