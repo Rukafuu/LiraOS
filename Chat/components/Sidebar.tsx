@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MessageSquare, Search, Settings, X, Trash2, Sparkles, Command, LayoutGrid, ShoppingBag, Keyboard, Shield, Video, Crown, Gamepad2, Gift } from 'lucide-react';
+import { Plus, MessageSquare, Search, Settings, X, Trash2, Sparkles, Command, LayoutGrid, ShoppingBag, Keyboard, Shield, Video, Crown, Gamepad2, Gift, CheckSquare } from 'lucide-react';
 import { ChatSession } from '../types';
 import { LIRA_AVATAR } from '../constants';
 import { getCurrentUser } from '../services/userService';
@@ -24,6 +24,7 @@ interface SidebarProps {
   onOpenDailyQuests: () => void;
   onOpenSupporters: () => void;
   onOpenAdminPanel: () => void;
+  onOpenTodoPanel: () => void;
   isOpen: boolean;
   onCloseMobile: () => void;
 }
@@ -45,6 +46,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenDailyQuests,
   onOpenSupporters,
   onOpenAdminPanel,
+  onOpenTodoPanel,
   isOpen,
   onCloseMobile
 }) => {
@@ -371,6 +373,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     <Command size={16} className="text-red-400 group-hover:scale-110 transition-transform" />
                                 </div>
                                 <span className="text-[13px] font-medium">Admin Panel</span>
+                            </button>
+
+                            <button 
+                                onClick={onOpenTodoPanel} 
+                                className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors group"
+                            >
+                                <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                                    <CheckSquare size={16} className="text-purple-400 group-hover:scale-110 transition-transform" />
+                                </div>
+                                <span className="text-[13px] font-medium">To-Do Lists</span>
                             </button>
                         </motion.div>
                     ) : (

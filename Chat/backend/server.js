@@ -28,6 +28,7 @@ import discordRoutes from './routes/discordRoutes.js';
 import patreonRoutes from './routes/patreonRoutes.js';
 import instagramRoutes from './routes/instagram.js';
 import imagesRoutes from './routes/images.js';
+import todosRoutes from './routes/todos.js';
 
 // Services & Utils
 import { discordService } from './services/discordService.js';
@@ -95,6 +96,7 @@ app.use('/api/discord', discordRoutes);
 app.use('/api/discord', discordRoutes);
 app.use('/api/patreon', patreonRoutes);
 app.use('/api/instagram', instagramRoutes);
+app.use('/api/todos', todosRoutes);
 // Generic fallback (must be last)
 app.use('/api', chatRoutes);
 console.log('[DEBUG] All routes mounted successfully');

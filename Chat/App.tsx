@@ -44,6 +44,7 @@ import { DiscordModal } from './components/DiscordModal';
 import { MaintenanceScreen } from './components/MaintenanceScreen';
 import { PhotoBooth } from './components/PhotoBooth';
 import { AdminPanel } from './components/AdminPanel';
+import { TodoPanel } from './components/TodoPanel';
 
 const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
 const LOCAL_STORAGE_KEY = 'lira_chat_sessions';
@@ -79,6 +80,7 @@ const LiraAppContent = () => {
   const [isGamerOpen, setIsGamerOpen] = useState(false);
   const [isDailyQuestsOpen, setIsDailyQuestsOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [isTodoPanelOpen, setIsTodoPanelOpen] = useState(false);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -1002,6 +1004,7 @@ const LiraAppContent = () => {
         onOpenDailyQuests={() => setIsDailyQuestsOpen(true)}
         onOpenSupporters={() => setIsDashboardOpen(true)} // Map to dashboard for now
         onOpenAdminPanel={() => setIsAdminPanelOpen(true)}
+        onOpenTodoPanel={() => setIsTodoPanelOpen(true)}
         isOpen={isSidebarOpen}
         onCloseMobile={() => setIsSidebarOpen(false)}
       />
@@ -1258,6 +1261,19 @@ const LiraAppContent = () => {
       <AdminPanel 
         isOpen={isAdminPanelOpen}
         onClose={() => setIsAdminPanelOpen(false)}
+      />
+
+      <TodoPanel 
+        isOpen={isTodoPanelOpen}
+        onClose={() => setIsTodoPanelOpen(false)}
+        userTier={(() => {
+          const currentUser = getCurrentUser();
+          if (!currentUser) return 'Observer';
+          if (currentUser.plan && currentUser.plan !== 'free') {
+            return currentUser.plan.charAt(0).toUpperCase() + currentUser.plan.slice(1);
+          }
+          return 'Observer';
+        })()}
       />
 
       </Suspense>
