@@ -588,6 +588,30 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                    system_note: "✅ SUCCESS: The image is being generated in a LIVE WIDGET below your message. \n\nINSTRUCTION: \n1. Do NOT say 'I will show you when ready'. \n2. Do NOT say 'Waiting for result'. \n3. Simply say: 'Here is what I'm creating for you!' or describe the prompt enthusiastically.\n4. The Widget IS the result." 
                };
                break;
+            case 'create_calendar_event':
+               // Google Calendar Integration
+               // TODO: Implement OAuth2 flow and actual Google Calendar API integration
+               const { summary, description, start_time, end_time, attendees } = functionCall.args;
+               
+               // For now, return a placeholder response
+               // In production, this would:
+               // 1. Check if user has authorized Google Calendar
+               // 2. Use OAuth2 tokens to call Google Calendar API
+               // 3. Create the actual event
+               
+               functionResult = {
+                 success: true,
+                 message: `Evento "${summary}" agendado para ${start_time}`,
+                 note: "⚠️ Google Calendar integration requires OAuth2 setup. This is a placeholder response.",
+                 event: {
+                   summary,
+                   description,
+                   start_time,
+                   end_time: end_time || new Date(new Date(start_time).getTime() + 3600000).toISOString(),
+                   attendees: attendees || []
+                 }
+               };
+               break;
             case 'execute_system_command':
                functionResult = await pcController.handleInstruction(functionCall.args.command);
                break;
