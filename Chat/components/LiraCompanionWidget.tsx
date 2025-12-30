@@ -31,6 +31,7 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
   const [isDancing, setIsDancing] = useState(false);
   const [currentPhrase, setCurrentPhrase] = useState<string | null>(null);
   const [size, setSize] = useState(350);
+  const [showControls, setShowControls] = useState(false); // Controls Auto-hide
   const WIDGET_ID = 'lira-companion-widget-canvas';
 
   // Initialize Lira
@@ -49,7 +50,7 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
         
         if (core.model) {
           core.model.y = 0;
-          core.model.scale.set(0.15);
+          // Initial scale setup moved to handleResize
         }
         
         setLira(core);
@@ -68,6 +69,13 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
       }
     };
   }, []);
+
+  // Controls Auto-Hide Logic
+  useEffect(() => {
+    if (!showControls) return;
+    const timer = setTimeout(() => setShowControls(false), 2000);
+    return () => clearTimeout(timer);
+  }, [showControls]);
 
   // Dance mode sync
   useEffect(() => {
@@ -92,26 +100,16 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
     return () => cancelAnimationFrame(animId);
   }, [lira, isSpeaking]);
 
-  // Resize model when size changes
-  useEffect(() => {
-    if (!lira || !lira.model) return;
-    
-    lira.handleResize();
-    const scale = size * 0.0008;
-    lira.model.scale.set(scale);
-  }, [size, lira]);
-
-  // Auto-hide phrase after 3 seconds
-  useEffect(() => {
-    if (!currentPhrase) return;
-    const timer = setTimeout(() => setCurrentPhrase(null), 3000);
-    return () => clearTimeout(timer);
-  }, [currentPhrase]);
+  // Handle Resize Logic was removed here because it's handled internally in LiraCore now
+  // We just ensure the wrapper size is correct.
 
   // Handle click on Lira
   const handleLiraClick = () => {
-    const randomPhrase = SILLY_PHRASES[Math.floor(Math.random() * SILLY_PHRASES.length)];
-    setCurrentPhrase(randomPhrase);
+    // Show controls on click
+    setShowControls(true);
+    // Speech bubbles disabled as per user request
+    // const randomPhrase = SILLY_PHRASES[Math.floor(Math.random() * SILLY_PHRASES.length)];
+    // setCurrentPhrase(randomPhrase);
   };
 
   return (
@@ -132,7 +130,9 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
       }}
       exit={{ opacity: 0, scale: 0.8 }}
       style={{ width: size, height: size }}
-      className="fixed z-50 group"
+      className="fixed z-[99999]" // Ultra high Z-index to float over Voice Overlay
+      onMouseEnter={() => setShowControls(true)}
+      onClick={() => setShowControls(true)}
     >
       {/* Transparent container - ONLY the avatar visible */}
       <div className="relative w-full h-full">
@@ -146,57 +146,50 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
           <div id={WIDGET_ID} className="w-full h-full" />
         </div>
 
-        {/* CONTROLS BAR (Bottom) */}
-        <div className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-[#121214]/90 border border-white/10 p-2 rounded-2xl backdrop-blur-md shadow-xl z-[60]">
-             <button 
-                onClick={(e) => { e.stopPropagation(); if (lira) lira.zoom(0.1); }}
-                className="p-2 hover:bg-white/10 rounded-xl text-white/70 hover:text-white transition-colors"
-                title="Aumentar (Zoom)"
-            >
-                <ZoomIn size={18} />
-            </button>
-            <button 
-                onClick={(e) => { e.stopPropagation(); if (lira) lira.zoom(-0.1); }}
-                className="p-2 hover:bg-white/10 rounded-xl text-white/70 hover:text-white transition-colors"
-                title="Diminuir (Zoom)"
-            >
-                <ZoomOut size={18} />
-            </button>
-            
-            <div className="w-px h-4 bg-white/10 mx-1" />
-
-            <button 
-                onClick={(e) => { e.stopPropagation(); setIsDancing(!isDancing); }}
-                className={`p-2 hover:bg-white/10 rounded-xl transition-colors ${isDancing ? 'text-lira-pink bg-lira-pink/10' : 'text-white/70 hover:text-white'}`}
-                title="Modo Dança"
-            >
-                <Music size={18} />
-            </button>
-            <button 
-                onClick={onClose} 
-                className="p-2 hover:bg-red-500/20 rounded-xl text-white/70 hover:text-red-400 transition-colors"
-                title="Fechar"
-            >
-                <X size={18} />
-            </button>
-        </div>
-
-        {/* Speech Bubble */}
+        {/* CONTROLS BAR (Bottom) - Auto Hiding */}
         <AnimatePresence>
-          {currentPhrase && (
-            <motion.div
-              initial={{ opacity: 0, y: 10, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10, scale: 0.9 }}
-              className="absolute -top-16 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-sm rounded-2xl px-4 py-3 shadow-2xl max-w-[250px] z-20"
-            >
-              <div className="text-sm text-gray-800 font-medium text-center">
-                {currentPhrase}
-              </div>
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white/95 rotate-45" />
-            </motion.div>
-          )}
+            {showControls && (
+                <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-[#121214]/90 border border-white/10 p-2 rounded-2xl backdrop-blur-md shadow-xl z-[100000]"
+                >
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); setShowControls(true); if (lira) lira.zoom(0.1); }}
+                        className="p-2 hover:bg-white/10 rounded-xl text-white/70 hover:text-white transition-colors"
+                        title="Aumentar (Zoom)"
+                    >
+                        <ZoomIn size={18} />
+                    </button>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); setShowControls(true); if (lira) lira.zoom(-0.1); }}
+                        className="p-2 hover:bg-white/10 rounded-xl text-white/70 hover:text-white transition-colors"
+                        title="Diminuir (Zoom)"
+                    >
+                        <ZoomOut size={18} />
+                    </button>
+                    
+                    <div className="w-px h-4 bg-white/10 mx-1" />
+
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); setShowControls(true); setIsDancing(!isDancing); }}
+                        className={`p-2 hover:bg-white/10 rounded-xl transition-colors ${isDancing ? 'text-lira-pink bg-lira-pink/10' : 'text-white/70 hover:text-white'}`}
+                        title="Modo Dança"
+                    >
+                        <Music size={18} />
+                    </button>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onClose(); }} 
+                        className="p-2 hover:bg-red-500/20 rounded-xl text-white/70 hover:text-red-400 transition-colors"
+                        title="Fechar"
+                    >
+                        <X size={18} />
+                    </button>
+                </motion.div>
+            )}
         </AnimatePresence>
+
 
         {/* Speaking Indicator */}
         {isSpeaking && (

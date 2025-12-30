@@ -71,6 +71,12 @@ export class LiraCore {
             
             // Re-bind resize target manually since app.resizeTo might be stale
             this.app.resizeTo = this.container;
+            
+            // FIX: Force immediate renderer resize to fix "Disappearing Head" (Masking)
+            // when reconnecting to a new DOM container.
+            if (this.app.renderer) {
+                 this.app.renderer.resize(this.container.clientWidth, this.container.clientHeight);
+            }
         }
 
         // Physically move the canvas to the new container
@@ -132,6 +138,10 @@ export class LiraCore {
             if (this.model) {
                 // @ts-ignore
                 this.model.autoUpdate = false; 
+
+                // FIX: Clear previous models to prevent duplication
+                // @ts-ignore
+                this.app.stage.removeChildren();
                 this.app.stage.addChild(this.model);
                 
                 // Save to global
@@ -194,13 +204,12 @@ export class LiraCore {
 
                 if (!this.isDancing) {
                     this.model.y = centerY + Math.sin(this.timePassed * 2) * 5; 
-                    if (this.idleTimer > 10000) { 
-                        this.idleTimer = 0;
-                        if (Math.random() > 0.5) this.isZoomingIn = !this.isZoomingIn;
+                    
+                    // AUTO ZOOM REMOVED: Stabilize scale to respect manual zoom
+                    if (this.originalScale) {
+                         this.model.scale.set(this.originalScale);
+                         this.model.scale.y = this.model.scale.x;
                     }
-                    const targetScale = this.isZoomingIn ? this.originalScale * 1.3 : this.originalScale;
-                    this.model.scale.x += (targetScale - this.model.scale.x) * 0.05;
-                    this.model.scale.y = this.model.scale.x;
                 } else {
                     const beat = this.timePassed * 12;
                     this.model.y = centerY + Math.abs(Math.sin(beat)) * 10;
