@@ -112,7 +112,6 @@ const LiraAppContent = () => {
   const [isReturningUser, setIsReturningUser] = useState(false);
   const [dynamicPersona, setDynamicPersona] = useState(false); // Fix for missing state
   const [showCompanion, setShowCompanion] = useState(false);
-  const [currentEmotion, setCurrentEmotion] = useState('NEUTRAL');
 
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -615,14 +614,6 @@ const LiraAppContent = () => {
         if (abortCtrl.signal.aborted) break;
 
         accumulatedResponse += chunk;
-
-        // 🎭 Emotion Tag Parsing (VTuber Mode)
-        const emotionMatch = accumulatedResponse.match(/\[(HAPPY|SAD|ANGRY|SURPRISE|SHY|NEUTRAL|WINK|SMUG)\]/);
-        if (emotionMatch) {
-          setCurrentEmotion(emotionMatch[1]);
-          accumulatedResponse = accumulatedResponse.replace(emotionMatch[0], '');
-        }
-
         setStreamingText(accumulatedResponse); // Keep for overlays if needed cheap
 
         const now = Date.now();
@@ -772,12 +763,12 @@ const LiraAppContent = () => {
       // Auto TTS Trigger (only if NOT in a voice call, as overlay handles that)
       if (isVoiceEnabled && accumulatedResponse && !abortCtrl.signal.aborted && !isVoiceActive) {
         // Determine voice (reuse logic)
-        const voiceId = localStorage.getItem('lira_premium_voice_id') || 'lira-local';
+        const voiceId = localStorage.getItem('lira_premium_voice_id') || 'xtts-local';
         const isPremium = voiceId !== 'google-pt-BR';
 
         liraVoice.speak(accumulatedResponse, {
           usePremium: isPremium,
-          voiceId: isPremium ? (voiceId === 'xtts-local' ? 'xtts-local' : 'lira-local') : 'google-pt-BR'
+          voiceId: isPremium ? 'xtts-local' : 'google-pt-BR'
         });
       }
 
@@ -1031,7 +1022,7 @@ const LiraAppContent = () => {
         onOpenLegal={() => setIsLegalModalOpen(true)}
         onOpenIris={() => setIsIrisOpen(true)}
         onOpenDiscord={() => setIsDiscordOpen(true)}
-        onOpenGamer={() => setIsGamerOpen(true)}
+        onOpenGamer={() => window.open('/gamer/', '_blank')}
         onOpenDailyQuests={() => setIsDailyQuestsOpen(true)}
         onOpenSupporters={() => setIsDashboardOpen(true)} // Map to dashboard for now
         onOpenAdminPanel={() => setIsAdminPanelOpen(true)}
@@ -1238,10 +1229,10 @@ const LiraAppContent = () => {
           isOpen={isShortcutsOpen}
           onClose={() => setIsShortcutsOpen(false)}
         />
-        <GamerModal
+        {/* <GamerModal
           isOpen={isGamerOpen}
           onClose={() => setIsGamerOpen(false)}
-        />
+        /> */}
         <DailyQuestsModal
           isOpen={isDailyQuestsOpen}
           onClose={() => setIsDailyQuestsOpen(false)}
@@ -1271,7 +1262,6 @@ const LiraAppContent = () => {
           <LiraCompanionWidget
             onClose={() => setShowCompanion(false)}
             isSpeaking={Boolean(streamingText || isVoiceActive)}
-            currentEmotion={currentEmotion}
           />
         )}
 
