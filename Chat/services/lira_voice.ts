@@ -19,6 +19,7 @@ export interface SpeakResult {
 }
 
 export const PREMIUM_VOICES = [
+  { id: 'lira-local', name: 'Lira Local (Anime 18yo)', description: 'Fast & Cute', color: 'from-pink-500 to-rose-500' },
   { id: 'xtts-local', name: 'XTTS v2 (Local GPU)', description: 'Free Neural Voice', color: 'from-emerald-500 to-teal-500' },
   { id: '2RrzVoV9QVqHnD8bujTu', name: 'Lira', description: 'Voz Padrão', color: 'from-pink-500 to-rose-500' },
   { id: 'WtA85syCrJwasGeHGH2p', name: 'Mira', description: 'Oposto', color: 'from-purple-500 to-indigo-500' },
@@ -33,10 +34,10 @@ class LiraVoice {
   private speaking: boolean = false;
   private currentAudio: HTMLAudioElement | null = null;
   private listeners: { onStart?: () => void; onEnd?: () => void }[] = [];
-  
+
   // ♻️ Global Recycled Audio Element (for Autoplay Stability)
   private globalAudio = typeof window !== 'undefined' ? new Audio() : null;
-  
+
   // Audio streaming (for XTTS WAV)
   private audioQueue: ArrayBuffer[] = [];
   private isPlaying = false;
@@ -46,29 +47,29 @@ class LiraVoice {
   private streamVolume = 1.0;
 
   public getAnalyser(): AnalyserNode | null {
-      return this.analyser;
+    return this.analyser;
   }
   public getAudioContext(): AudioContext | null {
-      return this.audioContext;
+    return this.audioContext;
   }
 
   private async ensureAudioContext() {
-     if (!this.audioContext) {
-        // @ts-ignore
-        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        this.analyser = this.audioContext.createAnalyser();
-        this.analyser.fftSize = 256; // Smaller for faster response
-        this.analyser.smoothingTimeConstant = 0.5;
-     }
-     
-     if (this.audioContext.state === 'suspended') {
-        await this.audioContext.resume();
-     }
-     return this.audioContext;
+    if (!this.audioContext) {
+      // @ts-ignore
+      this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      this.analyser = this.audioContext.createAnalyser();
+      this.analyser.fftSize = 256; // Smaller for faster response
+      this.analyser.smoothingTimeConstant = 0.5;
+    }
+
+    if (this.audioContext.state === 'suspended') {
+      await this.audioContext.resume();
+    }
+    return this.audioContext;
   }
 
   public async resumeAudioContext() {
-      await this.ensureAudioContext();
+    await this.ensureAudioContext();
   }
 
   constructor() {
@@ -83,9 +84,9 @@ class LiraVoice {
   private loadVoice() {
     if (!SYNTHESIS) return;
     const voices = SYNTHESIS.getVoices();
-    this.voice = voices.find(v => v.lang === 'pt-BR' && (v.name.includes('Google') || v.name.includes('Francisca'))) 
-              || voices.find(v => v.lang === 'pt-BR') 
-              || voices[0];
+    this.voice = voices.find(v => v.lang === 'pt-BR' && (v.name.includes('Google') || v.name.includes('Francisca')))
+      || voices.find(v => v.lang === 'pt-BR')
+      || voices[0];
   }
 
   getLocalVoices(): SpeechSynthesisVoice[] {
@@ -119,15 +120,15 @@ class LiraVoice {
   public async unlock() {
     console.log("[LiraVoice] 🔓 Unlock requested...");
     try {
-        await this.ensureAudioContext();
-        if (this.audioContext && this.audioContext.state === 'suspended') {
-            await this.audioContext.resume();
-            console.log("[LiraVoice] 🔓 AudioContext Resumed by user gesture.");
-        } else {
-            console.log("[LiraVoice] 🔓 AudioContext already running or missing.");
-        }
+      await this.ensureAudioContext();
+      if (this.audioContext && this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+        console.log("[LiraVoice] 🔓 AudioContext Resumed by user gesture.");
+      } else {
+        console.log("[LiraVoice] 🔓 AudioContext already running or missing.");
+      }
     } catch (e) {
-        console.warn("[LiraVoice] Unlock Error:", e);
+      console.warn("[LiraVoice] Unlock Error:", e);
     }
   }
 
@@ -136,12 +137,12 @@ class LiraVoice {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
-      
+
       const res = await fetch('http://localhost:5002/health', {
         method: 'GET',
         signal: controller.signal
       });
-      
+
       clearTimeout(timeout);
       return res.ok;
     } catch (e) {
@@ -153,70 +154,70 @@ class LiraVoice {
   private audioSourceNode: MediaElementAudioSourceNode | null = null;
 
   private async connectGlobalAudio() {
-      await this.ensureAudioContext();
-      if (!this.globalAudio || !this.audioContext || !this.analyser) return;
+    await this.ensureAudioContext();
+    if (!this.globalAudio || !this.audioContext || !this.analyser) return;
 
-      // Create MediaElementSource ONLY ONCE
-      if (!this.audioSourceNode) {
-          try {
-             this.audioSourceNode = this.audioContext.createMediaElementSource(this.globalAudio);
-             this.audioSourceNode.connect(this.analyser);
-             this.analyser.connect(this.audioContext.destination);
-          } catch (e) {
-             console.warn("Audio Routing Error:", e);
-          }
+    // Create MediaElementSource ONLY ONCE
+    if (!this.audioSourceNode) {
+      try {
+        this.audioSourceNode = this.audioContext.createMediaElementSource(this.globalAudio);
+        this.audioSourceNode.connect(this.analyser);
+        this.analyser.connect(this.audioContext.destination);
+      } catch (e) {
+        console.warn("Audio Routing Error:", e);
       }
+    }
   }
 
   // 🎵 Play a Song/Audio URL through the avatar system
   async playSong(url: string): Promise<boolean> {
-      console.log("[LiraVoice] 🎵 Playing Song:", url);
-      this.stop(); // Stop any current speech
-      
-      if (!this.globalAudio) this.globalAudio = new Audio();
-      await this.connectGlobalAudio();
-      
-      this.globalAudio.crossOrigin = "anonymous";
-      this.globalAudio.src = url;
-      this.globalAudio.volume = 1.0;
-      
-      try {
-          await this.globalAudio.play();
-          this.speaking = true;
-          this.notifyStart();
-          
-          this.globalAudio.onended = () => {
-              this.speaking = false;
-              this.notifyEnd();
-          };
-          return true;
-      } catch (e) {
-          console.error("Song Playback Failed:", e);
-          return false;
-      }
+    console.log("[LiraVoice] 🎵 Playing Song:", url);
+    this.stop(); // Stop any current speech
+
+    if (!this.globalAudio) this.globalAudio = new Audio();
+    await this.connectGlobalAudio();
+
+    this.globalAudio.crossOrigin = "anonymous";
+    this.globalAudio.src = url;
+    this.globalAudio.volume = 1.0;
+
+    try {
+      await this.globalAudio.play();
+      this.speaking = true;
+      this.notifyStart();
+
+      this.globalAudio.onended = () => {
+        this.speaking = false;
+        this.notifyEnd();
+      };
+      return true;
+    } catch (e) {
+      console.error("Song Playback Failed:", e);
+      return false;
+    }
   }
 
   // ✅ Main speak method with failover
   async speak(text: string, options: VoiceOptions = {}): Promise<SpeakResult> {
     console.log("[LiraVoice] 📢 Speak called for:", text.substring(0, 15));
     this.stop();
-    
+
     // 🧹 Deep Cleanup: Remove Emojis, Markdown, and odd symbols to save TTS
     const cleanText = text
-        .replace(/\[\[WIDGET:[\s\S]+?\]\]/g, '') // Remove Widgets (Multiline)
-        .replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '') // Remove Emojis
-        .replace(/[*#`_~\[\]()]/g, '') // Remove Markdown
-        .replace(/\s+/g, ' ')
-        .trim();
+      .replace(/\[\[WIDGET:[\s\S]+?\]\]/g, '') // Remove Widgets (Multiline)
+      .replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '') // Remove Emojis
+      .replace(/[*#`_~\[\]()]/g, '') // Remove Markdown
+      .replace(/\s+/g, ' ')
+      .trim();
 
     if (!cleanText) {
-        console.log("[LiraVoice] 🔇 Empty text (or only widget), skipping speech.");
-        this.notifyEnd();
-        return { ok: true, usedVoiceId: 'none', fallbackUsed: false };
+      console.log("[LiraVoice] 🔇 Empty text (or only widget), skipping speech.");
+      this.notifyEnd();
+      return { ok: true, usedVoiceId: 'none', fallbackUsed: false };
     }
 
     console.log(`[LiraVoice] Speaking: "${cleanText}" (Original: "${text.substring(0, 20)}...")`);
-    
+
     this.notifyStart();
 
     let requestedVoice = options.voiceId || (options.usePremium ? 'xtts-local' : '');
@@ -227,8 +228,8 @@ class LiraVoice {
     if (options.usePremium && requestedVoice) {
       // Check XTTS availability for local voices
       if (requestedVoice === 'xtts-local') {
-        const xttsOk = true; 
-        
+        const xttsOk = true;
+
         if (!xttsOk) {
           console.warn('⚠️ XTTS offline/timeout, falling back to Google TTS');
           usedVoiceId = 'google-pt-BR'; // Signal to use standard voice
@@ -236,41 +237,43 @@ class LiraVoice {
           requestedVoice = ''; // Clear to skip premium attempt
         }
       }
+      // Lira Local is handled by main backend, no separate health check needed
+
 
       // Try premium voice if not failed health check
       if (requestedVoice) {
         try {
           let textToSend = cleanText;
-          
+
           // ✂️ XTTS SAFETY CUT: Limit to ~600 chars to avoid "400 tokens" error and crash
-          if (requestedVoice === 'xtts-local' && textToSend.length > 500) {
-              const safeCut = textToSend.lastIndexOf('.', 500);
-              if (safeCut > 50) {
-                  textToSend = textToSend.substring(0, safeCut + 1);
+          if ((requestedVoice === 'xtts-local' || requestedVoice === 'lira-local') && textToSend.length > 500) {
+            const safeCut = textToSend.lastIndexOf('.', 500);
+            if (safeCut > 50) {
+              textToSend = textToSend.substring(0, safeCut + 1);
+            } else {
+              // If no good punctuation, look for other delimiters or hard cut
+              const spaceCut = textToSend.lastIndexOf(' ', 500);
+              if (spaceCut > 50) {
+                textToSend = textToSend.substring(0, spaceCut) + "...";
               } else {
-                  // If no good punctuation, look for other delimiters or hard cut
-                  const spaceCut = textToSend.lastIndexOf(' ', 500);
-                   if (spaceCut > 50) {
-                      textToSend = textToSend.substring(0, spaceCut) + "...";
-                   } else {
-                      textToSend = textToSend.substring(0, 500) + "...";
-                   }
+                textToSend = textToSend.substring(0, 500) + "...";
               }
-              console.log(`[LiraVoice] ✂️ Truncated huge text for XTTS Safety (${cleanText.length} -> ${textToSend.length} chars)`);
+            }
+            console.log(`[LiraVoice] ✂️ Truncated huge text for XTTS Safety (${cleanText.length} -> ${textToSend.length} chars)`);
           }
 
           // Define Endpoint based on voice type
           let endpoint = `${API_BASE_URL}/api/voice/tts`;
           const headers: HeadersInit = { 'Content-Type': 'application/json' };
-          
+
           if (requestedVoice === 'xtts-local') {
-             // ⚡ DIRECT LOCAL ACCESS (Bypasses Backend to use User's GPU)
-             endpoint = 'http://localhost:5002/tts';
-             console.log('[LiraVoice] ⚡ Routing to Local GPU Driver:', endpoint);
-             // Local server doesn't need auth headers, avoiding CORS preflight complexity
+            // ⚡ DIRECT LOCAL ACCESS (Bypasses Backend to use User's GPU)
+            endpoint = 'http://localhost:5002/tts';
+            console.log('[LiraVoice] ⚡ Routing to Local GPU Driver:', endpoint);
+            // Local server doesn't need auth headers, avoiding CORS preflight complexity
           } else {
-             // Cloud/Backend Voices need Auth
-             Object.assign(headers, getAuthHeaders());
+            // Cloud/Backend Voices need Auth
+            Object.assign(headers, getAuthHeaders());
           }
 
           const res = await fetch(endpoint, {
@@ -283,19 +286,19 @@ class LiraVoice {
 
           if (res.ok) {
             const contentType = res.headers.get('content-type');
-            
+
             // XTTS WAV & ElevenLabs MP3
             if (contentType?.includes('audio/wav') || contentType?.includes('audio/mpeg')) {
               console.log("[LiraVoice] Fetching Audio Buffer...");
               const arrayBuffer = await res.arrayBuffer();
-              
+
               if (arrayBuffer.byteLength === 0) {
-                 throw new Error("Empty audio buffer received");
+                throw new Error("Empty audio buffer received");
               }
 
               console.log(`[LiraVoice] Playing ${arrayBuffer.byteLength} bytes via Web Audio API...`);
               await this.playAudioBuffer(arrayBuffer, options.volume || 1.0);
-              
+
               return { ok: true, usedVoiceId: requestedVoice, fallbackUsed: false };
             }
           }
@@ -315,12 +318,12 @@ class LiraVoice {
       utterance.volume = options.volume || 1.0;
 
       utterance.onstart = () => { this.speaking = true; };
-      utterance.onend = () => { 
-        this.speaking = false; 
+      utterance.onend = () => {
+        this.speaking = false;
         this.notifyEnd();
       };
-      utterance.onerror = () => { 
-        this.speaking = false; 
+      utterance.onerror = () => {
+        this.speaking = false;
         this.notifyEnd();
       };
 
@@ -333,33 +336,33 @@ class LiraVoice {
 
   // 🎵 Play Audio Buffer (Web Audio API)
   private async playAudioBuffer(arrayBuffer: ArrayBuffer, volume: number = 1.0) {
-      await this.ensureAudioContext();
-      if (!this.audioContext) throw new Error("No Audio Context");
+    await this.ensureAudioContext();
+    if (!this.audioContext) throw new Error("No Audio Context");
 
-      const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-      
-      const source = this.audioContext.createBufferSource();
-      source.buffer = audioBuffer;
-      
-      const gainNode = this.audioContext.createGain();
-      gainNode.gain.value = volume;
-      
-      source.connect(gainNode);
-      
-      if (this.analyser) {
-          gainNode.connect(this.analyser);
-          this.analyser.connect(this.audioContext.destination);
-      } else {
-          gainNode.connect(this.audioContext.destination);
-      }
+    const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
 
-      this.speaking = true;
-      source.start(0);
-      
-      source.onended = () => {
-          this.speaking = false;
-          this.notifyEnd();
-      };
+    const source = this.audioContext.createBufferSource();
+    source.buffer = audioBuffer;
+
+    const gainNode = this.audioContext.createGain();
+    gainNode.gain.value = volume;
+
+    source.connect(gainNode);
+
+    if (this.analyser) {
+      gainNode.connect(this.analyser);
+      this.analyser.connect(this.audioContext.destination);
+    } else {
+      gainNode.connect(this.audioContext.destination);
+    }
+
+    this.speaking = true;
+    source.start(0);
+
+    source.onended = () => {
+      this.speaking = false;
+      this.notifyEnd();
+    };
   }
 
   // 🎵 Streaming audio playback (XTTS WAV)
@@ -393,7 +396,7 @@ class LiraVoice {
 
   private playNextChunk() {
     if (this.isPlaying || this.audioQueue.length === 0 || !this.audioContext) return;
-    
+
     this.isPlaying = true;
     const chunk = this.audioQueue.shift()!;
 
@@ -405,27 +408,27 @@ class LiraVoice {
         const source = this.audioContext.createBufferSource();
         const gainNode = this.audioContext.createGain();
         gainNode.gain.value = this.streamVolume;
-        
+
         source.buffer = audioBuffer;
         source.connect(gainNode);
 
         // Connect Graph based on Analyser presence
         if (this.analyser) {
-            gainNode.connect(this.analyser);
-            // Ensure destination connection only if not already connected (implicit, but safer to just reconnect)
-            // Ideally, we connect analyser to destination ONCE in ensureAudioContext, not every chunk.
-            // But doing it here is safe in WebAudio (idempotent).
-            this.analyser.connect(this.audioContext.destination);
+          gainNode.connect(this.analyser);
+          // Ensure destination connection only if not already connected (implicit, but safer to just reconnect)
+          // Ideally, we connect analyser to destination ONCE in ensureAudioContext, not every chunk.
+          // But doing it here is safe in WebAudio (idempotent).
+          this.analyser.connect(this.audioContext.destination);
         } else {
-            gainNode.connect(this.audioContext.destination);
+          gainNode.connect(this.audioContext.destination);
         }
-        
+
         const now = this.audioContext.currentTime;
         const startTime = Math.max(now, this.nextStartTime);
-        
+
         source.start(startTime);
         this.nextStartTime = startTime + audioBuffer.duration;
-        
+
         source.onended = () => {
           this.isPlaying = false;
           this.playNextChunk();
@@ -436,7 +439,7 @@ class LiraVoice {
         // We must skip this chunk and continue, otherwise the queue hangs.
         // console.warn("LiraVoice: Chunk decode failed (skipping)", err); 
         this.isPlaying = false;
-        this.playNextChunk(); 
+        this.playNextChunk();
       }
     );
   }
@@ -452,9 +455,9 @@ class LiraVoice {
       this.globalAudio.currentTime = 0; // Reset position
     }
     if (this.audioContext) {
-        try {
-            this.audioContext.suspend().catch(() => {});
-        } catch {}
+      try {
+        this.audioContext.suspend().catch(() => { });
+      } catch { }
     }
     if (SYNTHESIS) {
       SYNTHESIS.cancel();

@@ -2,6 +2,9 @@ import express from 'express';
 import dotenv from 'dotenv';
 import { Readable } from 'stream';
 import { requireAuth } from '../middlewares/authMiddleware.js';
+import path from 'path';
+import fs from 'fs';
+import { spawn } from 'child_process';
 
 dotenv.config();
 
@@ -27,24 +30,72 @@ router.post('/tts', async (req, res) => {
 
     const textToSpeak = cleanText.length > 0 ? cleanText : text;
 
+    // 🟢 Lira Local (Edge-TTS)
+    if (voiceId === 'lira-local') {
+      const pythonScript = path.join(process.cwd(), 'python', 'tts_engine.py');
+
+      // 🐧 Cross-Platform Command
+      // Windows uses 'python', Linux/Mac uses 'python3'
+      const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
+
+      // Spawn python process with --generate-only
+      const pyProcess = spawn(pythonCommand, [pythonScript, textToSpeak, '--generate-only']);
+
+      let audioPath = '';
+
+      pyProcess.stdout.on('data', (data) => {
+        audioPath += data.toString().trim();
+      });
+
+      pyProcess.stderr.on('data', (data) => {
+        console.error('[TTS Engine Error]', data.toString());
+      });
+
+      pyProcess.on('close', (code) => {
+        if (code !== 0 || !audioPath) {
+          return res.status(500).json({ error: 'TTS Generation Failed' });
+        }
+
+        // Read file and send
+        try {
+          if (fs.existsSync(audioPath)) {
+            const buffer = fs.readFileSync(audioPath);
+
+            res.setHeader('Content-Type', 'audio/mpeg');
+            // res.setHeader('Content-Length', buffer.length); // Optional, chunked transfer is fine
+            res.send(buffer);
+
+            // Cleanup
+            fs.unlinkSync(audioPath);
+          } else {
+            res.status(500).json({ error: 'Audio file not found' });
+          }
+        } catch (err) {
+          console.error(err);
+          res.status(500).json({ error: 'Error reading audio file' });
+        }
+      });
+      return;
+    }
+
     // 🟢 XTTS Local Support
     if (voiceId === 'xtts-local') {
       try {
         const xttsRes = await fetch('http://127.0.0.1:5002/tts', {
-           method: 'POST',
-           headers: {'Content-Type': 'application/json'},
-           body: JSON.stringify({ text: textToSpeak, language: 'pt' })
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: textToSpeak, language: 'pt' })
         });
         if (!xttsRes.ok) throw new Error(await xttsRes.text());
-        
+
         // BUFFERING PROXY (More robust than stream piping)
         const arrayBuffer = await xttsRes.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        
+
         res.setHeader('Content-Type', 'audio/wav');
         res.setHeader('Content-Length', buffer.length);
         res.send(buffer);
-        
+
         return;
       } catch (e) {
         console.error('XTTS Backend Error:', e);

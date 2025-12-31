@@ -50,7 +50,7 @@ app.use((req, res, next) => {
   if (origin) {
     res.header("Access-Control-Allow-Origin", origin);
   }
-  
+
   res.header("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS, PATCH");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
   res.header("Access-Control-Allow-Credentials", "true");
@@ -92,14 +92,14 @@ app.use('/api/images', imagesRoutes);
 const songsPath = path.join(__dirname, 'songs');
 app.use('/songs', express.static(songsPath));
 app.get('/api/songs', (req, res) => {
-    import('fs').then(fs => {
-        fs.readdir(songsPath, (err, files) => {
-            if (err) return res.status(500).json({ error: 'Failed to list songs' });
-            // Filter audio files
-            const audioFiles = files.filter(f => f.endsWith('.mp3') || f.endsWith('.wav'));
-            res.json(audioFiles);
-        });
+  import('fs').then(fs => {
+    fs.readdir(songsPath, (err, files) => {
+      if (err) return res.status(500).json({ error: 'Failed to list songs' });
+      // Filter audio files
+      const audioFiles = files.filter(f => f.endsWith('.mp3') || f.endsWith('.wav'));
+      res.json(audioFiles);
     });
+  });
 });
 
 app.use('/api/feedback', feedbackRoutes);
@@ -121,17 +121,17 @@ console.log('[DEBUG] All routes mounted successfully');
 // 📦 SERVE FRONTEND IN PRODUCTION
 // This handles SPA routing (like /companion) by falling back to index.html
 if (process.env.NODE_ENV === 'production' || process.env.SERVE_STATIC === 'true') {
-    const distPath = path.join(__dirname, '..', 'dist');
-    console.log(`[STATIC] Serving frontend from: ${distPath}`);
-    
-    // Serve static files
-    app.use(express.static(distPath));
+  const distPath = path.join(__dirname, '..', 'dist');
+  console.log(`[STATIC] Serving frontend from: ${distPath}`);
 
-    // SPA Fallback for unknown routes (e.g. /companion, /settings)
-    app.get('*', (req, res) => {
-        if (req.url.startsWith('/api')) return res.status(404).json({ error: 'API route not found' });
-        res.sendFile(path.join(distPath, 'index.html'));
-    });
+  // Serve static files
+  app.use(express.static(distPath));
+
+  // SPA Fallback for unknown routes (e.g. /companion, /settings)
+  app.get('*', (req, res) => {
+    if (req.url.startsWith('/api')) return res.status(404).json({ error: 'API route not found' });
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
 }
 
 // 🛡️ GLOBAL ERROR HANDLER
@@ -148,60 +148,68 @@ app.listen(PORT, '0.0.0.0', async () => {
   console.log(`[SYSTEM] Server running on port ${PORT}`);
   console.log(`[SYSTEM] Environment: ${process.env.NODE_ENV}`);
   console.log(`[SYSTEM] Frontend URL: ${FRONTEND_URL}`);
-  
+
   // Jobs
   // TODO: Migrate cleanupExpiredBans to support PostgreSQL
   // cleanupExpiredBans();
-  
+
   // Start PC Controller Service
   import('./services/pcControllerService.js').then(service => {
-      service.pcController.start();
+    service.pcController.start();
   }).catch(err => console.error('Failed to load PC Controller Service:', err));
-  
+
   // Discord Bot
   if (process.env.DISCORD_TOKEN) {
-      console.log('[STARTUP] Starting Discord Bot...');
-      await discordService.start().catch(err => console.error('Discord Bot require attention:', err.message));
+    console.log('[STARTUP] Starting Discord Bot...');
+    await discordService.start().catch(err => console.error('Discord Bot require attention:', err.message));
   }
 
   // Start Local RPC
   if (process.env.DISCORD_CLIENT_ID || process.env.DISCORD_APPLICATION_ID) {
-      import('./services/rpcService.js').then(({ rpcService }) => {
-          rpcService.start();
-      }).catch(err => console.error('Failed to load RPC:', err));
+    import('./services/rpcService.js').then(({ rpcService }) => {
+      rpcService.start();
+    }).catch(err => console.error('Failed to load RPC:', err));
+  }
+
+  // Start Twitch Integration
+  if (process.env.TWITCH_OAUTH_TOKEN && process.env.TWITCH_CHANNEL) {
+    import('./services/twitchService.js').then(({ twitchService }) => {
+      console.log('[STARTUP] Starting Twitch Integration...');
+      twitchService.connect();
+    }).catch(err => console.error('Failed to load Twitch Service:', err));
   }
 });
 
 // --- Start Python Game Bridge ---
 import { spawn } from 'child_process';
 const startGameBridge = () => {
-    console.log('[STARTUP] Launching Game Bridge (Python)...');
-    
-    const bridgePath = path.join(__dirname, 'python', 'game_bridge.py');
-    console.log(`[BRIDGE] Target: ${bridgePath}`);
+  console.log('[STARTUP] Launching Game Bridge (Python)...');
 
-    const pyProcess = spawn('python', [bridgePath], {
-        cwd: __dirname,
-        stdio: 'inherit',
-        shell: true 
-    });
+  const bridgePath = path.join(__dirname, 'python', 'game_bridge.py');
+  console.log(`[BRIDGE] Target: ${bridgePath}`);
 
-    pyProcess.on('error', (err) => {
-        console.error('[BRIDGE] SPAWN ERROR:', err);
-    });
-     
-    pyProcess.on('close', (code) => {
-        console.log(`[BRIDGE] Process exited with code ${code}`);
-    });
+  const pyProcess = spawn('python', [bridgePath], {
+    cwd: __dirname,
+    stdio: 'inherit',
+    shell: true
+  });
+
+  pyProcess.on('error', (err) => {
+    console.error('[BRIDGE] SPAWN ERROR:', err);
+  });
+
+  pyProcess.on('close', (code) => {
+    console.log(`[BRIDGE] Process exited with code ${code}`);
+  });
 };
 
 // Só inicia o Game Bridge se explicitamente ativado ou se estiver em dev (e não desativado)
 const shouldStartBridge = process.env.ENABLE_GAME_BRIDGE === 'true';
 
 if (shouldStartBridge) {
-    startGameBridge();
+  startGameBridge();
 } else {
-    console.log('[STARTUP] Game Bridge disabled (ENABLE_GAME_BRIDGE != true). Running in headless/cloud mode.');
+  console.log('[STARTUP] Game Bridge disabled (ENABLE_GAME_BRIDGE != true). Running in headless/cloud mode.');
 }
 // Prevent crash on unhandled errors
 process.on('uncaughtException', (err) => {

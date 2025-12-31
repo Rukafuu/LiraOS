@@ -772,12 +772,12 @@ const LiraAppContent = () => {
       // Auto TTS Trigger (only if NOT in a voice call, as overlay handles that)
       if (isVoiceEnabled && accumulatedResponse && !abortCtrl.signal.aborted && !isVoiceActive) {
         // Determine voice (reuse logic)
-        const voiceId = localStorage.getItem('lira_premium_voice_id') || 'xtts-local';
+        const voiceId = localStorage.getItem('lira_premium_voice_id') || 'lira-local';
         const isPremium = voiceId !== 'google-pt-BR';
 
         liraVoice.speak(accumulatedResponse, {
           usePremium: isPremium,
-          voiceId: isPremium ? 'xtts-local' : 'google-pt-BR'
+          voiceId: isPremium ? (voiceId === 'xtts-local' ? 'xtts-local' : 'lira-local') : 'google-pt-BR'
         });
       }
 
