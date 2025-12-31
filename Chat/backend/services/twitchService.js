@@ -1,114 +1,59 @@
-import tmi from 'tmi.js';
-import fs from 'fs';
-import path from 'path';
-import { GoogleGenAI } from '@google/genai';
-import dotenv from 'dotenv';
-dotenv.config();
+import { twitchInterrupts } from '../modules/gamer/twitch/interrupts.js';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const genAI = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }) : null;
-
-// Output paths for OBS
-const OUTPUT_DIR = path.join(process.cwd(), 'obs_output');
-const CHAT_FILE = path.join(OUTPUT_DIR, 'current_chat.txt');
-const RESPONSE_FILE = path.join(OUTPUT_DIR, 'lira_response.txt');
-
-// Ensure output directory exists
-if (!fs.existsSync(OUTPUT_DIR)) {
-    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-}
-
-export class TwitchService {
-    constructor() {
-        this.client = null;
-        this.isConnected = false;
-    }
-
-    async connect() {
-        if (this.isConnected) return;
-
-        const options = {
-            options: { debug: true },
-            connection: {
-                reconnect: true,
-                secure: true
-            },
-            identity: {
-                username: process.env.TWITCH_USERNAME,
-                password: process.env.TWITCH_OAUTH_TOKEN
-            },
-            channels: [process.env.TWITCH_CHANNEL]
-        };
-
-        if (!options.identity.username || !options.identity.password || !options.channels[0]) {
-            console.warn('[Twitch] Missing credentials in .env. Twitch integration disabled.');
-            return;
-        }
-
-        this.client = new tmi.Client(options);
-
-        this.client.on('message', (channel, tags, message, self) => {
-            if (self) return;
-            // Pass full tags for role detection
-            this.handleMessage(tags, message);
-        });
-
-        this.client.on('connected', (address, port) => {
-            console.log(`[Twitch] Connected to ${address}:${port}`);
-            this.isConnected = true;
-            this.writeToObs('SYSTEM', 'LiraOS Connected to Twitch!');
-        });
-
-        try {
-            await this.client.connect();
-        } catch (err) {
-            console.error('[Twitch] Connection failed:', err);
-        }
-    }
+// ...
 
     async handleMessage(tags, message) {
-        const username = tags['display-name'] || tags.username || 'Viewer';
-        const isSub = tags.subscriber === true;
-        const isMod = tags.mod === true;
-        const isVip = tags.vip === true;
-        const bits = tags.bits ? parseInt(tags.bits) : 0;
+    const username = tags['display-name'] || tags.username || 'Viewer';
+    const isSub = tags.subscriber === true;
+    const isMod = tags.mod === true;
+    const isVip = tags.vip === true;
+    const bits = tags.bits ? parseInt(tags.bits) : 0;
 
-        console.log(`[Twitch] ${username} (Sub:${isSub}|Bits:${bits}): ${message}`);
-        this.writeToObs(username, message);
+    // INJECT INTO GAMER BRAIN (No cooldowns, pure raw feed)
+    // High priority if Sub, Mod, Vip or Bits
+    const isPriorityUser = isSub || isMod || isVip || bits > 0;
+    try {
+        twitchInterrupts.ingest(username, message, isPriorityUser);
+    } catch (e) {
+        // Should not block main thread
+    }
 
-        if (!genAI) return;
+    console.log(`[Twitch] ${username} (Sub:${isSub}|Bits:${bits}): ${message}`);
+    this.writeToObs(username, message);
 
-        // --- Streamer Logic ---
-        const now = Date.now();
-        const COOLDOWN = 15000; // 15s global cooldown to "not fry"
-        const timeSinceLast = now - (this.lastReplyTime || 0);
+    if (!genAI) return;
 
-        // Priority Calculation
-        let isPriority = false;
-        if (bits > 0 || isSub || isMod || isVip) isPriority = true;
+    // --- Streamer Logic ---
+    const now = Date.now();
+    const COOLDOWN = 15000; // 15s global cooldown to "not fry"
+    const timeSinceLast = now - (this.lastReplyTime || 0);
 
-        // Filtering
-        if (isPriority) {
-            // Priority users: Reduced cooldown (5s) + Always pass RNG
-            if (timeSinceLast < 5000) return;
-        } else {
-            // Normal users: Strict cooldown (15s) + 20% Chance
-            if (timeSinceLast < COOLDOWN) return;
-            if (Math.random() > 0.2) return; // 80% chance to ignore
-        }
+    // Priority Calculation
+    let isPriority = false;
+    if (bits > 0 || isSub || isMod || isVip) isPriority = true;
 
-        this.lastReplyTime = now;
+    // Filtering
+    if (isPriority) {
+        // Priority users: Reduced cooldown (5s) + Always pass RNG
+        if (timeSinceLast < 5000) return;
+    } else {
+        // Normal users: Strict cooldown (15s) + 20% Chance
+        if (timeSinceLast < COOLDOWN) return;
+        if (Math.random() > 0.2) return; // 80% chance to ignore
+    }
 
-        try {
-            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+    this.lastReplyTime = now;
 
-            // Context Builder
-            let userContext = "Viewer";
-            if (isSub) userContext = "Subscriber";
-            if (isMod) userContext = "Moderator";
-            if (bits > 0) userContext = `Supporter (${bits} bits)`;
+    try {
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
-            const prompt = `
+        // Context Builder
+        let userContext = "Viewer";
+        if (isSub) userContext = "Subscriber";
+        if (isMod) userContext = "Moderator";
+        if (bits > 0) userContext = `Supporter (${bits} bits)`;
+
+        const prompt = `
             [SYSTEM]
             You are Lira, a virtual streamer (VTuber) on Twitch.
             User: ${username} (${userContext})
@@ -125,59 +70,59 @@ export class TwitchService {
             Respond as Lira:
             `;
 
-            const result = await model.generateContent(prompt);
-            const response = result.response.text();
+        const result = await model.generateContent(prompt);
+        const response = result.response.text();
 
-            const cleanText = response.replace(/\[(HAPPY|SAD|ANGRY|SURPRISE|SHY|NEUTRAL|WINK|SMUG)\]/g, '').trim();
-            await this.speak(cleanText || response);
+        const cleanText = response.replace(/\[(HAPPY|SAD|ANGRY|SURPRISE|SHY|NEUTRAL|WINK|SMUG)\]/g, '').trim();
+        await this.speak(cleanText || response);
 
-        } catch (error) {
-            console.error('[Twitch] AI Generation Error:', error);
-        }
+    } catch (error) {
+        console.error('[Twitch] AI Generation Error:', error);
     }
+}
 
-    writeToObs(username, message) {
-        const text = `${username}: ${message}`;
-        try {
-            // Write current chat message
-            fs.writeFileSync(CHAT_FILE, text);
+writeToObs(username, message) {
+    const text = `${username}: ${message}`;
+    try {
+        // Write current chat message
+        fs.writeFileSync(CHAT_FILE, text);
 
-            // Append to a log if needed? For now just overwrite for "Current Message" caption
-            // Or maybe we want a rolling log?
-            // Let's stick to "Current Chat" for now as per "AI Waifu" style
-        } catch (e) {
-            console.error('[Twitch] Failed to write to OBS file:', e);
-        }
+        // Append to a log if needed? For now just overwrite for "Current Message" caption
+        // Or maybe we want a rolling log?
+        // Let's stick to "Current Chat" for now as per "AI Waifu" style
+    } catch (e) {
+        console.error('[Twitch] Failed to write to OBS file:', e);
     }
+}
 
     // Method for Lira to speak (send to chat + OBS response)
     async speak(text) {
-        if (!this.client || !this.isConnected) return;
+    if (!this.client || !this.isConnected) return;
 
-        try {
-            const channel = process.env.TWITCH_CHANNEL;
-            await this.client.say(channel, text);
-            fs.writeFileSync(RESPONSE_FILE, text);
+    try {
+        const channel = process.env.TWITCH_CHANNEL;
+        await this.client.say(channel, text);
+        fs.writeFileSync(RESPONSE_FILE, text);
 
-            // Trigger TTS
-            const pythonScript = path.join(process.cwd(), 'python', 'tts_engine.py');
-            // Use spawn to run python script
-            const { spawn } = await import('child_process');
+        // Trigger TTS
+        const pythonScript = path.join(process.cwd(), 'python', 'tts_engine.py');
+        // Use spawn to run python script
+        const { spawn } = await import('child_process');
 
-            // Sanitize text for command line (basic)
-            // But better to just pass as arg.
+        // Sanitize text for command line (basic)
+        // But better to just pass as arg.
 
-            console.log(`[TTS] Speaking: ${text}`);
-            const ttsProcess = spawn('python', [pythonScript, text]);
+        console.log(`[TTS] Speaking: ${text}`);
+        const ttsProcess = spawn('python', [pythonScript, text]);
 
-            ttsProcess.stderr.on('data', (data) => {
-                console.error(`[TTS Error]: ${data}`);
-            });
+        ttsProcess.stderr.on('data', (data) => {
+            console.error(`[TTS Error]: ${data}`);
+        });
 
-        } catch (e) {
-            console.error('[Twitch] Failed to send message:', e);
-        }
+    } catch (e) {
+        console.error('[Twitch] Failed to send message:', e);
     }
+}
 }
 
 export const twitchService = new TwitchService();

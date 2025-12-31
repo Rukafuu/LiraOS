@@ -220,7 +220,7 @@ class LiraVoice {
 
     this.notifyStart();
 
-    let requestedVoice = options.voiceId || (options.usePremium ? 'xtts-local' : '');
+    let requestedVoice = options.voiceId || (options.usePremium ? 'lira-local' : '');
     let usedVoiceId = requestedVoice;
     let fallbackUsed = false;
 

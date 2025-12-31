@@ -1,0 +1,15 @@
+GAME: Minecraft
+OBJECTIVE: Survive, Build, Explore.
+
+KEY ENTITIES:
+- Creeper: Green, explodes. Run away or hit-and-run.
+- Zombie: Green skin, burns in sun. Easy target.
+- Skeleton: Shoots arrows. Hide or strafe.
+- Diamond: Light blue ore. MINE IT IMMEDIATELY.
+- Wood: Brown logs. Break to craft.
+
+STRATEGY:
+- Night is dangerous. Build shelter or dig hole.
+- Food is essential. Kill pigs/cows or eat bread.
+- If low health, eat.
+- If see deep cave, place torches.

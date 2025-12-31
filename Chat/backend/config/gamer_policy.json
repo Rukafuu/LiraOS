@@ -1,0 +1,44 @@
+{
+  "policyVersion": "1.0",
+  "globalKillSwitch": "F10",
+  "safetyRules": {
+    "visualOnly": true,
+    "humanizedInput": true,
+    "minReactionTimeMs": 150,
+    "maxAPM": 300
+  },
+  "gameCategories": {
+    "whitelist": [
+      "minecraft",
+      "honkai",
+      "stardew_valley",
+      "visual_novel_generic",
+      "notepad_adventure"
+    ],
+    "greylist": [
+      "osu",
+      "genshin_impact"
+    ],
+    "blacklist": [
+      "valorant",
+      "csgo",
+      "league_of_legends",
+      "apex_legends",
+      "fortnite"
+    ]
+  },
+  "inputAllowList": [
+    "keyboard_press",
+    "keyboard_hold",
+    "mouse_move",
+    "mouse_click_left",
+    "mouse_click_right",
+    "gamepad_button",
+    "gamepad_stick"
+  ],
+  "forbiddenInputs": [
+    "memory_write",
+    "dll_inject",
+    "packet_send"
+  ]
+}
