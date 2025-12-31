@@ -66,16 +66,16 @@ const LiraAppContent = () => {
   // Handle OAuth Callback on Load
   useEffect(() => {
     const checkOAuth = async () => {
-       const success = await handleOAuthCallback();
-       if (success) {
-          window.history.replaceState({}, document.title, window.location.pathname);
-          const user = getCurrentUser();
-          setIsLoggedIn(true);
-          // If fresh user (loginCount <= 1), show onboarding
-          if (user && user.loginCount <= 1) {
-              setShowOnboarding(true);
-          }
-       }
+      const success = await handleOAuthCallback();
+      if (success) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        const user = getCurrentUser();
+        setIsLoggedIn(true);
+        // If fresh user (loginCount <= 1), show onboarding
+        if (user && user.loginCount <= 1) {
+          setShowOnboarding(true);
+        }
+      }
     };
     checkOAuth();
   }, []);
@@ -85,10 +85,10 @@ const LiraAppContent = () => {
   const [memories, setMemories] = useState<Memory[]>([]);
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
-     if (typeof window !== 'undefined') {
-        return window.innerWidth >= 768;
-     }
-     return false;
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 768;
+    }
+    return false;
   });
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -110,21 +110,22 @@ const LiraAppContent = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const [isReturningUser, setIsReturningUser] = useState(false);
-    const [dynamicPersona, setDynamicPersona] = useState(false); // Fix for missing state
+  const [dynamicPersona, setDynamicPersona] = useState(false); // Fix for missing state
   const [showCompanion, setShowCompanion] = useState(false);
-  
+  const [currentEmotion, setCurrentEmotion] = useState('NEUTRAL');
+
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(() => {
-     if (typeof window !== 'undefined') {
-       return localStorage.getItem('lira_voice_enabled') === 'true';
-     }
-     return false;
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('lira_voice_enabled') === 'true';
+    }
+    return false;
   });
 
   const handleToggleVoice = () => {
-      const newVal = !isVoiceEnabled;
-      setIsVoiceEnabled(newVal);
-      localStorage.setItem('lira_voice_enabled', String(newVal));
-      addToast(newVal ? 'Read Aloud Enabled 🔊' : 'Read Aloud Disabled 🔇', 'info');
+    const newVal = !isVoiceEnabled;
+    setIsVoiceEnabled(newVal);
+    localStorage.setItem('lira_voice_enabled', String(newVal));
+    addToast(newVal ? 'Read Aloud Enabled 🔊' : 'Read Aloud Disabled 🔇', 'info');
   };
 
   const { stats, addXp, increaseBond, setUsername, activePersonaId, setActivePersonaId, unlockedPersonas, personas, addCoins } = useGamification();
@@ -136,7 +137,7 @@ const LiraAppContent = () => {
   // Mood Ticker
   useEffect(() => {
     const timer = setInterval(() => {
-        setMoodState(prev => updateMood(prev, { type: 'TICK' }));
+      setMoodState(prev => updateMood(prev, { type: 'TICK' }));
     }, 20000); // 20s tick
     return () => clearInterval(timer);
   }, []);
@@ -148,34 +149,34 @@ const LiraAppContent = () => {
   const { currentTheme, setTheme } = useTheme();
 
   const handleGodMode = () => {
-      if (isGodMode) return;
-      addCoins(9999);
-      setIsGodMode(true);
-      addToast('GOD MODE ENABLED: Unlimited Power!', 'success');
-      const audio = new Audio('https://www.myinstants.com/media/sounds/level-up-sound-effect.mp3'); 
-      audio.volume = 0.2;
-      audio.play().catch(() => {});
-      setTimeout(() => setIsGodMode(false), 5000);
+    if (isGodMode) return;
+    addCoins(9999);
+    setIsGodMode(true);
+    addToast('GOD MODE ENABLED: Unlimited Power!', 'success');
+    const audio = new Audio('https://www.myinstants.com/media/sounds/level-up-sound-effect.mp3');
+    audio.volume = 0.2;
+    audio.play().catch(() => { });
+    setTimeout(() => setIsGodMode(false), 5000);
   };
 
   const { isBarrelRoll, isMatrixMode } = useKeyboardManager({
-      onNewChat: () => {
-        createNewChat();
-        addToast('New conversation created', 'info');
-      },
-      onToggleSidebar: () => setIsSidebarOpen(prev => !prev),
-      onOpenSettings: () => setIsSettingsOpen(true),
-      onOpenShortcuts: () => setIsShortcutsOpen(true),
-      onCloseModals: () => {
-          setIsSettingsOpen(false);
-          setIsDashboardOpen(false);
-          setIsStoreOpen(false);
-          setIsShortcutsOpen(false);
-          setIsCookieModalOpen(false);
-          setIsGamerOpen(false);
-          setIsDailyQuestsOpen(false);
-      },
-      onGodMode: handleGodMode
+    onNewChat: () => {
+      createNewChat();
+      addToast('New conversation created', 'info');
+    },
+    onToggleSidebar: () => setIsSidebarOpen(prev => !prev),
+    onOpenSettings: () => setIsSettingsOpen(true),
+    onOpenShortcuts: () => setIsShortcutsOpen(true),
+    onCloseModals: () => {
+      setIsSettingsOpen(false);
+      setIsDashboardOpen(false);
+      setIsStoreOpen(false);
+      setIsShortcutsOpen(false);
+      setIsCookieModalOpen(false);
+      setIsGamerOpen(false);
+      setIsDailyQuestsOpen(false);
+    },
+    onGodMode: handleGodMode
   });
 
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -187,7 +188,7 @@ const LiraAppContent = () => {
 
     window.addEventListener('offline', handleOffline);
     window.addEventListener('online', handleOnline);
-    
+
     return () => {
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('online', handleOnline);
@@ -201,7 +202,7 @@ const LiraAppContent = () => {
         if (response.ok) {
           setBackendStatus('online');
         } else if (response.status === 503) {
-             setIsOffline(true); // Trigger maintenance screen on 503
+          setIsOffline(true); // Trigger maintenance screen on 503
         } else {
           setBackendStatus('offline');
         }
@@ -215,7 +216,7 @@ const LiraAppContent = () => {
   }, []);
 
   if (isOffline) {
-      return <MaintenanceScreen />;
+    return <MaintenanceScreen />;
   }
 
   useEffect(() => {
@@ -248,12 +249,12 @@ const LiraAppContent = () => {
             refreshToken,
             expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000
           }));
-        } catch {}
+        } catch { }
         // Clean URL
         const cleanUrl = window.location.origin + window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
       }
-    } catch {}
+    } catch { }
     if (currentUser && authenticated) {
       setUsername(currentUser.username);
       setIsLoggedIn(true);
@@ -272,7 +273,7 @@ const LiraAppContent = () => {
             if (typeof s?.isSidebarOpen === 'boolean') setIsSidebarOpen(s.isSidebarOpen);
             if (s?.themeId) setTheme(s.themeId);
           }
-        } catch {}
+        } catch { }
       })();
     } else {
       setIsLoginOpen(false);
@@ -282,21 +283,21 @@ const LiraAppContent = () => {
   useEffect(() => {
     if (!isLoggedIn) return;
     const currentUser = getCurrentUser();
-    
+
     // Auto-Show Companion if Voice Call starts
     if (isVoiceActive) {
-        setShowCompanion(true);
-        // Force layout refresh to wake up Lira
-        setTimeout(() => window.dispatchEvent(new Event('resize')), 500);
+      setShowCompanion(true);
+      // Force layout refresh to wake up Lira
+      setTimeout(() => window.dispatchEvent(new Event('resize')), 500);
     }
 
     const userId = currentUser?.id;
     (async () => {
       try {
         if (userId) {
-           const useFastAuth = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_USE_FASTAPI_AUTH) === '1';
-           const url = `${API_BASE_URL}/api/chat/sessions`;
-           const r = await fetch(url, { headers: getAuthHeaders() });
+          const useFastAuth = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_USE_FASTAPI_AUTH) === '1';
+          const url = `${API_BASE_URL}/api/chat/sessions`;
+          const r = await fetch(url, { headers: getAuthHeaders() });
           if (r.ok) {
             const list = await r.json();
             if (Array.isArray(list) && list.length > 0) {
@@ -311,11 +312,11 @@ const LiraAppContent = () => {
                   if (Array.isArray(parsed) && parsed.length > 0) {
                     setSessions(parsed);
                     setCurrentSessionId(parsed[0].id || null);
-                  await fetch(`${API_BASE_URL}/api/chat/sessions`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-                    body: JSON.stringify({ userId, sessions: parsed })
-                  }).catch(() => {});
+                    await fetch(`${API_BASE_URL}/api/chat/sessions`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+                      body: JSON.stringify({ userId, sessions: parsed })
+                    }).catch(() => { });
                   } else {
                     setSessions([]);
                     setCurrentSessionId(null);
@@ -337,7 +338,7 @@ const LiraAppContent = () => {
                       recovered = arr;
                       break;
                     }
-                  } catch {}
+                  } catch { }
                 }
                 if (recovered.length > 0) {
                   setSessions(recovered);
@@ -346,7 +347,7 @@ const LiraAppContent = () => {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                     body: JSON.stringify({ userId, sessions: recovered })
-                  }).catch(() => {});
+                  }).catch(() => { });
                 } else {
                   setSessions([]);
                   setCurrentSessionId(null);
@@ -355,7 +356,7 @@ const LiraAppContent = () => {
             }
           }
         }
-      } catch {}
+      } catch { }
     })();
     (async () => {
       const serverMemories = await fetchMemories(userId);
@@ -374,7 +375,7 @@ const LiraAppContent = () => {
               headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
               body: JSON.stringify({ userId, memories: arr })
             });
-          } catch {}
+          } catch { }
         } else {
           // search any backup keys
           const keys = Object.keys(localStorage);
@@ -390,10 +391,10 @@ const LiraAppContent = () => {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
                   body: JSON.stringify({ userId, memories: arr })
-                }).catch(() => {});
+                }).catch(() => { });
                 break;
               }
-            } catch {}
+            } catch { }
           }
         }
       }
@@ -416,7 +417,7 @@ const LiraAppContent = () => {
         }))
       }))
     }));
-    
+
     // Only save to LocalStorage if NOT logged in (Guest Mode)
     // Logged in users save to backend via explicit calls in handleSendMessage/triggerAIResponse
     if (!userId) {
@@ -444,23 +445,23 @@ const LiraAppContent = () => {
     setIsBooted(true);
     const hasSeenOnboarding = localStorage.getItem(`lira_onboarding_seen_${userId}`);
     if (!hasSeenOnboarding) {
-       setShowOnboarding(true);
+      setShowOnboarding(true);
     }
   };
 
   const handleOnboardingComplete = () => {
-     setShowOnboarding(false);
-     const currentUser = getCurrentUser();
-     if (currentUser?.id) {
-       localStorage.setItem(`lira_onboarding_seen_${currentUser.id}`, 'true');
-     }
-     addToast('Welcome to LiraOS!', 'success');
+    setShowOnboarding(false);
+    const currentUser = getCurrentUser();
+    if (currentUser?.id) {
+      localStorage.setItem(`lira_onboarding_seen_${currentUser.id}`, 'true');
+    }
+    addToast('Welcome to LiraOS!', 'success');
   };
 
   const handleCookieSave = (preferences: CookiePreferences) => {
-     localStorage.setItem(COOKIE_CONSENT_KEY, JSON.stringify(preferences));
-     setIsCookieModalOpen(false);
-     addToast('Preferences saved', 'success');
+    localStorage.setItem(COOKIE_CONSENT_KEY, JSON.stringify(preferences));
+    setIsCookieModalOpen(false);
+    addToast('Preferences saved', 'success');
   };
 
   const createNewChat = () => {
@@ -484,7 +485,7 @@ const LiraAppContent = () => {
     const currentUser = getCurrentUser();
     const userId = currentUser?.id;
     if (userId) {
-      fetch(`${API_BASE_URL}/api/chat/sessions/${encodeURIComponent(id)}`, { method: 'DELETE', headers: getAuthHeaders() }).catch(() => {});
+      fetch(`${API_BASE_URL}/api/chat/sessions/${encodeURIComponent(id)}`, { method: 'DELETE', headers: getAuthHeaders() }).catch(() => { });
     }
     setSessions(prev => prev.filter(s => s.id !== id));
     if (currentSessionId === id) setCurrentSessionId(null);
@@ -492,32 +493,32 @@ const LiraAppContent = () => {
   };
 
   const handleDeleteMemory = async (id: string) => {
-     const ok = await deleteMemoryServer(id);
-     if (ok) {
-       setMemories(prev => prev.filter(m => m.id !== id));
-       addToast('Memory deleted', 'info');
-     } else {
-       addToast('Failed to delete memory', 'error');
-     }
+    const ok = await deleteMemoryServer(id);
+    if (ok) {
+      setMemories(prev => prev.filter(m => m.id !== id));
+      addToast('Memory deleted', 'info');
+    } else {
+      addToast('Failed to delete memory', 'error');
+    }
   };
 
   const handleStop = () => {
     if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-        setIsGenerating(false);
-        addToast('Generation stopped', 'info');
-        setSessions(prev => prev.map(s => {
-          if (s.id === currentSessionId) {
-             return {
-                ...s,
-                messages: s.messages.map(m => 
-                   m.isStreaming ? { ...m, isStreaming: false, status: 'done', content: m.partial || m.content || '' } : m
-                )
-             };
-          }
-          return s;
-        }));
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setIsGenerating(false);
+      addToast('Generation stopped', 'info');
+      setSessions(prev => prev.map(s => {
+        if (s.id === currentSessionId) {
+          return {
+            ...s,
+            messages: s.messages.map(m =>
+              m.isStreaming ? { ...m, isStreaming: false, status: 'done', content: m.partial || m.content || '' } : m
+            )
+          };
+        }
+        return s;
+      }));
     }
   };
 
@@ -539,254 +540,264 @@ const LiraAppContent = () => {
   };
 
   const triggerAIResponse = async (sessionId: string, history: Message[], promptText: string, attachments: Attachment[] = []) => {
-      const abortCtrl = new AbortController();
-      abortControllerRef.current = abortCtrl;
-      setIsGenerating(true);
-      const modelMessageId = uuidv4();
-      
-      // 1. IMMEDIATE FEEDBACK: Create Thinking Message
-      setSessions(prev => prev.map(s => { 
-        if (s.id === sessionId) {
-           return { ...s, messages: [...s.messages, {
-               id: modelMessageId,
-               role: 'model',
-               content: '',
-               partial: '',
-               status: 'thinking',
-               timestamp: Date.now(),
-               isStreaming: true
-           }]}; 
-        } 
-        return s; 
-      }));
+    const abortCtrl = new AbortController();
+    abortControllerRef.current = abortCtrl;
+    setIsGenerating(true);
+    const modelMessageId = uuidv4();
 
-      let accumulatedResponse = "";
-      
-      // Declare userId at function scope so it's available in finally block
-      const currentUser = getCurrentUser();
-      const userId = currentUser?.id;
-      
+    // 1. IMMEDIATE FEEDBACK: Create Thinking Message
+    setSessions(prev => prev.map(s => {
+      if (s.id === sessionId) {
+        return {
+          ...s, messages: [...s.messages, {
+            id: modelMessageId,
+            role: 'model',
+            content: '',
+            partial: '',
+            status: 'thinking',
+            timestamp: Date.now(),
+            isStreaming: true
+          }]
+        };
+      }
+      return s;
+    }));
+
+    let accumulatedResponse = "";
+
+    // Declare userId at function scope so it's available in finally block
+    const currentUser = getCurrentUser();
+    const userId = currentUser?.id;
+
+    try {
+      // Search for relevant memories
+      const relevantMemories = await getRelevantMemories(promptText, 5, userId);
+
+      // 🧠 process user message
+      const userMessage = { content: promptText };
+      const { memory: extractedMemory } = await addIntelligentMemory(userMessage, 'default', userId);
+      if (extractedMemory) {
+        setMemories(prev => [...prev, extractedMemory]);
+        addToast('Memória salva 🧠', 'success');
+      }
+
       try {
-        // Search for relevant memories
-        const relevantMemories = await getRelevantMemories(promptText, 5, userId);
-        
-        // 🧠 process user message
-        const userMessage = { content: promptText };
-        const { memory: extractedMemory } = await addIntelligentMemory(userMessage, 'default', userId);
-        if (extractedMemory) {
-          setMemories(prev => [...prev, extractedMemory]);
-          addToast('Memória salva 🧠', 'success');
+        // Dynamic Persona Logic: Inject Instructions
+        let finalPrompt = promptText;
+        const unlockedIds = personas.filter(p => !p.isLocked).map(p => p.id);
+
+        if (dynamicPersona) {
+          const idsList = unlockedIds.join(', ');
+          finalPrompt += `\n\n[SYSTEM: You have "Dynamic Persona" enabled. Your current persona is "${activePersonaId}". If you detect that the user's tone or intent would be SIGNIFICANTLY better served by one of your other unlocked personas (IDs: ${idsList}), you MUST append the tag "[[SWITCH_PERSONA:target_id]]" at the very end of your response. Example: "[[SWITCH_PERSONA:caring]]". Do not switch if the current persona fits well.]`;
         }
 
-        try {
-          // Dynamic Persona Logic: Inject Instructions
-          let finalPrompt = promptText;
-          const unlockedIds = personas.filter(p => !p.isLocked).map(p => p.id);
-          
-          if (dynamicPersona) {
-              const idsList = unlockedIds.join(', ');
-              finalPrompt += `\n\n[SYSTEM: You have "Dynamic Persona" enabled. Your current persona is "${activePersonaId}". If you detect that the user's tone or intent would be SIGNIFICANTLY better served by one of your other unlocked personas (IDs: ${idsList}), you MUST append the tag "[[SWITCH_PERSONA:target_id]]" at the very end of your response. Example: "[[SWITCH_PERSONA:caring]]". Do not switch if the current persona fits well.]`;
-          }
+        // EXHAUSTED MODE: Override
+        if (moodState.mood === 'exausta') {
+          finalPrompt += `\n\n[SYSTEM: You are currently EXHAUSTED (Low Battery/Tired). Your responses should be shorter, more direct, maybe with some sighs (*sigh*) or pauses (...). Avoid long explanations. If the user asks complicated things, ask for a break or be brief. DO NOT switch personas while exhausted.]`;
+        }
 
-          // EXHAUSTED MODE: Override
-          if (moodState.mood === 'exausta') {
-             finalPrompt += `\n\n[SYSTEM: You are currently EXHAUSTED (Low Battery/Tired). Your responses should be shorter, more direct, maybe with some sighs (*sigh*) or pauses (...). Avoid long explanations. If the user asks complicated things, ask for a break or be brief. DO NOT switch personas while exhausted.]`;
-          }
+        const latest = await fetchMemories(userId);
+        if (Array.isArray(latest) && latest.length > 0) {
+          setMemories(latest);
+        }
+      } catch { }
 
-          const latest = await fetchMemories(userId);
-             if (Array.isArray(latest) && latest.length > 0) {
-               setMemories(latest);
-             }
-         } catch {}
+      // Pass memories to context - using selected model with relevância
+      const personaToUse = isDeepMode ? { ...activePersona, systemInstruction: `${activePersona.systemInstruction}\nResponda com raciocínio detalhado, valide suposições, cite fontes quando úteis, e apresente passos claros.` } : activePersona;
+      const localDateTime = new Date().toLocaleString();
+      const stream = streamResponse(history, promptText, personaToUse, relevantMemories, selectedModel, abortCtrl.signal, attachments, userId, localDateTime);
 
-        // Pass memories to context - using selected model with relevância
-        const personaToUse = isDeepMode ? { ...activePersona, systemInstruction: `${activePersona.systemInstruction}\nResponda com raciocínio detalhado, valide suposições, cite fontes quando úteis, e apresente passos claros.` } : activePersona;
-        const localDateTime = new Date().toLocaleString();
-        const stream = streamResponse(history, promptText, personaToUse, relevantMemories, selectedModel, abortCtrl.signal, attachments, userId, localDateTime);
-        
-        // Throttled Update Logic
-        const UPDATE_INTERVAL = 80; // Faster updates for smoother UI
-        let lastUpdate = 0;
-        
-        for await (const chunk of stream) {
-            if (abortCtrl.signal.aborted) break;
+      // Throttled Update Logic
+      const UPDATE_INTERVAL = 80; // Faster updates for smoother UI
+      let lastUpdate = 0;
 
-            accumulatedResponse += chunk;
-            setStreamingText(accumulatedResponse); // Keep for overlays if needed cheap
+      for await (const chunk of stream) {
+        if (abortCtrl.signal.aborted) break;
 
-            const now = Date.now();
-            if (now - lastUpdate > UPDATE_INTERVAL) {
-               lastUpdate = now;
-               setSessions(prev => prev.map(s => {
-                  if (s.id === sessionId) {
-                      const newMessages = s.messages.map(m => {
-                          if (m.id === modelMessageId) {
-                               return {
-                                   ...m,
-                                   partial: accumulatedResponse,
-                                   status: 'streaming' as const,
-                                   isStreaming: true
-                               };
-                          }
-                          return m;
-                      });
-                      return { ...s, messages: newMessages };
-                  }
-                  return s;
-               }));
+        accumulatedResponse += chunk;
+
+        // 🎭 Emotion Tag Parsing (VTuber Mode)
+        const emotionMatch = accumulatedResponse.match(/\[(HAPPY|SAD|ANGRY|SURPRISE|SHY|NEUTRAL|WINK|SMUG)\]/);
+        if (emotionMatch) {
+          setCurrentEmotion(emotionMatch[1]);
+          accumulatedResponse = accumulatedResponse.replace(emotionMatch[0], '');
+        }
+
+        setStreamingText(accumulatedResponse); // Keep for overlays if needed cheap
+
+        const now = Date.now();
+        if (now - lastUpdate > UPDATE_INTERVAL) {
+          lastUpdate = now;
+          setSessions(prev => prev.map(s => {
+            if (s.id === sessionId) {
+              const newMessages = s.messages.map(m => {
+                if (m.id === modelMessageId) {
+                  return {
+                    ...m,
+                    partial: accumulatedResponse,
+                    status: 'streaming' as const,
+                    isStreaming: true
+                  };
+                }
+                return m;
+              });
+              return { ...s, messages: newMessages };
             }
+            return s;
+          }));
         }
-        
-        // Final update to ensure complete message is saved
-        setSessions(prev => prev.map(s => {
-             if (s.id === sessionId) {
-                 const existingModelMsgIndex = s.messages.findIndex(m => m.id === modelMessageId);
-                 if (existingModelMsgIndex === -1) {
-                     return {
-                         ...s,
-                         messages: [...s.messages, {
-                             id: modelMessageId,
-                             role: 'model',
-                             content: accumulatedResponse,
-                             timestamp: Date.now(),
-                             isStreaming: true
-                         }]
-                     };
-                 } else {
-                     const newMessages = [...s.messages];
-                     newMessages[existingModelMsgIndex] = {
-                         ...newMessages[existingModelMsgIndex],
-                         content: accumulatedResponse
-                     };
-                     return { ...s, messages: newMessages };
-                 }
-             }
-             return s;
-        }));
+      }
 
-        const hadImage = (attachments || []).some(att => att.type === 'image');
-        if (hadImage) {
-          if (accumulatedResponse.includes('Limite de uso da API do Gemini')) {
-            addToast('Limite do Gemini atingido. Tente novamente em alguns minutos.', 'error');
-          } else if (
-            accumulatedResponse.includes('Não foi possível analisar a imagem') ||
-            accumulatedResponse.includes('Infelizmente não consegui processá-la')
-          ) {
-            addToast('Serviço de visão indisponível. Tente novamente em breve.', 'error');
-          }
-        }
-
-        
-        // Fallback heuristic: save if it matches known patterns and none was extracted
-        if (!extractedMemory && (promptText.toLowerCase().includes("remember that") || promptText.toLowerCase().includes("my name is"))) {
-           const created = await addMemoryServer(promptText, ['auto'], 'note', 'medium', userId);
-           if (created) {
-             setMemories(prev => [...prev, created]);
-           } else {
-             const localMem: Memory = { id: uuidv4(), content: promptText, createdAt: Date.now(), tags: ['auto'], category: 'note', priority: 'medium' };
-             setMemories(prev => [...prev, localMem]);
-           }
-           addToast('Memória salva 🧠', 'success');
-        }
-
-      } catch (e) {
-          if ((e as any).name !== 'AbortError') console.error("Generation error", e);
-      } finally {
-          setIsGenerating(false);
-          abortControllerRef.current = null;
-          
-          // Save final session state to backend
-          // Save final session state to backend
-          if (userId && accumulatedResponse) {
-             // Update Mood on Response
-             setMoodState(prev => updateMood(prev, { type: 'ASSISTANT_RESPONSE', tokens: accumulatedResponse.length / 4 }));
-             
-             const finalModelMsg: Message = {
+      // Final update to ensure complete message is saved
+      setSessions(prev => prev.map(s => {
+        if (s.id === sessionId) {
+          const existingModelMsgIndex = s.messages.findIndex(m => m.id === modelMessageId);
+          if (existingModelMsgIndex === -1) {
+            return {
+              ...s,
+              messages: [...s.messages, {
                 id: modelMessageId,
                 role: 'model',
                 content: accumulatedResponse,
                 timestamp: Date.now(),
-                isStreaming: false,
-                status: 'done'
-             };
-             
-             // 🎭 Dynamic Persona Switch Processing
-             const switchRegex = /\[\[SWITCH_PERSONA:([a-z-]+)\]\]/i;
-             const match = accumulatedResponse.match(switchRegex);
-             if (match && match[1]) {
-                 const targetId = match[1] as any;
-                 if (personas.some(p => p.id === targetId)) { // Verify it's valid
-                      finalModelMsg.content = finalModelMsg.content.replace(match[0], '').trim();
-                      accumulatedResponse = finalModelMsg.content; // Update for TTS and Save
-                      
-                      // 1. Change Persona
-                      // We need to access setActivePersonaId from gamification context.
-                      // Since we are inside a callback/effect scope, we need to be careful.
-                      // But we have 'personas' and 'activePersonaId' in scope? No, we have the hook values.
-                      // Wait, triggerAIResponse is inside the component, so it has access to `setActivePersonaId`?
-                      // The hook `useGamification` returns `setActivePersonaId`.
-                      // Let's verify we destructured it.
-                      // We destructured `activePersonaId`, `personas`... need `setActivePersonaId`.
-                      
-                      // Check destructuring in App.tsx (line 88)
-                      // const { stats, addXp, increaseBond, setUsername, activePersonaId, personas, addCoins } = useGamification();
-                      // I need to add `setActivePersonaId` to the destructuring list in the first chunk or assume it's there.
-                      // It seems I missed it in the file view. I'll add it now.
-                 }
-             }
-
-             // We need to reconstruct the session. 
-             // Note: 'history' passed to this function includes the user message.
-             const finalMessages = [...history, finalModelMsg];
-             
-             // We need to find the session to get other props (title, personaId, etc)
-             // But we can't access 'sessions' state reliably here if it changed.
-             // We'll trust that sessionId is valid and title/persona haven't changed during generation.
-             // However, to be safe, we might want to fetch it or just patch the messages.
-             // Our backend upsertSession replaces the session. 
-             // Let's try to get it from the functional update in setSessions? No.
-             
-             // Best effort: find in current sessions list (closure might be stale but usually fine for title/persona)
-             const currentSess = sessions.find(s => s.id === sessionId);
-             if (currentSess) {
-                const sessionToSave = {
-                   ...currentSess,
-                   messages: finalMessages,
-                   updatedAt: Date.now()
-                };
-                saveSessionServer(sessionToSave);
-             }
+                isStreaming: true
+              }]
+            };
+          } else {
+            const newMessages = [...s.messages];
+            newMessages[existingModelMsgIndex] = {
+              ...newMessages[existingModelMsgIndex],
+              content: accumulatedResponse
+            };
+            return { ...s, messages: newMessages };
           }
-          
-          // Auto TTS Trigger (only if NOT in a voice call, as overlay handles that)
-          if (isVoiceEnabled && accumulatedResponse && !abortCtrl.signal.aborted && !isVoiceActive) {
-               // Determine voice (reuse logic)
-               const voiceId = localStorage.getItem('lira_premium_voice_id') || 'xtts-local';
-               const isPremium = voiceId !== 'google-pt-BR';
-               
-               liraVoice.speak(accumulatedResponse, {
-                  usePremium: isPremium,
-                  voiceId: isPremium ? 'xtts-local' : 'google-pt-BR'
-               });
-          }
+        }
+        return s;
+      }));
 
-          setSessions(prev => prev.map(s => {
-             if (s.id === sessionId) {
-                return {
-                   ...s,
-                   messages: s.messages.map(m => m.id === modelMessageId ? { ...m, isStreaming: false, status: 'done', content: accumulatedResponse, partial: undefined } : m)
-                };
-             }
-             return s;
-          }));
-          
-          setStreamingText(''); // Clear streaming text to unblock overlay
+      const hadImage = (attachments || []).some(att => att.type === 'image');
+      if (hadImage) {
+        if (accumulatedResponse.includes('Limite de uso da API do Gemini')) {
+          addToast('Limite do Gemini atingido. Tente novamente em alguns minutos.', 'error');
+        } else if (
+          accumulatedResponse.includes('Não foi possível analisar a imagem') ||
+          accumulatedResponse.includes('Infelizmente não consegui processá-la')
+        ) {
+          addToast('Serviço de visão indisponível. Tente novamente em breve.', 'error');
+        }
       }
+
+
+      // Fallback heuristic: save if it matches known patterns and none was extracted
+      if (!extractedMemory && (promptText.toLowerCase().includes("remember that") || promptText.toLowerCase().includes("my name is"))) {
+        const created = await addMemoryServer(promptText, ['auto'], 'note', 'medium', userId);
+        if (created) {
+          setMemories(prev => [...prev, created]);
+        } else {
+          const localMem: Memory = { id: uuidv4(), content: promptText, createdAt: Date.now(), tags: ['auto'], category: 'note', priority: 'medium' };
+          setMemories(prev => [...prev, localMem]);
+        }
+        addToast('Memória salva 🧠', 'success');
+      }
+
+    } catch (e) {
+      if ((e as any).name !== 'AbortError') console.error("Generation error", e);
+    } finally {
+      setIsGenerating(false);
+      abortControllerRef.current = null;
+
+      // Save final session state to backend
+      // Save final session state to backend
+      if (userId && accumulatedResponse) {
+        // Update Mood on Response
+        setMoodState(prev => updateMood(prev, { type: 'ASSISTANT_RESPONSE', tokens: accumulatedResponse.length / 4 }));
+
+        const finalModelMsg: Message = {
+          id: modelMessageId,
+          role: 'model',
+          content: accumulatedResponse,
+          timestamp: Date.now(),
+          isStreaming: false,
+          status: 'done'
+        };
+
+        // 🎭 Dynamic Persona Switch Processing
+        const switchRegex = /\[\[SWITCH_PERSONA:([a-z-]+)\]\]/i;
+        const match = accumulatedResponse.match(switchRegex);
+        if (match && match[1]) {
+          const targetId = match[1] as any;
+          if (personas.some(p => p.id === targetId)) { // Verify it's valid
+            finalModelMsg.content = finalModelMsg.content.replace(match[0], '').trim();
+            accumulatedResponse = finalModelMsg.content; // Update for TTS and Save
+
+            // 1. Change Persona
+            // We need to access setActivePersonaId from gamification context.
+            // Since we are inside a callback/effect scope, we need to be careful.
+            // But we have 'personas' and 'activePersonaId' in scope? No, we have the hook values.
+            // Wait, triggerAIResponse is inside the component, so it has access to `setActivePersonaId`?
+            // The hook `useGamification` returns `setActivePersonaId`.
+            // Let's verify we destructured it.
+            // We destructured `activePersonaId`, `personas`... need `setActivePersonaId`.
+
+            // Check destructuring in App.tsx (line 88)
+            // const { stats, addXp, increaseBond, setUsername, activePersonaId, personas, addCoins } = useGamification();
+            // I need to add `setActivePersonaId` to the destructuring list in the first chunk or assume it's there.
+            // It seems I missed it in the file view. I'll add it now.
+          }
+        }
+
+        // We need to reconstruct the session. 
+        // Note: 'history' passed to this function includes the user message.
+        const finalMessages = [...history, finalModelMsg];
+
+        // We need to find the session to get other props (title, personaId, etc)
+        // But we can't access 'sessions' state reliably here if it changed.
+        // We'll trust that sessionId is valid and title/persona haven't changed during generation.
+        // However, to be safe, we might want to fetch it or just patch the messages.
+        // Our backend upsertSession replaces the session. 
+        // Let's try to get it from the functional update in setSessions? No.
+
+        // Best effort: find in current sessions list (closure might be stale but usually fine for title/persona)
+        const currentSess = sessions.find(s => s.id === sessionId);
+        if (currentSess) {
+          const sessionToSave = {
+            ...currentSess,
+            messages: finalMessages,
+            updatedAt: Date.now()
+          };
+          saveSessionServer(sessionToSave);
+        }
+      }
+
+      // Auto TTS Trigger (only if NOT in a voice call, as overlay handles that)
+      if (isVoiceEnabled && accumulatedResponse && !abortCtrl.signal.aborted && !isVoiceActive) {
+        // Determine voice (reuse logic)
+        const voiceId = localStorage.getItem('lira_premium_voice_id') || 'xtts-local';
+        const isPremium = voiceId !== 'google-pt-BR';
+
+        liraVoice.speak(accumulatedResponse, {
+          usePremium: isPremium,
+          voiceId: isPremium ? 'xtts-local' : 'google-pt-BR'
+        });
+      }
+
+      setSessions(prev => prev.map(s => {
+        if (s.id === sessionId) {
+          return {
+            ...s,
+            messages: s.messages.map(m => m.id === modelMessageId ? { ...m, isStreaming: false, status: 'done', content: accumulatedResponse, partial: undefined } : m)
+          };
+        }
+        return s;
+      }));
+
+      setStreamingText(''); // Clear streaming text to unblock overlay
+    }
   };
 
   const handleSendMessage = async (text: string, attachments: Attachment[] = []) => {
     let activeSessionId = currentSessionId;
-    addXp(10); 
+    addXp(10);
     increaseBond(1);
     if (!activeSessionId) {
       const currentUser = getCurrentUser();
@@ -814,11 +825,11 @@ const LiraAppContent = () => {
 
     // Update Mood on User Message
     setMoodState(prev => updateMood(prev, { type: 'USER_MESSAGE', chars: text.length }));
-    
+
     // Check for rest commands
     if (/vai descansar|descansa|tá tudo bem|relaxa/i.test(text)) {
-        setMoodState(prev => updateMood(prev, { type: 'REST' }));
-        addToast('Lira recuperou um pouco de energia 🔋', 'success');
+      setMoodState(prev => updateMood(prev, { type: 'REST' }));
+      addToast('Lira recuperou um pouco de energia 🔋', 'success');
     }
 
     setSessions(prev => prev.map(session => {
@@ -832,7 +843,7 @@ const LiraAppContent = () => {
       const currentUser = getCurrentUser();
       const userId = currentUser?.id;
       const toSave = s ? { ...s, messages: [...s.messages, userMessage], userId } : undefined;
-      
+
       if (toSave && userId) {
         saveSessionServer(toSave);
       }
@@ -841,24 +852,24 @@ const LiraAppContent = () => {
     const updatedHistory = [...history, userMessage];
     await triggerAIResponse(activeSessionId, updatedHistory, text, attachments);
     if (history.length === 0) {
-        generateChatTitle(text, selectedModel).then(title => {
-          setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, title } : s));
-          const currentUser = getCurrentUser();
-          const userId = currentUser?.id;
-          const saved = sessions.find(ss => ss.id === activeSessionId);
-          const finalSession = saved ? { ...saved, title, userId } : undefined;
-          if (finalSession && userId) {
-            const useFastAuth = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_USE_FASTAPI_AUTH) === '1';
-            const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
-            fetch(`${API_BASE_URL}/api/chat/sessions`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-              body: JSON.stringify(finalSession)
-            }).catch(() => {});
-            const key = `${LOCAL_STORAGE_KEY}_${userId}`;
-            try { localStorage.setItem(key, JSON.stringify([finalSession, ...sessions.filter(x => x.id !== activeSessionId)])); } catch {}
-          }
-        });
+      generateChatTitle(text, selectedModel).then(title => {
+        setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, title } : s));
+        const currentUser = getCurrentUser();
+        const userId = currentUser?.id;
+        const saved = sessions.find(ss => ss.id === activeSessionId);
+        const finalSession = saved ? { ...saved, title, userId } : undefined;
+        if (finalSession && userId) {
+          const useFastAuth = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_USE_FASTAPI_AUTH) === '1';
+          const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
+          fetch(`${API_BASE_URL}/api/chat/sessions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+            body: JSON.stringify(finalSession)
+          }).catch(() => { });
+          const key = `${LOCAL_STORAGE_KEY}_${userId}`;
+          try { localStorage.setItem(key, JSON.stringify([finalSession, ...sessions.filter(x => x.id !== activeSessionId)])); } catch { }
+        }
+      });
     }
   };
 
@@ -871,8 +882,8 @@ const LiraAppContent = () => {
     const messagesUpToUser = session.messages.slice(0, messageIndex);
     const lastUserMessage = messagesUpToUser.filter(m => m.role === 'user').pop();
     if (!lastUserMessage) return;
-    setSessions(prev => prev.map(s => 
-      s.id === currentSessionId 
+    setSessions(prev => prev.map(s =>
+      s.id === currentSessionId
         ? { ...s, messages: messagesUpToUser, updatedAt: Date.now() }
         : s
     ));
@@ -907,34 +918,34 @@ const LiraAppContent = () => {
   // Broadcast Channel for Companion Sync
   useEffect(() => {
     const channel = new BroadcastChannel('lira_companion_channel');
-    
+
     if (streamingText || isVoiceActive) {
-        channel.postMessage({ type: 'SPEAK_START' });
+      channel.postMessage({ type: 'SPEAK_START' });
     } else {
-        channel.postMessage({ type: 'SPEAK_END' });
+      channel.postMessage({ type: 'SPEAK_END' });
     }
 
     return () => channel.close();
   }, [streamingText, isVoiceActive]);
-  
+
   const handleTTS = async (text: string) => {
     // Determine voice (reuse overlay logic or default)
     const voiceId = localStorage.getItem('lira_premium_voice_id') || 'xtts-local';
     const isPremium = voiceId !== 'google-pt-BR';
-    
+
     liraVoice.speak(text, {
-       usePremium: isPremium,
-       voiceId: isPremium ? 'xtts-local' : 'google-pt-BR'
+      usePremium: isPremium,
+      voiceId: isPremium ? 'xtts-local' : 'google-pt-BR'
     });
   };
 
   const handleCompanionInteraction = (type: 'drag' | 'resize') => {
-      if (streamingText || isVoiceActive) return;
-      const phrases = type === 'drag' 
-        ? ["Ui!", "Opa!", "Me leva!", "Segura!"] 
-        : ["Tô crescendo!", "Eita!", "Gostei!"];
-      const text = phrases[Math.floor(Math.random() * phrases.length)];
-      handleTTS(text);
+    if (streamingText || isVoiceActive) return;
+    const phrases = type === 'drag'
+      ? ["Ui!", "Opa!", "Me leva!", "Segura!"]
+      : ["Tô crescendo!", "Eita!", "Gostei!"];
+    const text = phrases[Math.floor(Math.random() * phrases.length)];
+    handleTTS(text);
   };
   // Persist UI settings
   useEffect(() => {
@@ -947,47 +958,47 @@ const LiraAppContent = () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
       body: JSON.stringify({ userId, patch })
-    }).catch(() => {});
+    }).catch(() => { });
   }, [selectedModel, isDeepMode, isSidebarOpen, currentTheme.id]);
 
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [legalSection, setLegalSection] = useState<'terms' | 'privacy' | 'cookies'>('terms');
   const [isIrisOpen, setIsIrisOpen] = useState(false);
   const [isDiscordOpen, setIsDiscordOpen] = useState(false);
-  
+
   // ... existing code ...
 
   if (!isLoggedIn) {
-      return (
-          <>
-            <div className={`fixed inset-0 bg-black text-white ${isBarrelRoll ? 'do-a-barrel-roll' : ''} ${isMatrixMode ? 'matrix-mode' : ''} z-0`}>
-                <LandingChat onLoginReq={() => setIsLoginOpen(true)} />
-                <LoginModal
-                    isOpen={isLoginOpen}
-                    onClose={() => setIsLoginOpen(false)}
-                    backendUrl={API_BASE_URL}
-                    onLoggedIn={() => {
-                        const u = getCurrentUser();
-                        if (u) {
-                            setUsername(u.username);
-                            setIsLoggedIn(true);
-                            setIsBooted(true);
-                            setIsReturningUser(Boolean(u.lastLogin));
-                            
-                            // Check for first-time login onboarding
-                            const hasSeenOnboarding = localStorage.getItem(`lira_onboarding_seen_${u.id}`);
-                            if (!hasSeenOnboarding) {
-                                setShowOnboarding(true);
-                                setShowWelcome(false); // Don't show generic welcome if showing tour
-                            } else {
-                                setShowWelcome(true);
-                            }
-                        }
-                    }}
-                />
-            </div>
-          </>
-      );
+    return (
+      <>
+        <div className={`fixed inset-0 bg-black text-white ${isBarrelRoll ? 'do-a-barrel-roll' : ''} ${isMatrixMode ? 'matrix-mode' : ''} z-0`}>
+          <LandingChat onLoginReq={() => setIsLoginOpen(true)} />
+          <LoginModal
+            isOpen={isLoginOpen}
+            onClose={() => setIsLoginOpen(false)}
+            backendUrl={API_BASE_URL}
+            onLoggedIn={() => {
+              const u = getCurrentUser();
+              if (u) {
+                setUsername(u.username);
+                setIsLoggedIn(true);
+                setIsBooted(true);
+                setIsReturningUser(Boolean(u.lastLogin));
+
+                // Check for first-time login onboarding
+                const hasSeenOnboarding = localStorage.getItem(`lira_onboarding_seen_${u.id}`);
+                if (!hasSeenOnboarding) {
+                  setShowOnboarding(true);
+                  setShowWelcome(false); // Don't show generic welcome if showing tour
+                } else {
+                  setShowWelcome(true);
+                }
+              }
+            }}
+          />
+        </div>
+      </>
+    );
   }
 
   return (
@@ -1001,13 +1012,13 @@ const LiraAppContent = () => {
       <div className="bg-noise" />
       <ParticleBackground isHyperSpeed={isBarrelRoll || isGodMode} />
       <div className={`absolute inset-0 bg-gradient-to-b ${glowClassName} blur-[120px] pointer-events-none z-0 transition-all duration-1000`} />
-      
+
       {showOnboarding && <OnboardingTour onComplete={handleOnboardingComplete} />}
       <LegalModal isOpen={isLegalModalOpen} onClose={() => setIsLegalModalOpen(false)} initialSection={legalSection} />
       <IrisModal isOpen={isIrisOpen} onClose={() => setIsIrisOpen(false)} />
       <DiscordModal isOpen={isDiscordOpen} onClose={() => setIsDiscordOpen(false)} />
 
-      <Sidebar 
+      <Sidebar
         sessions={sessions}
         currentSessionId={currentSessionId}
         onSelectSession={setCurrentSessionId}
@@ -1029,9 +1040,9 @@ const LiraAppContent = () => {
         isOpen={isSidebarOpen}
         onCloseMobile={() => setIsSidebarOpen(false)}
       />
- 
+
       <div className="flex-1 flex flex-col min-w-0">
-        <ChatHeader 
+        <ChatHeader
           title={currentSession?.title || 'New Conversation'}
           isMobile={typeof window !== 'undefined' ? window.innerWidth < 768 : false}
           onToggleSidebar={toggleSidebar}
@@ -1053,9 +1064,9 @@ const LiraAppContent = () => {
               const sess = sessionStr ? JSON.parse(sessionStr) : null;
               if (sess?.refreshToken) {
                 const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
-                fetch(`${API_BASE_URL}/api/auth/logout`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ refreshToken: sess.refreshToken }) }).catch(() => {});
+                fetch(`${API_BASE_URL}/api/auth/logout`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ refreshToken: sess.refreshToken }) }).catch(() => { });
               }
-            } catch {}
+            } catch { }
             userLogout();
             setSessions([]);
             setCurrentSessionId(null);
@@ -1069,7 +1080,7 @@ const LiraAppContent = () => {
           isExhausted={moodState.mood === 'exausta'}
           fatigue={moodState.fatigue}
         />
- 
+
         <div className="flex-1 flex flex-col min-h-0">
           <MessageList
             messages={currentSession?.messages || []}
@@ -1111,210 +1122,211 @@ const LiraAppContent = () => {
             onToggleDeepMode={handleToggleDeepMode}
             onOpenLegal={() => setIsLegalModalOpen(true)}
             onOpenCookies={() => setIsLegalModalOpen(true)}
-            voiceEnabled={isVoiceEnabled} 
+            voiceEnabled={isVoiceEnabled}
             onToggleVoice={handleToggleVoice}
           />
         </div>
       </div>
- 
+
       <Suspense fallback={<LoadingScreen />}>
-      <SettingsModal 
-        isOpen={isSettingsOpen} 
-        onClose={() => setIsSettingsOpen(false)} 
-        memories={memories} 
-        onDeleteMemory={handleDeleteMemory} 
-        onClearUserData={async () => {
-          const currentUser = getCurrentUser();
-          const userId = currentUser?.id;
-          if (!userId) return;
-          const sessionsKey = `${LOCAL_STORAGE_KEY}_${userId}`;
-          const memKey = `${MEMORY_STORAGE_KEY}_${userId}`;
-          localStorage.removeItem(sessionsKey);
-          localStorage.removeItem(memKey);
-          setSessions([]);
-          setCurrentSessionId(null);
-          setMemories([]);
-          const okMem = await deleteAllMemoriesForUser(userId);
-          let okSess = false;
-          try {
-            const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
-            const r = await fetch(`${API_BASE_URL}/api/sessions?userId=${encodeURIComponent(userId)}`, { method: 'DELETE', headers: getAuthHeaders() });
-            okSess = r.ok;
-          } catch {}
-          addToast(okMem && okSess ? 'Your data has been cleared' : 'Failed to clear some server data (local cleared)', okMem && okSess ? 'success' : 'error');
-        }}
-        onLogout={() => {
-          const currentUser = getCurrentUser();
-          const userId = currentUser?.id;
-          if (userId) {
-            // Optional: persist any unsaved local state under user keys (already handled by effects)
-          }
-          userLogout();
-          setSessions([]);
-          setCurrentSessionId(null);
-          setMemories([]);
-          setIsLoggedIn(false);
-          setIsSettingsOpen(false);
-          addToast('Logged out', 'success');
-        }}
-        onOpenLegal={(section) => {
-          setLegalSection(section);
-          setIsLegalModalOpen(true);
-        }}
-        onExportUserData={() => {
-          const currentUser = getCurrentUser();
-          const userId = currentUser?.id;
-          (async () => {
-            try {
-              const payload: any = { users: [], userId, sessions: [], memories: [] }; // getAllUsers() removed - function doesn't exist
-              if (userId) {
-                const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
-                const sr = await fetch(`${API_BASE_URL}/api/sessions?userId=${encodeURIComponent(userId)}`, { headers: getAuthHeaders() });
-                if (sr.ok) payload.sessions = await sr.json();
-                const mems = await fetchMemories(userId);
-                payload.memories = mems;
-              }
-              const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-              const url = URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `lira-export-${userId || 'anon'}.json`;
-              document.body.appendChild(a);
-              a.click();
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
-              addToast('Exported data', 'success');
-            } catch {
-              addToast('Export failed', 'error');
-            }
-          })();
-        }}
-        onImportUserData={(data) => {
-          try {
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          memories={memories}
+          onDeleteMemory={handleDeleteMemory}
+          onClearUserData={async () => {
             const currentUser = getCurrentUser();
             const userId = currentUser?.id;
+            if (!userId) return;
+            const sessionsKey = `${LOCAL_STORAGE_KEY}_${userId}`;
+            const memKey = `${MEMORY_STORAGE_KEY}_${userId}`;
+            localStorage.removeItem(sessionsKey);
+            localStorage.removeItem(memKey);
+            setSessions([]);
+            setCurrentSessionId(null);
+            setMemories([]);
+            const okMem = await deleteAllMemoriesForUser(userId);
+            let okSess = false;
+            try {
+              const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
+              const r = await fetch(`${API_BASE_URL}/api/sessions?userId=${encodeURIComponent(userId)}`, { method: 'DELETE', headers: getAuthHeaders() });
+              okSess = r.ok;
+            } catch { }
+            addToast(okMem && okSess ? 'Your data has been cleared' : 'Failed to clear some server data (local cleared)', okMem && okSess ? 'success' : 'error');
+          }}
+          onLogout={() => {
+            const currentUser = getCurrentUser();
+            const userId = currentUser?.id;
+            if (userId) {
+              // Optional: persist any unsaved local state under user keys (already handled by effects)
+            }
+            userLogout();
+            setSessions([]);
+            setCurrentSessionId(null);
+            setMemories([]);
+            setIsLoggedIn(false);
+            setIsSettingsOpen(false);
+            addToast('Logged out', 'success');
+          }}
+          onOpenLegal={(section) => {
+            setLegalSection(section);
+            setIsLegalModalOpen(true);
+          }}
+          onExportUserData={() => {
+            const currentUser = getCurrentUser();
+            const userId = currentUser?.id;
+            (async () => {
+              try {
+                const payload: any = { users: [], userId, sessions: [], memories: [] }; // getAllUsers() removed - function doesn't exist
+                if (userId) {
+                  const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
+                  const sr = await fetch(`${API_BASE_URL}/api/sessions?userId=${encodeURIComponent(userId)}`, { headers: getAuthHeaders() });
+                  if (sr.ok) payload.sessions = await sr.json();
+                  const mems = await fetchMemories(userId);
+                  payload.memories = mems;
+                }
+                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `lira-export-${userId || 'anon'}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                addToast('Exported data', 'success');
+              } catch {
+                addToast('Export failed', 'error');
+              }
+            })();
+          }}
+          onImportUserData={(data) => {
+            try {
+              const currentUser = getCurrentUser();
+              const userId = currentUser?.id;
               // importUsers removed - function doesn't exist
               // if (Array.isArray(data.users)) {
               //   const { added, updated } = importUsers(data.users);
               //   addToast(`Users merged (${added} added, ${updated} updated)`, 'info');
               // }
-            const sessionsKey = userId ? `${LOCAL_STORAGE_KEY}_${userId}` : LOCAL_STORAGE_KEY;
-            const memKey = userId ? `${MEMORY_STORAGE_KEY}_${userId}` : MEMORY_STORAGE_KEY;
-            if (Array.isArray(data.sessions)) {
-              localStorage.setItem(sessionsKey, JSON.stringify(data.sessions));
-              setSessions(data.sessions);
-              setCurrentSessionId(data.sessions[0]?.id || null);
+              const sessionsKey = userId ? `${LOCAL_STORAGE_KEY}_${userId}` : LOCAL_STORAGE_KEY;
+              const memKey = userId ? `${MEMORY_STORAGE_KEY}_${userId}` : MEMORY_STORAGE_KEY;
+              if (Array.isArray(data.sessions)) {
+                localStorage.setItem(sessionsKey, JSON.stringify(data.sessions));
+                setSessions(data.sessions);
+                setCurrentSessionId(data.sessions[0]?.id || null);
+              }
+              if (Array.isArray(data.memories)) {
+                localStorage.setItem(memKey, JSON.stringify(data.memories));
+                setMemories(data.memories);
+              }
+              addToast('Imported data', 'success');
+            } catch {
+              addToast('Invalid import file', 'error');
             }
-            if (Array.isArray(data.memories)) {
-              localStorage.setItem(memKey, JSON.stringify(data.memories));
-              setMemories(data.memories);
-            }
-            addToast('Imported data', 'success');
-          } catch {
-            addToast('Invalid import file', 'error');
-          }
-        }}
-      />
-      <DashboardModal 
-        isOpen={isDashboardOpen} 
-        onClose={() => setIsDashboardOpen(false)} 
-      />
-      <StoreModal 
-        isOpen={isStoreOpen} 
-        onClose={() => setIsStoreOpen(false)} 
-      />
-      <ShortcutsModal 
-        isOpen={isShortcutsOpen} 
-        onClose={() => setIsShortcutsOpen(false)} 
-      />
-      <GamerModal 
-        isOpen={isGamerOpen} 
-        onClose={() => setIsGamerOpen(false)} 
-      />
-      <DailyQuestsModal
-        isOpen={isDailyQuestsOpen}
-        onClose={() => setIsDailyQuestsOpen(false)}
-      />
-      <CookieConsentModal 
-        isOpen={isCookieModalOpen} 
-        onSave={handleCookieSave} 
-        onClose={() => setIsCookieModalOpen(false)} 
-      />
-      <VoiceCallOverlay
-        isOpen={isVoiceActive}
-        onClose={() => setIsVoiceActive(false)}
-        onSendMessage={(text) => handleSendMessage(text, [])}
-        userName={stats.username || 'User'}
-        avatarUrl={LIRA_AVATAR}
-        currentResponse={streamingText}
-        messages={currentSession?.messages || []}
-        onToggleCompanion={() => setShowCompanion(prev => !prev)}
-      />
-      
-      {/* Background Studio for Selfies (Disabled when Voice Call is active to avoid conflicts) */}
-      {!isVoiceActive && (
+          }}
+        />
+        <DashboardModal
+          isOpen={isDashboardOpen}
+          onClose={() => setIsDashboardOpen(false)}
+        />
+        <StoreModal
+          isOpen={isStoreOpen}
+          onClose={() => setIsStoreOpen(false)}
+        />
+        <ShortcutsModal
+          isOpen={isShortcutsOpen}
+          onClose={() => setIsShortcutsOpen(false)}
+        />
+        <GamerModal
+          isOpen={isGamerOpen}
+          onClose={() => setIsGamerOpen(false)}
+        />
+        <DailyQuestsModal
+          isOpen={isDailyQuestsOpen}
+          onClose={() => setIsDailyQuestsOpen(false)}
+        />
+        <CookieConsentModal
+          isOpen={isCookieModalOpen}
+          onSave={handleCookieSave}
+          onClose={() => setIsCookieModalOpen(false)}
+        />
+        <VoiceCallOverlay
+          isOpen={isVoiceActive}
+          onClose={() => setIsVoiceActive(false)}
+          onSendMessage={(text) => handleSendMessage(text, [])}
+          userName={stats.username || 'User'}
+          avatarUrl={LIRA_AVATAR}
+          currentResponse={streamingText}
+          messages={currentSession?.messages || []}
+          onToggleCompanion={() => setShowCompanion(prev => !prev)}
+        />
+
+        {/* Background Studio for Selfies (Disabled when Voice Call is active to avoid conflicts) */}
+        {!isVoiceActive && (
           <PhotoBooth messages={currentSession?.messages || []} />
-      )}
+        )}
 
-      {showCompanion && (
-          <LiraCompanionWidget 
-              onClose={() => setShowCompanion(false)}
-              isSpeaking={Boolean(streamingText || isVoiceActive)}
+        {showCompanion && (
+          <LiraCompanionWidget
+            onClose={() => setShowCompanion(false)}
+            isSpeaking={Boolean(streamingText || isVoiceActive)}
+            currentEmotion={currentEmotion}
           />
-      )}
+        )}
 
-      <WelcomeModal
-        isOpen={showWelcome}
-        username={(() => {
+        <WelcomeModal
+          isOpen={showWelcome}
+          username={(() => {
             const u = getCurrentUser();
             const rawName = stats.username && stats.username !== 'Guest' ? stats.username : (u?.username || 'Guest');
             // Admin Override
             if (u?.id === 'user_1734661833589' || rawName.toLowerCase().includes('admin')) {
-                return 'Pai';
+              return 'Pai';
             }
             return rawName;
-        })()}
-        isReturning={isReturningUser}
-        onClose={() => setShowWelcome(false)}
-        onNewChat={createNewChat}
-      />
-
-      <AdminPanel 
-        isOpen={isAdminPanelOpen}
-        onClose={() => setIsAdminPanelOpen(false)}
-      />
-
-      <TodoPanel 
-        isOpen={isTodoPanelOpen}
-        onClose={() => setIsTodoPanelOpen(false)}
-        userTier={(() => {
-          const currentUser = getCurrentUser();
-          if (!currentUser) return 'Observer';
-          
-          // Check if admin first
-          if (currentUser.id === 'user_1734661833589' || currentUser.username?.toLowerCase().includes('admin')) {
-            return 'Singularity';
-          }
-          
-          // Then check plan
-          if ((currentUser as any).plan && (currentUser as any).plan !== 'free') {
-            return (currentUser as any).plan.charAt(0).toUpperCase() + (currentUser as any).plan.slice(1);
-          }
-          
-          return 'Observer';
-        })()}
-      />
-
-      {isCalendarOpen && (
-        <CalendarApp 
-            onClose={() => setIsCalendarOpen(false)}
+          })()}
+          isReturning={isReturningUser}
+          onClose={() => setShowWelcome(false)}
+          onNewChat={createNewChat}
         />
-      )}
+
+        <AdminPanel
+          isOpen={isAdminPanelOpen}
+          onClose={() => setIsAdminPanelOpen(false)}
+        />
+
+        <TodoPanel
+          isOpen={isTodoPanelOpen}
+          onClose={() => setIsTodoPanelOpen(false)}
+          userTier={(() => {
+            const currentUser = getCurrentUser();
+            if (!currentUser) return 'Observer';
+
+            // Check if admin first
+            if (currentUser.id === 'user_1734661833589' || currentUser.username?.toLowerCase().includes('admin')) {
+              return 'Singularity';
+            }
+
+            // Then check plan
+            if ((currentUser as any).plan && (currentUser as any).plan !== 'free') {
+              return (currentUser as any).plan.charAt(0).toUpperCase() + (currentUser as any).plan.slice(1);
+            }
+
+            return 'Observer';
+          })()}
+        />
+
+        {isCalendarOpen && (
+          <CalendarApp
+            onClose={() => setIsCalendarOpen(false)}
+          />
+        )}
       </Suspense>
     </div>
   );
 };
- 
+
 const App: React.FC = () => {
   return (
     <ThemeProvider>
@@ -1328,5 +1340,5 @@ const App: React.FC = () => {
     </ThemeProvider>
   );
 };
- 
+
 export default App;

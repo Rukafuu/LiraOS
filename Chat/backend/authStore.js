@@ -161,22 +161,22 @@ export async function issueRefreshToken(userId) {
   } catch (e) {
     console.error('issueRefreshToken DB error:', e);
   }
-  
+
   return { token, expiresAt };
 }
 
 export async function verifyRefreshToken(token) {
   try {
     const rt = await prisma.refreshToken.findFirst({
-        where: { 
-            token,
-            revoked: 0
-        }
+      where: {
+        token,
+        revoked: 0
+      }
     });
 
     if (!rt) return null;
     if (Date.now() > Number(rt.expiresAt)) return null;
-    
+
     return { userId: rt.userId, expiresAt: Number(rt.expiresAt) };
   } catch (e) {
     console.error('verifyRefreshToken error:', e);
@@ -187,8 +187,8 @@ export async function verifyRefreshToken(token) {
 export async function revokeRefreshToken(token) {
   try {
     await prisma.refreshToken.update({
-        where: { token },
-        data: { revoked: 1 }
+      where: { token },
+      data: { revoked: 1 }
     });
     refreshTokens.delete(token);
     return true;
@@ -202,15 +202,15 @@ export async function revokeRefreshToken(token) {
 export async function createRecoverCode(email) {
   const code = crypto.randomBytes(3).toString('hex').toUpperCase();
   const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
-  
+
   try {
     await prisma.recoverCode.create({
-        data: {
-            email: email.toLowerCase(),
-            code,
-            expiresAt,
-            used: 0
-        }
+      data: {
+        email: email.toLowerCase(),
+        code,
+        expiresAt,
+        used: 0
+      }
     });
     return { code, expiresAt };
   } catch (e) {
@@ -222,28 +222,28 @@ export async function createRecoverCode(email) {
 export async function consumeRecoverCode(email, code) {
   try {
     const rc = await prisma.recoverCode.findFirst({
-        where: {
-            email: { equals: email, mode: 'insensitive' },
-            code
-        },
-        orderBy: {
-            expiresAt: 'desc'
-        }
+      where: {
+        email: { equals: email, mode: 'insensitive' },
+        code
+      },
+      orderBy: {
+        expiresAt: 'desc'
+      }
     });
 
     if (!rc) return false;
     if (rc.used) return false;
     if (Date.now() > Number(rc.expiresAt)) return false;
-    
+
     await prisma.recoverCode.updateMany({
-        where: {
-            email: { equals: email, mode: 'insensitive' },
-            code, // assume code matches
-            expiresAt: rc.expiresAt
-        },
-        data: { used: 1 }
+      where: {
+        email: { equals: email, mode: 'insensitive' },
+        code, // assume code matches
+        expiresAt: rc.expiresAt
+      },
+      data: { used: 1 }
     });
-    
+
     return true;
   } catch (e) {
     console.error('consumeRecoverCode error:', e);
@@ -251,14 +251,10 @@ export async function consumeRecoverCode(email, code) {
   }
 }
 
-const ADMIN_USER_ID = 'usr_1766449245238_96a75426fe68';
-// Load admins from ENV + Hardcoded defaults
 const envAdmins = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim()) : [];
-export const ADMIN_EMAILS = [...envAdmins, 'lucas.frischeisen@gmail.com', 'amarinthlira@gmail.com'];
+export const ADMIN_EMAILS = [...envAdmins];
 
 export async function isAdmin(userId) {
-  if (userId === ADMIN_USER_ID) return true;
-  if (userId === 'user_1734661833589') return true; // Pai/Admin override
   const user = await getUserById(userId);
   return user && ADMIN_EMAILS.includes(user.email);
 }
@@ -267,8 +263,8 @@ export async function setPassword(email, newPassword) {
   try {
     const { hash } = await hashPassword(newPassword);
     await prisma.user.update({
-        where: { email: email.toLowerCase() },
-        data: { passwordHash: hash }
+      where: { email: email.toLowerCase() },
+      data: { passwordHash: hash }
     });
     return true;
   } catch (e) {

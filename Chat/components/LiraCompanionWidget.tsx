@@ -6,9 +6,10 @@ import { X, Music, Sparkles, ZoomIn, ZoomOut } from 'lucide-react';
 interface LiraCompanionWidgetProps {
   onClose: () => void;
   isSpeaking: boolean;
+  currentEmotion?: string;
 }
 
-// Widget Version v2.1 (Cache Buster)
+// Widget Version v2.2 (Emotion Upgrade)
 const SILLY_PHRASES = [
   "Oi! Tá precisando de ajuda? 💜",
   "Clicou em mim? Que fofo! 😊",
@@ -24,7 +25,7 @@ const SILLY_PHRASES = [
   "Que tal uma pausa? 🎮"
 ];
 
-export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClose, isSpeaking }) => {
+export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClose, isSpeaking, currentEmotion }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [lira, setLira] = useState<LiraCore | null>(null);
   const liraRef = useRef<LiraCore | null>(null);
@@ -40,19 +41,19 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
 
     const init = async () => {
       await new Promise(r => setTimeout(r, 100));
-      
+
       try {
         const core = new LiraCore(WIDGET_ID);
         liraRef.current = core;
 
         await core.initLive2D();
         await core.loadModel('/assets/model/lira/youling.model3.json');
-        
+
         if (core.model) {
           core.model.y = 0;
           // Initial scale setup moved to handleResize
         }
-        
+
         setLira(core);
       } catch (err) {
         console.error('[Companion] Failed to init:', err);
@@ -64,7 +65,7 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
       if (liraRef.current) {
         console.log('[Companion] Destroying Lira...');
         // SAFETY: Do not destroy shared textures
-        liraRef.current.destroy(); 
+        liraRef.current.destroy();
         liraRef.current = null;
       }
     };
@@ -100,6 +101,13 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
     return () => cancelAnimationFrame(animId);
   }, [lira, isSpeaking]);
 
+  // Emotion Sync
+  useEffect(() => {
+    if (lira && currentEmotion) {
+      lira.setEmotion(currentEmotion);
+    }
+  }, [lira, currentEmotion]);
+
   // Handle Resize Logic was removed here because it's handled internally in LiraCore now
   // We just ensure the wrapper size is correct.
 
@@ -118,8 +126,8 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
       dragMomentum={false}
       dragConstraints={{ left: 0, top: 0, right: window.innerWidth - size, bottom: window.innerHeight - size }}
       initial={{ x: window.innerWidth - size - 20, y: window.innerHeight - size - 20, opacity: 0, scale: 0.8 }}
-      animate={{ 
-        opacity: 1, 
+      animate={{
+        opacity: 1,
         scale: 1
       }}
       exit={{ opacity: 0, scale: 0.8 }}
@@ -130,9 +138,9 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
     >
       {/* Transparent container - ONLY the avatar visible */}
       <div className="relative w-full h-full">
-        
+
         {/* Lira Canvas - Fully transparent background */}
-        <div 
+        <div
           id="lira-interaction-layer"
           className="absolute inset-0 cursor-pointer"
           onClick={handleLiraClick}
@@ -142,46 +150,46 @@ export const LiraCompanionWidget: React.FC<LiraCompanionWidgetProps> = ({ onClos
 
         {/* CONTROLS BAR (Bottom) - Auto Hiding */}
         <AnimatePresence>
-            {showControls && (
-                <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-[#121214]/90 border border-white/10 p-2 rounded-2xl backdrop-blur-md shadow-xl z-[100000]"
-                >
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); setShowControls(true); setSize(prev => Math.min(800, prev + 50)); }}
-                        className="p-2 hover:bg-white/10 rounded-xl text-white/70 hover:text-white transition-colors"
-                        title="Aumentar (Zoom)"
-                    >
-                        <ZoomIn size={18} />
-                    </button>
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); setShowControls(true); setSize(prev => Math.max(250, prev - 50)); }}
-                        className="p-2 hover:bg-white/10 rounded-xl text-white/70 hover:text-white transition-colors"
-                        title="Diminuir (Zoom)"
-                    >
-                        <ZoomOut size={18} />
-                    </button>
-                    
-                    <div className="w-px h-4 bg-white/10 mx-1" />
+          {showControls && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="absolute -bottom-16 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-[#121214]/90 border border-white/10 p-2 rounded-2xl backdrop-blur-md shadow-xl z-[100000]"
+            >
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowControls(true); setSize(prev => Math.min(800, prev + 50)); }}
+                className="p-2 hover:bg-white/10 rounded-xl text-white/70 hover:text-white transition-colors"
+                title="Aumentar (Zoom)"
+              >
+                <ZoomIn size={18} />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowControls(true); setSize(prev => Math.max(250, prev - 50)); }}
+                className="p-2 hover:bg-white/10 rounded-xl text-white/70 hover:text-white transition-colors"
+                title="Diminuir (Zoom)"
+              >
+                <ZoomOut size={18} />
+              </button>
 
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); setShowControls(true); setIsDancing(!isDancing); }}
-                        className={`p-2 hover:bg-white/10 rounded-xl transition-colors ${isDancing ? 'text-lira-pink bg-lira-pink/10' : 'text-white/70 hover:text-white'}`}
-                        title="Modo Dança"
-                    >
-                        <Music size={18} />
-                    </button>
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); onClose(); }} 
-                        className="p-2 hover:bg-red-500/20 rounded-xl text-white/70 hover:text-red-400 transition-colors"
-                        title="Fechar"
-                    >
-                        <X size={18} />
-                    </button>
-                </motion.div>
-            )}
+              <div className="w-px h-4 bg-white/10 mx-1" />
+
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowControls(true); setIsDancing(!isDancing); }}
+                className={`p-2 hover:bg-white/10 rounded-xl transition-colors ${isDancing ? 'text-lira-pink bg-lira-pink/10' : 'text-white/70 hover:text-white'}`}
+                title="Modo Dança"
+              >
+                <Music size={18} />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onClose(); }}
+                className="p-2 hover:bg-red-500/20 rounded-xl text-white/70 hover:text-red-400 transition-colors"
+                title="Fechar"
+              >
+                <X size={18} />
+              </button>
+            </motion.div>
+          )}
         </AnimatePresence>
 
 
