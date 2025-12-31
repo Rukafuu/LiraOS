@@ -113,8 +113,8 @@ function App() {
                 {/* COL 1: VISION & METRICS (4 cols) */}
                 <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
 
-                    {/* Vision Container - Fixed Aspect Ratio */}
-                    <div className="aspect-video bg-black/40 border border-white/10 rounded-2xl overflow-hidden relative group shadow-2xl backdrop-blur-sm">
+                    {/* Vision Container - Fixed Height instead of Ratio */}
+                    <div className="h-64 lg:h-80 bg-black/40 border border-white/10 rounded-2xl overflow-hidden relative group shadow-2xl backdrop-blur-sm">
                         <div className="absolute top-4 left-4 z-10">
                             <span className="px-2 py-1 bg-black/60 border border-white/10 rounded text-[10px] text-white/70 font-mono backdrop-blur-md flex items-center gap-2">
                                 <Eye size={12} className={status === 'ACTIVE' ? 'text-purple-400' : 'text-gray-500'} />
