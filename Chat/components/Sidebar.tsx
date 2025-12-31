@@ -241,9 +241,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center hover:bg-yellow-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenStore(); }}>
                                             <ShoppingBag size={16} className="text-yellow-400" />
                                         </div>
-                                        <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center hover:bg-purple-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenGamer(); }}>
-                                            <Gamepad2 size={16} className="text-purple-500" />
-                                        </div>
+                                        {(currentUser?.id === 'user_1734661833589' || currentUser?.username?.toLowerCase().includes('admin')) && (
+                                            <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center hover:bg-purple-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenGamer(); }}>
+                                                <Gamepad2 size={16} className="text-purple-500" />
+                                            </div>
+                                        )}
                                         <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center hover:bg-pink-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenDailyQuests(); }}>
                                             <Gift size={16} className="text-pink-400" />
                                         </div>
@@ -269,8 +271,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             <div
                                 key={session.id}
                                 className={`group relative flex items-center gap-3 p-2.5 rounded-lg cursor-pointer transition-all ${currentSessionId === session.id
-                                        ? 'bg-purple-500/10 text-white border border-purple-500/20'
-                                        : 'text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-transparent'
+                                    ? 'bg-purple-500/10 text-white border border-purple-500/20'
+                                    : 'text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-transparent'
                                     }`}
                                 onClick={() => onSelectSession(session.id)}
                             >
