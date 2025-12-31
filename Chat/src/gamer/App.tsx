@@ -73,14 +73,14 @@ function App() {
     }
 
     return (
-        <div className="min-h-screen bg-[#030014] text-white font-sans selection:bg-purple-500/30 flex flex-col overflow-hidden relative">
+        <div className="min-h-screen bg-[#030014] text-white font-sans selection:bg-purple-500/30 flex flex-col relative overflow-y-auto">
             {/* Background Effects */}
-            <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-purple-600/20 blur-[150px] rounded-full pointer-events-none" />
-            <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-600/10 blur-[150px] rounded-full pointer-events-none" />
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] opacity-20 pointer-events-none" />
+            <div className="fixed top-[-20%] left-[-10%] w-[50%] h-[50%] bg-purple-600/20 blur-[150px] rounded-full pointer-events-none" />
+            <div className="fixed bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-600/10 blur-[150px] rounded-full pointer-events-none" />
+            <div className="fixed inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] opacity-20 pointer-events-none" />
 
             {/* HEADER */}
-            <header className="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-[#030014]/80 backdrop-blur-md z-50">
+            <header className="h-16 border-b border-white/10 flex-shrink-0 flex items-center justify-between px-6 bg-[#030014]/80 backdrop-blur-md z-50 sticky top-0">
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
                         <Brain size={18} className="text-white" />
@@ -89,7 +89,7 @@ function App() {
                         <h1 className="font-bold text-lg tracking-wide bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">LIRA NEURO-LINK</h1>
                         <div className="flex items-center gap-2 text-[10px] text-white/40 font-mono">
                             <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                            Connected to Core v2.1 (Purple Update)
+                            Connected to Core v2.2 (Scrollable)
                         </div>
                     </div>
                 </div>
@@ -108,13 +108,13 @@ function App() {
             </header>
 
             {/* MAIN DASHBOARD */}
-            <main className="flex-1 p-6 grid grid-cols-12 gap-6 overflow-hidden">
+            <main className="flex-1 p-6 grid grid-cols-12 gap-6 pb-12">
 
                 {/* COL 1: VISION & METRICS (4 cols) */}
-                <div className="col-span-12 lg:col-span-4 flex flex-col gap-6 h-full">
+                <div className="col-span-12 lg:col-span-4 flex flex-col gap-6">
 
-                    {/* Vision Container */}
-                    <div className="flex-1 bg-black/40 border border-white/10 rounded-2xl overflow-hidden relative group shadow-2xl backdrop-blur-sm">
+                    {/* Vision Container - Fixed Aspect Ratio */}
+                    <div className="aspect-video bg-black/40 border border-white/10 rounded-2xl overflow-hidden relative group shadow-2xl backdrop-blur-sm">
                         <div className="absolute top-4 left-4 z-10">
                             <span className="px-2 py-1 bg-black/60 border border-white/10 rounded text-[10px] text-white/70 font-mono backdrop-blur-md flex items-center gap-2">
                                 <Eye size={12} className={status === 'ACTIVE' ? 'text-purple-400' : 'text-gray-500'} />
