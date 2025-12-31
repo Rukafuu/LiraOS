@@ -1022,7 +1022,7 @@ const LiraAppContent = () => {
         onOpenLegal={() => setIsLegalModalOpen(true)}
         onOpenIris={() => setIsIrisOpen(true)}
         onOpenDiscord={() => setIsDiscordOpen(true)}
-        onOpenGamer={() => window.open('/gamer/', '_blank')}
+        onOpenGamer={() => window.location.href = '/gamer/'}
         onOpenDailyQuests={() => setIsDailyQuestsOpen(true)}
         onOpenSupporters={() => setIsDashboardOpen(true)} // Map to dashboard for now
         onOpenAdminPanel={() => setIsAdminPanelOpen(true)}
