@@ -23,6 +23,7 @@ export class StateBuilder {
             timestamp: perception.timestamp,
             visual: {
                 hasImage: !!perception.screenshot,
+                screenshot: perception.screenshot || null, // Pass raw base64 for the Brain
                 // In future phases: OCR result, Object detection list
                 summary: "Raw Visual Input"
             },
