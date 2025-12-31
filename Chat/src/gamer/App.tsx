@@ -14,13 +14,22 @@ function App() {
     useEffect(() => {
         // 🛡️ SECURITY GATE
         if (!isAuthenticated()) {
-            window.location.href = '/login'; // Redirect to main app login
+            window.location.href = '/login';
             return;
         }
 
         const user = getCurrentUser();
+
+        // Admin Check (Hardcoded Super User or "admin" in name)
+        const isAdmin = user?.id === 'user_1734661833589' || user?.username?.toLowerCase().includes('admin');
+
+        if (!isAdmin) {
+            setIsAuthorized(false); // Explicitly deny
+            return;
+        }
+
         setIsAuthorized(true);
-        addLog(`AUTH_VERIFIED: ${user?.username?.toUpperCase() || 'UNKNOWN'}`);
+        addLog(`AUTH_VERIFIED: ${user?.username?.toUpperCase() || 'UNKNOWN'} (ADMIN_CLEARANCE)`);
     }, []);
 
     // Poll Vision Cortex
