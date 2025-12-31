@@ -1,17 +1,31 @@
 import { useState, useEffect } from 'react'
-import { Activity, Brain, Eye, Terminal, Zap, ShieldAlert, Wifi, Power } from 'lucide-react'
+import { Activity, Brain, Eye, Terminal, Zap, ShieldAlert, Wifi, Power, Lock } from 'lucide-react'
+import { getCurrentUser, isAuthenticated } from '../../services/userService'
 
 function App() {
     const [visionImage, setVisionImage] = useState<string | null>(null);
     const [logs, setLogs] = useState<string[]>([]);
     const [status, setStatus] = useState('OFFLINE'); // OFFLINE, IDLE, ACTIVE
     const [apm, setApm] = useState(0);
+    const [isAuthorized, setIsAuthorized] = useState(false);
 
     const addLog = (msg: string) => setLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 20));
 
+    useEffect(() => {
+        // 🛡️ SECURITY GATE
+        if (!isAuthenticated()) {
+            window.location.href = '/login'; // Redirect to main app login
+            return;
+        }
+
+        const user = getCurrentUser();
+        setIsAuthorized(true);
+        addLog(`AUTH_VERIFIED: ${user?.username?.toUpperCase() || 'UNKNOWN'}`);
+    }, []);
+
     // Poll Vision Cortex
     useEffect(() => {
-        if (status !== 'ACTIVE') return;
+        if (status !== 'ACTIVE' || !isAuthorized) return;
 
         const interval = setInterval(async () => {
             try {
@@ -29,7 +43,17 @@ function App() {
         }, 200);
 
         return () => clearInterval(interval);
-    }, [status]);
+    }, [status, isAuthorized]);
+
+    if (!isAuthorized) {
+        return (
+            <div className="min-h-screen bg-black flex items-center justify-center text-red-500 font-mono flex-col gap-4">
+                <Lock size={64} className="animate-pulse" />
+                <h1 className="text-2xl font-bold tracking-widest">ACCESS DENIED</h1>
+                <p className="opacity-50 text-sm">SECURITY CLEARANCE REQUIRED</p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-[#050505] text-green-500 font-mono p-4 flex gap-4 crt-effect selection:bg-green-500 selection:text-black">
