@@ -281,6 +281,28 @@ function App() {
                     {/* Primary Actions */}
                     <div className="space-y-3">
                         <button
+                            onClick={async () => {
+                                addLog('HOOK: Waiting 2s for Window Focus...');
+                                await new Promise(r => setTimeout(r, 2000));
+                                try {
+                                    const res = await fetch(`${BRIDGE_URL}/connect/active`, { method: 'POST' });
+                                    const d = await res.json();
+                                    if (d.status === 'connected') {
+                                        addLog(`✅ HOOKED: ${d.window} (${d.size.join('x')})`);
+                                    } else {
+                                        addLog('❌ HOOK FAILED');
+                                    }
+                                } catch (e) {
+                                    addLog('❌ BRIDGE ERROR');
+                                }
+                            }}
+                            className="w-full h-12 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center gap-2 font-medium hover:bg-white/10 hover:border-white/30 text-emerald-400/80 hover:text-emerald-400 transition-all active:scale-[0.98]"
+                        >
+                            <Wifi size={18} />
+                            LINK ACTIVE WINDOW (2s Delay)
+                        </button>
+
+                        <button
                             onClick={() => { setStatus('ACTIVE'); addLog('Initializing NeuroLoop Protocol...'); }}
                             className="w-full h-14 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl flex items-center justify-center gap-2 font-bold hover:shadow-[0_0_20px_rgba(124,58,237,0.4)] transition-all active:scale-[0.98]"
                         >
