@@ -66,20 +66,23 @@ Last Action: ${state.context.lastAction || "None"}
 Last Thought: ${state.context.lastThought || "Initializing..."}
 
  INSTRUCTIONS:
-1. Scan the image for immediate threats (mobs, lava, cliffs) and resources (trees, chests, items).
-2. Determine your short-term goal (e.g., "Cut that tree", "Run from Zombie", "Eat food").
-3. Select ONE primitive action to execute.
-4. IMPORTANT: For looking around (mouse), use SMALL relative values (-0.5 to 0.5) to avoid spinning too fast.
+1. Scan the image for immediate threats and resources.
+2. Determine your short-term goal.
+3. Select ONE primitive action.
+4. IMPORTANT - MOVEMENT MECHANICS:
+   - To WALK: Use "type": "key", "key": "w", "duration": 2.0 (or higher). Short taps (0.1s) do nothing!
+   - To MINE/ATTACK: You MUST HOLD left_click. Use "type": "mouse", "subtype": "left_click", "duration": 3.0 (to break a block).
+   - To LOOK: Use SMALL mouse values (x: 0.1) prevents spinning.
 
 AVAILABLE ACTIONS (JSON):
-- Moving: { "type": "key", "key": "w", "duration": 1.0 } (Keys: w, a, s, d, space, shift, e)
-- Aiming: { "type": "mouse", "x": 0.2, "y": 0.0 } (Relative: -1.0 to 1.0. Right is positive X, Down is positive Y)
-- Clicking: { "type": "mouse", "subtype": "left_click", "duration": 0.1 } (subtype: left_click, right_click)
-- Gamepad: { "type": "gamepad", "subtype": "stick", "key": "LEFT", "x": 0.0, "y": -1.0 } (Simulate joystick)
+- Moving: { "type": "key", "key": "w", "duration": 2.5 } (Keys: w, a, s, d, space, shift, e, esc)
+- Aiming: { "type": "mouse", "x": 0.2, "y": 0.0 } (Relative: -0.5 to 0.5. Right is +X, Down is +Y)
+- Mining/Attacking: { "type": "mouse", "subtype": "left_click", "duration": 3.0 } (Hold longer to break blocks!)
+- Using Item/Place: { "type": "mouse", "subtype": "right_click", "duration": 0.2 }
 
 RESPONSE FORMAT (Strict JSON):
 {
-  "thought": "Brief reasoning (max 1 sentence). Ex: I see a creeper, I need to back away.",
+  "thought": "Reasoning. Ex: 'Tree ahead, walking forward for 3 seconds to reach it.'",
   "action_payload": { ... one of the available actions ... }
 }
 `;
