@@ -4,71 +4,89 @@ import path from 'path';
 
 class DecisionEngine {
     constructor() {
-        this.genAI = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
-        // Using flash for speed/cost balance in loop
+        // Initialize Gemini
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+            console.warn("[DECISION] No GEMINI_API_KEY found in environment variables.");
+        }
+        this.genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
         this.model = this.genAI ? this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" }) : null;
         this.kbCache = {};
     }
 
     async decide(state) {
         if (!this.model) {
-            console.error("[DECISION] No API Key or Model initialized.");
-            return null;
+            return { thought: "System Offline: AI Model not initialized.", action: "wait" };
         }
         if (!state.visual.screenshot) {
-            return null; // Can't see, can't play
+            return { thought: "Blind: No visual input available.", action: "wait" };
         }
 
-        // 1. Load Knowledge Base (Cached)
-        const gameId = state.gameId;
+        // 1. Load Knowledge Cache
+        const gameId = state.gameId || "minecraft"; // Default to Minecraft if unknown
         if (!this.kbCache[gameId]) {
             try {
-                const kbPath = path.join(process.cwd(), 'data', 'knowledge', 'games', `${gameId}.txt`);
-                if (fs.existsSync(kbPath)) {
-                    this.kbCache[gameId] = fs.readFileSync(kbPath, 'utf-8');
-                } else {
-                    this.kbCache[gameId] = "Objective: Play the game. Survive and win.";
+                // Try multiple paths for knowledge base
+                const possiblePaths = [
+                    path.join(process.cwd(), 'data', 'knowledge', 'games', `${gameId}.txt`),
+                    path.join(process.cwd(), 'backend', 'data', 'knowledge', 'games', `${gameId}.txt`)
+                ];
+
+                let loaded = false;
+                for (const p of possiblePaths) {
+                    if (fs.existsSync(p)) {
+                        this.kbCache[gameId] = fs.readFileSync(p, 'utf-8');
+                        loaded = true;
+                        break;
+                    }
+                }
+
+                if (!loaded) {
+                    this.kbCache[gameId] = "Objective: Play the game intelligently. Explore, survive, and progress.";
                 }
             } catch (e) {
+                console.warn(`[KNOWLEDGE] Failed to load KB for ${gameId}: ${e.message}`);
                 this.kbCache[gameId] = "";
             }
         }
         const knowledge = this.kbCache[gameId];
 
-        // 2. Construct Prompt
+        // 2. Build Prompt
+        // We instruct Gemini to act as the Gamer
         const prompt = `
-ROLE: You are Lira, an AI Gamer playing ${gameId}.
-YOUR GOAL: Analyze the screen visualization and execute the Best Next Move.
+SYSTEM_MODE: AUTONOMOUS_GAMER_V2
+IDENTITY: You are Lira, an advanced AI playing ${gameId}.
+OBJECTIVE: Analyze the visual frame and execute the optimal next move.
 
-KNOWLEDGE BASE:
+KNOWLEDGE_BASE:
 ${knowledge}
 
-CURRENT CONTEXT:
-Last Thought: ${state.context.lastThought || "Just started."}
+CONTEXT:
+Last Action: ${state.context.lastAction || "None"}
+Last Thought: ${state.context.lastThought || "Initializing..."}
 
-INSTRUCTIONS:
-1. Analyze the image. Identify UI elements, enemies, resources, and player status.
-2. Decide a single immediate action (duration < 1s).
-3. If unsure, look around (mouseMove) or wait.
+ INSTRUCTIONS:
+1. Scan the image for immediate threats (mobs, lava, cliffs) and resources (trees, chests, items).
+2. Determine your short-term goal (e.g., "Cut that tree", "Run from Zombie", "Eat food").
+3. Select ONE primitive action to execute.
+4. IMPORTANT: For looking around (mouse), use SMALL relative values (-0.5 to 0.5) to avoid spinning too fast.
 
-AVAILABLE ACTIONS:
-- { "action": "key", "key": "w", "duration": 0.5 }  (for movement: w,a,s,d, space, shift)
-- { "action": "mouseMove", "x": 500, "y": 300 } (x,y are relative 0-1000, 500,500 is center)
-- { "action": "mouseClick", "duration": 0.1 } (attack/use)
-- { "action": "wait", "duration": 0.5 }
+AVAILABLE ACTIONS (JSON):
+- Moving: { "type": "key", "key": "w", "duration": 1.0 } (Keys: w, a, s, d, space, shift, e)
+- Aiming: { "type": "mouse", "x": 0.2, "y": 0.0 } (Relative: -1.0 to 1.0. Right is positive X, Down is positive Y)
+- Clicking: { "type": "mouse", "subtype": "left_click", "duration": 0.1 } (subtype: left_click, right_click)
+- Gamepad: { "type": "gamepad", "subtype": "stick", "key": "LEFT", "x": 0.0, "y": -1.0 } (Simulate joystick)
 
-OUTPUT FORMAT:
-Return ONLY a valid JSON object. No markdown.
+RESPONSE FORMAT (Strict JSON):
 {
-  "thought": "I see a Creeper to the left. I will strafe right.",
-  "action": "key",
-  "key": "d",
-  "duration": 0.3
+  "thought": "Brief reasoning (max 1 sentence). Ex: I see a creeper, I need to back away.",
+  "action_payload": { ... one of the available actions ... }
 }
 `;
 
         try {
-            // 3. Call Gemini
+            // 3. Generate Decision
+            const start = Date.now();
             const result = await this.model.generateContent([
                 prompt,
                 {
@@ -78,19 +96,36 @@ Return ONLY a valid JSON object. No markdown.
                     }
                 }
             ]);
-
-            const response = result.response;
+            const response = await result.response;
             const text = response.text();
 
-            // 4. Parse JSON
+            // console.log(`[GEMINI] Thinking time: ${Date.now() - start}ms`);
+
+            // 4. Parse & Validate
             const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
             const decision = JSON.parse(cleanText);
+
+            // Backwards compatibility mapping if AI hallucinates format
+            if (decision.action && !decision.action_payload) {
+                // Convert old format to new payload format
+                decision.action_payload = {
+                    type: decision.action === 'key' ? 'key' : 'mouse',
+                    key: decision.key,
+                    duration: decision.duration,
+                    x: decision.x,
+                    y: decision.y
+                };
+            }
 
             return decision;
 
         } catch (e) {
-            console.error(`[DECISION] Brain Freeze: ${e.message}`);
-            return { thought: `Error: ${e.message}`, action: "wait" };
+            console.error(`[BRAIN_FREEZE] ${e.message}`);
+            // Fallback: Just wait and observe
+            return {
+                thought: `Cortex Glitch: ${e.message}. Holding position.`,
+                action_payload: { type: "chat", text: "err" }
+            };
         }
     }
 }
