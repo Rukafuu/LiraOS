@@ -89,6 +89,7 @@ RESPONSE FORMAT (Strict JSON):
 
         try {
             // 3. Generate Decision
+            console.log(`[BRAIN] 📤 Sending request to Gemini...`);
             const start = Date.now();
             const result = await this.model.generateContent([
                 prompt,
@@ -102,7 +103,8 @@ RESPONSE FORMAT (Strict JSON):
             const response = await result.response;
             const text = response.text();
 
-            // console.log(`[GEMINI] Thinking time: ${Date.now() - start}ms`);
+            const duration = Date.now() - start;
+            console.log(`[BRAIN] 📥 Gemini Response in ${duration}ms`);
 
             // 4. Parse & Validate
             const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
