@@ -61,33 +61,24 @@ bot_running = False # Added for bot logic
 bot_thread = None # Added for bot logic
 
 def find_window_by_name(name):
-    """Finds a window handle/hwnd by fuzzy name matching, prioritizing executables."""
-    result = []
+    """Simple robust finder: Case-insensitive partial match on title."""
+    target = name.lower()
+    found_hwnd = None
     
-    def callback(hwnd, result):
-        try:
-            if not win32gui.IsWindowVisible(hwnd): return
-            
-            w_text = win32gui.GetWindowText(hwnd)
-            if not w_text: return
-            
-            # Check Title
-            if name.lower() in w_text.lower():
-                # Check Process Name
-                try:
-                    _, pid = win32process.GetWindowThreadProcessId(hwnd)
-                    proc = psutil.Process(pid)
-                    exe = proc.name().lower()
-                    
-                    # Score matches: 10 points for exact process match, 1 point for title match
-                    score = 0
-                    if 'osu!' in exe: score += 10
-                    else: score += 1
-                    
-                    result.append((score, hwnd, w_text, exe))
-                except:
-                    # If we can't read process (access denied?), assuming it's just a title match
-                    result.append((1, hwnd, w_text, "unknown"))
+    def callback(hwnd, _):
+        nonlocal found_hwnd
+        if win32gui.IsWindowVisible(hwnd):
+            text = win32gui.GetWindowText(hwnd).lower()
+            if target in text:
+                found_hwnd = hwnd
+                return False # Stop
+        return True
+
+    try:
+        win32gui.EnumWindows(callback, None)
+    except: pass
+    
+    return found_hwnd
         except:
             pass
             
