@@ -32,19 +32,28 @@ function App() {
         addLog(`BIOMETRIC_SCAN: MATCHED [${user?.username?.toUpperCase()}] - CLEARANCE LEVEL: OMEGA`);
     }, []);
 
+    // Dynamic Bridge URL
+    const getBridgeUrl = () => {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('bridge') || localStorage.getItem('lira_bridge_url') || 'http://localhost:5000';
+    }
+    const BRIDGE_URL = getBridgeUrl();
+
     // Poll Vision Cortex
     useEffect(() => {
         if (status !== 'ACTIVE' || !isAuthorized) return;
         const interval = setInterval(async () => {
             try {
-                const res = await fetch('http://localhost:5000/actions/snapshot');
+                const res = await fetch(`${BRIDGE_URL}/actions/snapshot`);
                 const data = await res.json();
                 if (data.success && data.image) {
                     setVisionImage(`data:image/jpeg;base64,${data.image}`);
                 }
                 setApm(Math.floor(Math.random() * 40) + 20); // Sim
                 setLatency(Math.floor(Math.random() * 5) + 8);
-            } catch (e) { }
+            } catch (e) {
+                console.error("Bridge connection failed:", e);
+            }
         }, 200);
         return () => clearInterval(interval);
     }, [status, isAuthorized]);
