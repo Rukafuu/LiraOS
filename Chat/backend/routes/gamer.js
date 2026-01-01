@@ -1,5 +1,6 @@
 import express from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { decisionEngine } from '../modules/gamer/brain/decisionEngine.js';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
@@ -8,7 +9,6 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config();
 dotenv.config();
 
 const router = express.Router();
