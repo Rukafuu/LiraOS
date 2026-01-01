@@ -48,9 +48,9 @@ function App() {
     }
     const BRIDGE_URL = getBridgeUrl();
 
-    // Poll Vision Cortex
+    // Poll Vision Cortex (Visual Stream Only)
     useEffect(() => {
-        if (status !== 'ACTIVE' || !isAuthorized) return;
+        if (!isAuthorized) return;
         const interval = setInterval(async () => {
             try {
                 const res = await fetch(`${BRIDGE_URL}/actions/snapshot`);
@@ -58,14 +58,68 @@ function App() {
                 if (data.success && data.image) {
                     setVisionImage(`data:image/jpeg;base64,${data.image}`);
                 }
-                setApm(Math.floor(Math.random() * 40) + 20); // Sim
-                setLatency(Math.floor(Math.random() * 5) + 8);
             } catch (e) {
-                console.error("Bridge connection failed:", e);
+                // Silent fail for stream
             }
-        }, 200);
+        }, 100); // 10fps stream
         return () => clearInterval(interval);
-    }, [status, isAuthorized]);
+    }, [isAuthorized]);
+
+    // NeuroLoop (Brain & Decision Making)
+    const [isThinking, setIsThinking] = useState(false);
+    useEffect(() => {
+        if (status !== 'ACTIVE' || !isAuthorized) return;
+
+        const brainLoop = async () => {
+            if (isThinking || !visionImage) return;
+            setIsThinking(true);
+            const loopStart = Date.now();
+
+            try {
+                // 1. Extract base64 (remove prefix)
+                const imageBase64 = visionImage.split(',')[1];
+
+                // 2. Ask Brain (Node Backend)
+                const brainRes = await fetch('/api/gamer/decide', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image: imageBase64,
+                        gameId: 'minecraft', // Hardcoded for now, can be dynamic
+                        context: { lastThought: logs[0] }
+                    })
+                });
+
+                const decision = await brainRes.json();
+                const thought = decision.thought || "Thinking...";
+                addLog(`🧠 ${thought}`);
+
+                // 3. Execute Action (Python Bridge)
+                if (decision.action_payload && decision.action_payload.type !== 'wait') {
+                    addLog(`⚡ EXEC: ${decision.action_payload.type} ${decision.action_payload.key || ''}`);
+                    await fetch(`${BRIDGE_URL}/actions/execute`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(decision.action_payload)
+                    });
+                }
+
+                // Metric Updates
+                const loopTime = Date.now() - loopStart;
+                setLatency(loopTime);
+                setApm(Math.round(60000 / (loopTime + 100))); // Est. APM
+
+            } catch (e) {
+                console.error("NeuroLoop Error:", e);
+                addLog(`❌ CORTEX_ERROR: ${e}`);
+            } finally {
+                setIsThinking(false);
+            }
+        };
+
+        const interval = setInterval(brainLoop, 1000); // 1 Action/sec max rate
+        return () => clearInterval(interval);
+    }, [status, isAuthorized, visionImage, isThinking]);
 
     if (!isAuthorized) {
         return (
