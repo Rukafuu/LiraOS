@@ -214,10 +214,63 @@ except Exception as e:
     virtual_gamepad = None
     vg = None
 
+import ctypes
+import time
+from ctypes import wintypes
+
+# --- DIRECT INPUT HARDWARE SIMULATION ---
+# Map keys to Scancodes (Hardware Level)
+scancodes = {
+    'w': 0x11, 'a': 0x1E, 's': 0x1F, 'd': 0x20, 'space': 0x39,
+    'e': 0x12, 'esc': 0x01, 'shift': 0x2A, 'ctrl': 0x1D, 'enter': 0x1C
+}
+
+PUL = ctypes.POINTER(ctypes.c_ulong)
+class KeyBdInput(ctypes.Structure):
+    _fields_ = [("wVk", ctypes.c_ushort),
+                ("wScan", ctypes.c_ushort),
+                ("dwFlags", ctypes.c_ulong),
+                ("time", ctypes.c_ulong),
+                ("dwExtraInfo", PUL)]
+class HardwareInput(ctypes.Structure):
+    _fields_ = [("uMsg", ctypes.c_ulong),
+                ("wParamL", ctypes.c_short),
+                ("wParamH", ctypes.c_ushort)]
+class MouseInput(ctypes.Structure):
+    _fields_ = [("dx", ctypes.c_long),
+                ("dy", ctypes.c_long),
+                ("mouseData", ctypes.c_ulong),
+                ("dwFlags", ctypes.c_ulong),
+                ("time", ctypes.c_ulong),
+                ("dwExtraInfo", PUL)]
+class Input_I(ctypes.Union):
+    _fields_ = [("ki", KeyBdInput),
+                ("mi", MouseInput),
+                ("hi", HardwareInput)]
+class Input(ctypes.Structure):
+    _fields_ = [("type", ctypes.c_ulong),
+                ("ii", Input_I)]
+
+def press_key_hardware(hexKeyCode):
+    extra = ctypes.c_ulong(0)
+    ii_ = Input_I()
+    ii_.ki = KeyBdInput(0, hexKeyCode, 0x0008, 0, ctypes.pointer(extra))
+    x = Input(ctypes.c_ulong(1), ii_)
+    ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
+
+def release_key_hardware(hexKeyCode):
+    extra = ctypes.c_ulong(0)
+    ii_ = Input_I()
+    ii_.ki = KeyBdInput(0, hexKeyCode, 0x0008 | 0x0002, 0, ctypes.pointer(extra))
+    x = Input(ctypes.c_ulong(1), ii_)
+    ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
+
+# --- END DIRECT INPUT ---
+
 @app.route('/actions/execute', methods=['POST'])
 def send_input_action():
     """
-    Sends input using global keyboard simulation or Virtual Gamepad
+    Sends input using DirectInput (Hardware Simulation)
     """
     global game_window_handle
     data = request.json
@@ -228,11 +281,9 @@ def send_input_action():
     # FORCE FOCUS
     if game_window_handle:
         try:
-            # Only focus if not already focused to avoid flickering
             current_hwnd = win32gui.GetForegroundWindow()
             if current_hwnd != game_window_handle:
-                # Use a trick to force focus if Windows blocks it
-                win32gui.ShowWindow(game_window_handle, 5) # SW_SHOW
+                win32gui.ShowWindow(game_window_handle, 5) 
                 win32gui.SetForegroundWindow(game_window_handle)
         except Exception as e:
             print(f"[INPUT] Focus Warning: {e}")
@@ -312,34 +363,38 @@ def send_input_action():
         except: pass
 
         if action_type == 'key':
-            key = data.get('key')
+            # --- KEYBOARD (DIRECT INPUT) ---
+            key = data.get('key', '').lower()
             duration = float(data.get('duration', 0.1))
             
-            # --- MOUSE AIMING (Osu! Mode) ---
+            # --- MOUSE AIMING ---
             if 'x' in data and 'y' in data:
-                try:
+                 try:
                     rel_x = float(data['x'])
                     rel_y = float(data['y'])
-                    
-                    # Get Window Rect to calc absolute coords
                     rect = win32gui.GetWindowRect(game_window_handle)
                     wx, wy, wr, wb = rect
                     w_width = wr - wx
                     w_height = wb - wy
-                    
                     target_x = int(wx + (rel_x * w_width))
                     target_y = int(wy + (rel_y * w_height))
-                    
-                    # Move Mouse
                     win32api.SetCursorPos((target_x, target_y))
-                except Exception as ex:
-                    print(f"[INPUT] Aim Error: {ex}")
+                 except: pass
+                 except: pass
 
-            keyboard.press(key)
-            time.sleep(duration)
-            keyboard.release(key)
-            
-            return jsonify({"success": True, "action": f"Pressed {key} for {duration}s"})
+            if key in scancodes:
+                # Use Hardware Input (Robust)
+                code = scancodes[key]
+                press_key_hardware(code)
+                time.sleep(duration)
+                release_key_hardware(code)
+                return jsonify({"success": True, "action": f"DirectInput {key} for {duration}s"})
+            else:
+                # Fallback to legacy
+                keyboard.press(key)
+                time.sleep(duration)
+                keyboard.release(key)
+                return jsonify({"success": True, "action": f"LegacyInput {key} for {duration}s"})
 
         elif action_type == 'mouse':
             subtype = data.get('subtype', 'left_click')
