@@ -16,6 +16,15 @@ function App() {
 
     useEffect(() => {
         if (!isAuthenticated()) {
+            // BACKDOOR FOR LOCAL TESTING
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('debug_auth') === 'true') {
+                console.warn("⚠️ DEBUG AUTH BYPASS ACTIVE ⚠️");
+                setIsAuthorized(true);
+                addLog("DEBUG_OVERRIDE: AUTHENTICATION BYPASSED");
+                return;
+            }
+
             window.location.href = '/login';
             return;
         }
