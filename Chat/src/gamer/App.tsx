@@ -293,15 +293,15 @@ function App() {
                     <div className="space-y-3">
                         <button
                             onClick={async () => {
-                                addLog('HOOK: Waiting 2s for Window Focus...');
-                                await new Promise(r => setTimeout(r, 2000));
+                                addLog('HOOK: Waiting 5s for Window Focus...');
+                                await new Promise(r => setTimeout(r, 5000));
                                 try {
                                     const res = await fetch(`${BRIDGE_URL}/connect/active`, { method: 'POST' });
                                     const d = await res.json();
                                     if (d.status === 'connected') {
                                         addLog(`✅ HOOKED: ${d.window} (${d.size.join('x')})`);
                                     } else {
-                                        addLog('❌ HOOK FAILED');
+                                        addLog(`❌ HOOK FAILED: ${d.error || 'Unknown'}`);
                                     }
                                 } catch (e) {
                                     addLog('❌ BRIDGE ERROR');
@@ -310,7 +310,7 @@ function App() {
                             className="w-full h-12 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center gap-2 font-medium hover:bg-white/10 hover:border-white/30 text-emerald-400/80 hover:text-emerald-400 transition-all active:scale-[0.98]"
                         >
                             <Wifi size={18} />
-                            LINK ACTIVE WINDOW (2s Delay)
+                            LINK ACTIVE WINDOW (5s Delay)
                         </button>
 
                         <button
