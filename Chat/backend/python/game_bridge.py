@@ -220,7 +220,7 @@ try:
     import vgamepad as vg_module
     vg = vg_module
     virtual_gamepad = vg.VX360Gamepad()
-    print("[GAMEPAD] Virtual Xbox 360 Controller Connected! 🎮")
+    print("[GAMEPAD] Virtual Xbox 360 Controller Connected!")
 except Exception as e:
     print(f"[GAMEPAD] Failed to load vgamepad (Is ViGEmBus installed?): {e}")
     virtual_gamepad = None
@@ -636,7 +636,7 @@ def is_admin():
 # ... (Previous Code)
 
 if __name__ == '__main__':
-    print("🎮 Lira Game Bridge Service Started on Port 5000")
+    print("Lira Game Bridge Service Started on Port 5000")
     
     if not is_admin():
         print("\n\n" + "!"*50)
