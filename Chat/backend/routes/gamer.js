@@ -11,11 +11,6 @@ const __dirname = path.dirname(__filename);
 dotenv.config();
 dotenv.config();
 
-import express from 'express';
-import { decisionEngine } from '../modules/gamer/brain/decisionEngine.js';
-import dotenv from 'dotenv';
-dotenv.config();
-
 const router = express.Router();
 
 router.post('/decide', async (req, res) => {
@@ -26,7 +21,7 @@ router.post('/decide', async (req, res) => {
             return res.status(400).json({ error: "No image provided" });
         }
 
-        console.log(`[GAMER:DECIDE] Processing frame for ${gameId || 'Unknown'}...`);
+        // console.log(`[GAMER:DECIDE] Processing frame for ${gameId || 'Unknown'}...`);
 
         // 1. Construct State Object
         const state = {
@@ -52,7 +47,5 @@ router.post('/decide', async (req, res) => {
         });
     }
 });
-
-export default router;
 
 export default router;
