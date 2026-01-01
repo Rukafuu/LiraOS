@@ -144,14 +144,16 @@ def connect_game():
     # DEBUG: Print windows if not found
     if not hwnd:
         logging.warning(f"[DEBUG] Could not find window for id={game_id}. Searching for: {targets}")
-        # Optional: Print all visible windows to help user debug
-        def list_windows(hwnd, _):
-           if win32gui.IsWindowVisible(hwnd):
-               t = win32gui.GetWindowText(hwnd)
-               if t: logging.info(f"Visible Window: '{t}'")
+        logging.info("--- LIST OF VISIBLE WINDOWS ---")
+        def list_windows(h, _):
+           if win32gui.IsWindowVisible(h):
+               t = win32gui.GetWindowText(h)
+               if t: logging.info(f" > '{t}'")
         try:
             win32gui.EnumWindows(list_windows, None)
-        except: pass
+        except Exception as e:
+            logging.error(f"Failed to list windows: {e}")
+        logging.info("-------------------------------")
     
     if hwnd:
         title = win32gui.GetWindowText(hwnd)
