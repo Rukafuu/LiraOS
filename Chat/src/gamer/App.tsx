@@ -15,33 +15,31 @@ function App() {
     const addLog = (msg: string) => setLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 50));
 
     useEffect(() => {
-        useEffect(() => {
-            // BACKDOOR FOR LOCAL TESTING - FIRST CHECK
-            const params = new URLSearchParams(window.location.search);
-            if (params.get('debug_auth') === 'true') {
-                console.warn("⚠️ DEBUG AUTH BYPASS ACTIVE ⚠️");
-                setIsAuthorized(true);
-                addLog("DEBUG_OVERRIDE: AUTHENTICATION BYPASSED");
-                return;
-            }
-
-            if (!isAuthenticated()) {
-                window.location.href = '/login';
-                return;
-            }
-            const user = getCurrentUser();
-            // Admin Check
-            const isAdmin = user?.id === 'user_1734661833589' || user?.username?.toLowerCase().includes('admin');
-
-            if (!isAdmin) {
-                setIsAuthorized(false);
-                return;
-            }
-
+        // BACKDOOR FOR LOCAL TESTING - FIRST CHECK
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('debug_auth') === 'true') {
+            console.warn("⚠️ DEBUG AUTH BYPASS ACTIVE ⚠️");
             setIsAuthorized(true);
-            addLog(`BIOMETRIC_SCAN: MATCHED [${user?.username?.toUpperCase()}] - CLEARANCE LEVEL: OMEGA`);
-        }); // Close the second useEffect
-    }, []); // Close the first useEffect correctly
+            addLog("DEBUG_OVERRIDE: AUTHENTICATION BYPASSED");
+            return;
+        }
+
+        if (!isAuthenticated()) {
+            window.location.href = '/login';
+            return;
+        }
+        const user = getCurrentUser();
+        // Admin Check
+        const isAdmin = user?.id === 'user_1734661833589' || user?.username?.toLowerCase().includes('admin');
+
+        if (!isAdmin) {
+            setIsAuthorized(false);
+            return;
+        }
+
+        setIsAuthorized(true);
+        addLog(`BIOMETRIC_SCAN: MATCHED [${user?.username?.toUpperCase()}] - CLEARANCE LEVEL: OMEGA`);
+    }, []);
 
     // Dynamic Bridge URL
     const getBridgeUrl = () => {
