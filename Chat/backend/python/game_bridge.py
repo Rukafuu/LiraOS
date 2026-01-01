@@ -79,20 +79,7 @@ def find_window_by_name(name):
     except: pass
     
     return found_hwnd
-        except:
-            pass
-            
-    win32gui.EnumWindows(callback, result)
-    
-    # Sort by score descending
-    result.sort(key=lambda x: x[0], reverse=True)
-    
-    if result:
-        best = result[0]
-        logging.info(f"[FIND] Found best candidate: '{best[2]}' (Score: {best[0]}, Exe: {best[3]})")
-        return best[1] # Return HWND
-        
-    return None
+
 
 @app.route('/status', methods=['GET'])
 def status():
