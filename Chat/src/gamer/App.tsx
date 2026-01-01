@@ -119,7 +119,13 @@ function App() {
                         }`}>
                         STATUS: {status}
                     </span>
-                    <button onClick={() => window.location.href = '/'} className="p-2 hover:bg-white/5 rounded-full transition-colors opacity-50 hover:opacity-100">
+                    <button
+                        onClick={() => setStatus(prev => prev === 'ACTIVE' ? 'OFFLINE' : 'ACTIVE')}
+                        className={`p-2 rounded-full transition-all ${status === 'ACTIVE'
+                            ? 'bg-green-500/20 text-green-400 shadow-[0_0_10px_rgba(74,222,128,0.3)]'
+                            : 'hover:bg-white/5 opacity-50 hover:opacity-100'
+                            }`}
+                    >
                         <Power size={20} />
                     </button>
                 </div>
