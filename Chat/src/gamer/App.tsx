@@ -119,7 +119,7 @@ function App() {
 
         const interval = setInterval(brainLoop, 1000); // 1 Action/sec max rate
         return () => clearInterval(interval);
-    }, [status, isAuthorized, visionImage, isThinking]);
+    }, [status, isAuthorized, visionImage, isThinking, logs]);
 
     if (!isAuthorized) {
         return (
