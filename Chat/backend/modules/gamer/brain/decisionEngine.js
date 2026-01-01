@@ -10,7 +10,7 @@ class DecisionEngine {
             console.warn("[DECISION] No GEMINI_API_KEY found in environment variables.");
         }
         this.genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
-        this.model = this.genAI ? this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" }) : null;
+        this.model = this.genAI ? this.genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" }) : null;
         this.kbCache = {};
     }
 
