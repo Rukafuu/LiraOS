@@ -38,12 +38,7 @@ CORS(app, resources={r"/*": {"origins": "*"}})
 def handle_options(path):
     return jsonify({"status": "ok"})
 
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization,ngrok-skip-browser-warning')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    return response
+
 # Logging Setup
 file_handler = logging.FileHandler('bridge_debug.log', mode='w')
 console_handler = logging.StreamHandler()
