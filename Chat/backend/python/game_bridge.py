@@ -187,12 +187,12 @@ def capture_screen():
             monitor = {"top": y, "left": x, "width": w, "height": h}
             sct_img = sct.grab(monitor)
             
-            # Resize for performance (MAX 800x600)
+            # Resize for performance (Speed Optimization)
             img = Image.frombytes("RGB", sct_img.size, sct_img.bgra, "raw", "BGRX")
-            img.thumbnail((800, 600)) 
+            img.thumbnail((480, 360)) 
             
             buffered = BytesIO()
-            img.save(buffered, format="JPEG", quality=30) # Very low quality for speed
+            img.save(buffered, format="JPEG", quality=20) # Low quality for max speed
             img_str = base64.b64encode(buffered.getvalue()).decode()
             
             return jsonify({"success": True, "image": img_str})
