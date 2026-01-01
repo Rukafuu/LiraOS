@@ -380,7 +380,7 @@ def send_input_action():
                     target_y = int(wy + (rel_y * w_height))
                     win32api.SetCursorPos((target_x, target_y))
                  except: pass
-                 except: pass
+
 
             if key in scancodes:
                 # Use Hardware Input (Robust)
