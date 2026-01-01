@@ -85,12 +85,23 @@ function App() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         image: imageBase64,
-                        gameId: 'minecraft', // Hardcoded for now, can be dynamic
+                        gameId: 'minecraft', // Hardcoded for now
                         context: { lastThought: logs[0] }
                     })
                 });
 
-                const decision = await brainRes.json();
+                const textParams = await brainRes.text();
+                if (!brainRes.ok) {
+                    throw new Error(`Server Error (${brainRes.status}): ${textParams}`);
+                }
+
+                let decision;
+                try {
+                    decision = JSON.parse(textParams);
+                } catch (e) {
+                    throw new Error(`Invalid JSON from Brain: ${textParams.substring(0, 50)}...`);
+                }
+
                 const thought = decision.thought || "Thinking...";
                 addLog(`🧠 ${thought}`);
 
