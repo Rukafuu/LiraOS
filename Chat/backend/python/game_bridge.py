@@ -214,7 +214,7 @@ except Exception as e:
     virtual_gamepad = None
     vg = None
 
-@app.route('/actions/input', methods=['POST'])
+@app.route('/actions/execute', methods=['POST'])
 def send_input_action():
     """
     Sends input using global keyboard simulation or Virtual Gamepad
