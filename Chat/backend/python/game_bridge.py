@@ -223,6 +223,20 @@ def send_input_action():
     data = request.json
     action_type = data.get('type') 
     
+    display_error = None
+    
+    # FORCE FOCUS
+    if game_window_handle:
+        try:
+            # Only focus if not already focused to avoid flickering
+            current_hwnd = win32gui.GetForegroundWindow()
+            if current_hwnd != game_window_handle:
+                # Use a trick to force focus if Windows blocks it
+                win32gui.ShowWindow(game_window_handle, 5) # SW_SHOW
+                win32gui.SetForegroundWindow(game_window_handle)
+        except Exception as e:
+            print(f"[INPUT] Focus Warning: {e}")
+
     # --- VIRTUAL GAMEPAD HANDLER ---
     if action_type == 'gamepad' and virtual_gamepad and vg:
         subtype = data.get('subtype')
