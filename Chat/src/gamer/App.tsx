@@ -105,14 +105,15 @@ function App() {
                 const thought = decision.thought || "Thinking...";
                 addLog(`🧠 ${thought}`);
 
-                // 3. Execute Action (Python Bridge)
+                // 3. Execute Action (Python Bridge) - Fire & Forget
                 if (decision.action_payload && decision.action_payload.type !== 'wait') {
                     addLog(`⚡ EXEC: ${decision.action_payload.type} ${decision.action_payload.key || ''}`);
-                    await fetch(`${BRIDGE_URL}/actions/execute`, {
+                    // NO AWAIT HERE: Let the action run while we think about the next frame
+                    fetch(`${BRIDGE_URL}/actions/execute`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(decision.action_payload)
-                    });
+                    }).catch(e => console.error("Action Exec Fail:", e));
                 }
 
                 // Metric Updates
