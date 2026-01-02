@@ -67,6 +67,7 @@ function App() {
 
     // NeuroLoop (Brain & Decision Making)
     const [isThinking, setIsThinking] = useState(false);
+    const [pendingCommand, setPendingCommand] = useState<string | null>(null);
     useEffect(() => {
         if (status !== 'ACTIVE' || !isAuthorized) return;
 
@@ -86,9 +87,15 @@ function App() {
                     body: JSON.stringify({
                         image: imageBase64,
                         gameId: 'minecraft', // Hardcoded for now
-                        context: { lastThought: logs[0] }
+                        context: {
+                            lastThought: logs[0],
+                            userCommand: pendingCommand
+                        }
                     })
                 });
+
+                // Clear command after sending
+                if (pendingCommand) setPendingCommand(null);
 
                 const textParams = await brainRes.text();
                 if (!brainRes.ok) {
@@ -284,8 +291,16 @@ function App() {
                             <ChevronRight size={14} className="text-purple-500 animate-pulse" />
                             <input
                                 type="text"
-                                placeholder="Execute console command..."
+                                placeholder="Copilot Override (Enter to send)..."
                                 className="bg-transparent border-none outline-none text-sm text-white placeholder-white/20 w-full font-mono"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        const val = e.currentTarget.value;
+                                        setPendingCommand(val);
+                                        addLog(`🗣️ COPILOT: ${val}`);
+                                        e.currentTarget.value = '';
+                                    }
+                                }}
                             />
                         </div>
                     </div>
