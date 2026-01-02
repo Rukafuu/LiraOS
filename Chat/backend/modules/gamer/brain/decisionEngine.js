@@ -64,6 +64,8 @@ ${knowledge}
 CONTEXT:
 Last Action: ${state.context.lastAction || "None"}
 Last Thought: ${state.context.lastThought || "Initializing..."}
+PRIORITY COMMAND (USER): ${state.context.userCommand || "None"}
+CHAT HIGHLIGHT (TWITCH): ${state.context.chatMessage || "None"}
 
  INSTRUCTIONS:
 1. Scan the image for immediate threats and resources.
