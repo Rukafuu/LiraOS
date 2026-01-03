@@ -73,6 +73,7 @@ app.use((req, res, next) => {
 
 // Health Check
 app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
+app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
 
 // Routes Mounting
 console.log('[DEBUG] Mounting routes...');
