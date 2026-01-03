@@ -31,6 +31,7 @@ import instagramRoutes from './routes/instagram.js';
 import imagesRoutes from './routes/images.js';
 import todosRoutes from './routes/todos.js';
 import googleAuthRoutes from './routes/authGoogle.js';
+import developerRoutes from './routes/developer/index.js';
 
 // Services & Utils
 import { discordService } from './services/discordService.js';
@@ -115,6 +116,7 @@ app.use('/api/patreon', patreonRoutes);
 app.use('/api/instagram', instagramRoutes);
 app.use('/api/todos', todosRoutes);
 app.use('/api/auth/google', googleAuthRoutes);
+app.use('/api/developer', developerRoutes);
 // Generic fallback (must be last)
 app.use('/api', chatRoutes);
 console.log('[DEBUG] All routes mounted successfully');
