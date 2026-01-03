@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MessageSquare, Search, Settings, X, Trash2, Sparkles, Command, LayoutGrid, ShoppingBag, Keyboard, Shield, Video, Crown, Gamepad2, Gift, CheckSquare, Calendar } from 'lucide-react';
+import { Plus, MessageSquare, Search, Settings, X, Trash2, Sparkles, Command, LayoutGrid, ShoppingBag, Keyboard, Shield, Video, Crown, Gamepad2, Gift, CheckSquare, Calendar, Activity } from 'lucide-react';
 import { ChatSession } from '../types';
 import { LIRA_AVATAR } from '../constants';
 import { getCurrentUser } from '../services/userService';
@@ -185,6 +185,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     >
                                         <div className="px-3 text-[10px] font-bold text-gray-500 tracking-wider mb-2">{t('sidebar.my_items')}</div>
 
+                                        <button onClick={() => window.open('/dashboard.html', '_blank')} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
+                                            <Activity size={16} className="text-cyan-400 group-hover:scale-110 transition-transform" />
+                                            <span className="text-sm">Dev Dashboard</span>
+                                        </button>
+
                                         <button onClick={onOpenDashboard} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
                                             <LayoutGrid size={16} className="text-blue-400 group-hover:scale-110 transition-transform" />
                                             <span className="text-sm">{t('sidebar.dashboard')}</span>
@@ -232,6 +237,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         onClick={() => setIsItemsExpanded(true)}
                                         className="flex items-center justify-around cursor-pointer py-2"
                                     >
+                                        <div className="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center hover:bg-cyan-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); window.open('/dashboard.html', '_blank'); }}>
+                                            <Activity size={16} className="text-cyan-400" />
+                                        </div>
                                         <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center hover:bg-blue-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenDashboard(); }}>
                                             <LayoutGrid size={16} className="text-blue-400" />
                                         </div>

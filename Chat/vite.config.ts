@@ -35,7 +35,8 @@ export default defineConfig(({ mode }) => {
         },
         input: {
           main: path.resolve(__dirname, 'index.html'),
-          gamer: path.resolve(__dirname, 'gamer/index.html')
+          gamer: path.resolve(__dirname, 'gamer/index.html'),
+          dashboard: path.resolve(__dirname, 'dashboard.html')
         }
       },
       // Generate unique hashes for each build

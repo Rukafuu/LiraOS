@@ -5,6 +5,8 @@ export default {
     "./index.html",
     "./gamer/index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
+    "./dashboard-ui/**/*.{js,ts,jsx,tsx}",
+    "./dashboard.html",
     "./components/**/*.{js,ts,jsx,tsx}",
     "./contexts/**/*.{js,ts,jsx,tsx}",
     "./pages/**/*.{js,ts,jsx,tsx}",

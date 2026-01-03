@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",
+    "test:smoke": "node smoke_test.js",
     "postinstall": "prisma generate"
   },
   "dependencies": {
