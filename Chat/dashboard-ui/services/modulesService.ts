@@ -11,25 +11,31 @@ export interface LiraModule {
   priority: string;
 }
 
+function getAuthHeaders() {
+  try {
+    const sessionStr = localStorage.getItem('lira_session');
+    if (sessionStr) {
+      const session = JSON.parse(sessionStr);
+      return {
+        'Authorization': `Bearer ${session.token}`,
+        'Content-Type': 'application/json'
+      };
+    }
+  } catch {}
+  return { 'Content-Type': 'application/json' };
+}
+
 export async function fetchModules(): Promise<LiraModule[]> {
   try {
-    // Tentar API primeiro
-    const res = await fetch("/api/modules");
+    // Tentar API Developer primeiro
+    const res = await fetch("/api/developer/modules", {
+        headers: getAuthHeaders()
+    });
     if (res.ok) {
       return (await res.json()) as LiraModule[];
     }
   } catch (error) {
     console.log('API não disponível, usando dados locais');
-  }
-
-  // Fallback: carregar do arquivo JSON local
-  try {
-    const res = await fetch('/modules.json');
-    if (res.ok) {
-      return (await res.json()) as LiraModule[];
-    }
-  } catch (error) {
-    console.error('Erro ao carregar módulos:', error);
   }
 
   return [];
@@ -37,26 +43,24 @@ export async function fetchModules(): Promise<LiraModule[]> {
 
 export async function fetchModule(moduleId: string): Promise<LiraModule | null> {
   try {
-    // Tentar API primeiro
-    const res = await fetch(`/api/modules/${moduleId}`);
+    const res = await fetch(`/api/developer/modules/${moduleId}`, {
+        headers: getAuthHeaders()
+    });
     if (res.ok) {
       return (await res.json()) as LiraModule;
     }
   } catch (error) {
-    console.log('API não disponível, usando dados locais');
+    console.log('API não disponível');
   }
 
-  // Fallback: buscar no array local
-  const modules = await fetchModules();
-  return modules.find(m => m.id === moduleId) || null;
+  return null;
 }
 
 export async function getModuleMainFile(module: LiraModule): Promise<string> {
-  // Retorna o caminho completo do arquivo principal
   if (module.main_files && module.main_files.length > 0) {
     return `${module.root_path}/${module.main_files[0]}`;
   }
-  return `${module.root_path}/main.py`; // fallback
+  return `${module.root_path}/main.py`;
 }
 
 export function getModuleStatusColor(status: string): string {

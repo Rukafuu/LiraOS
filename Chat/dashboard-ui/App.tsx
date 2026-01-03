@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ModuleSidebar } from './components/ModuleSidebar';
 import { ModuleDashboard } from './components/ModuleDashboard';
 import { LiraModule, fetchModule } from './services/modulesService';
+import liraLogo from './assets/lira_logo.png';
 
 const App: React.FC = () => {
   const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
@@ -33,7 +34,7 @@ const App: React.FC = () => {
       <div style={{ textAlign: 'center', marginBottom: '40px' }}>
         <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
           <img
-            src="/assets/lira-pfp.png"
+            src={liraLogo}
             alt="Lira Logo"
             style={{
               width: "140px",

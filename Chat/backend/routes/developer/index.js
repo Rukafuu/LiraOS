@@ -6,6 +6,7 @@ import { pcController } from '../../services/pcControllerService.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import modulesRouter from './modules.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -73,5 +74,7 @@ router.get('/config', (req, res) => {
     vision_enabled: !!process.env.MISTRAL_PIXTRAL_API_KEY
   });
 });
+
+router.use('/modules', modulesRouter);
 
 export default router;
