@@ -151,7 +151,10 @@ function App() {
     const handleMinecraftConnect = async () => {
         addLog(`[MC] Connecting to ${minecraftAddress}...`);
         try {
-             const parts = minecraftAddress.split(':');
+             // Sanitize Input (Remove tcp:// prefix if pasted from Ngrok)
+             const cleanAddress = minecraftAddress.replace('tcp://', '').replace('http://', '').trim();
+             
+             const parts = cleanAddress.split(':');
              const host = parts[0];
              const port = parts.length > 1 ? parseInt(parts[1]) : 25565;
              
