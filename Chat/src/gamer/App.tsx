@@ -155,10 +155,12 @@ function App() {
              const host = parts[0];
              const port = parts.length > 1 ? parseInt(parts[1]) : 25565;
              
-             // IMPORTANT: Use default backend URL logic since this App might be served differently
-             // Assuming requests to /api are proxied or absolute URL needed?
-             // Trying relative '/api' first as per Lira config
-             const res = await fetch(`/api/gamer/minecraft/connect`, {
+             // FORCE PROD BACKEND WHEN LOCALHOST (Bypass local DB issues)
+             const baseUrl = window.location.hostname === 'localhost' 
+                ? 'https://liraos-production.up.railway.app' 
+                : '';
+
+             const res = await fetch(`${baseUrl}/api/gamer/minecraft/connect`, {
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
                  body: JSON.stringify({ host, port, username: 'LiraBot' })
