@@ -7,16 +7,15 @@ export class MinecraftBrain {
         const apiKey = process.env.GEMINI_API_KEY;
         this.genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
         this.model = this.genAI ? this.genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" }) : null;
-        this.isThinking = false;
-        
-        // Listen to bot events
-        minecraftBot.on('chat', (data) => this.handleChat(data));
-        minecraftBot.on('status', (perception) => this.autoLoop(perception));
+        this.autoMode = false;
+        this.lastDecisionTime = 0;
     }
 
     async handleChat({ username, message }) {
+        const msg = message.toLowerCase();
+        
         // Simple command handling via chat
-        if (message.includes("lira come here") || message.includes("vem aqui")) {
+        if (msg.includes("lira come here") || msg.includes("vem aqui")) {
             const player = minecraftBot.bot.players[username];
             if (player && player.entity) {
                 minecraftBot.chat(`Indo até você, ${username}!`);
@@ -25,12 +24,23 @@ export class MinecraftBrain {
             }
         }
         
-        if (message.includes("set home")) {
+        if (msg.includes("set home")) {
              const player = minecraftBot.bot.players[username];
              if (player && player.entity) {
                  minecraftBot.setHome(player.entity.position);
                  minecraftBot.chat("Casa definida! Não vou quebrar nada por aqui.");
              }
+        }
+
+        if (msg.includes("lira auto on")) {
+            this.autoMode = true;
+            minecraftBot.chat("Modo Autônomo ATIVADO. Tome cuidado!");
+            this.decideNextMove();
+        }
+
+        if (msg.includes("lira auto off")) {
+            this.autoMode = false;
+            minecraftBot.chat("Modo Autônomo DESATIVADO. Fico parada.");
         }
     }
 
@@ -42,17 +52,20 @@ export class MinecraftBrain {
             // minecraftBot.chat("Ai! Tô morrendo!"); 
         }
 
-        // Here we could implement the full Autonomous Agent loop
-        // asking Gemini what to do based on perception.json
-        // For now, let's keep it reactive to Chat Commands to save tokens/latency
-        // until 'Auto Mode' is explicitly enabled.
+        // Auto Mode Logic (Every 6 seconds)
+        if (this.autoMode && (Date.now() - this.lastDecisionTime > 6000)) {
+            this.decideNextMove();
+        }
     }
 
     async decideNextMove(customObjective) {
         if (this.isThinking || !this.model) return;
         this.isThinking = true;
+        this.lastDecisionTime = Date.now();
 
         const perception = minecraftBot.getPerception();
+        if (!perception) { this.isThinking = false; return; }
+
         // Construct the prompt
         const prompt = `
         ROLE: Autonomous Minecraft Agent (Mineflayer).
@@ -61,27 +74,44 @@ export class MinecraftBrain {
         INVENTORY: ${JSON.stringify(perception.inventory)}
         SURROUNDINGS: ${JSON.stringify(perception.surroundings)}
         
-        OBJECTIVE: ${customObjective || "Survive and gather resources. Do not wander too far."}
+        OBJECTIVE: ${customObjective || "Survive, gather wood, and stay close to humans. If hungry, find food."}
         
         AVAILABLE ACTIONS:
-        - chat(message)
-        - goto(x, y, z)
-        - mine(block_name)
-        - attack(entity_name)
+        - { "action": "chat", "message": "text" }
+        - { "action": "goto", "x": 100, "y": 64, "z": 100 }
+        - { "action": "mine", "target": "log" } (Use exact block name part, e.g. 'log' matches 'oak_log')
         
-        RESPONSE FORMAT (JSON):
+        RESPONSE FORMAT (JSON ONLY):
         {
-            "thought": "Reasoning...",
-            "action": "goto",
-            "params": [100, 64, 100]
+            "thought": "I see a tree nearby and I need wood.",
+            "action": "mine",
+            "target": "log"
         }
         `;
 
         try {
-             // Call Gemini...
-             // (Implementation omitted for brevity, similar to decisionEngine)
+             console.log('[MC_BRAIN] Thinking...');
+             const result = await this.model.generateContent(prompt);
+             const text = await result.response.text();
+             
+             // Parse JSON
+             const cleanText = text.replace(/```json/g, '').replace(/```/g, '').trim();
+             const decision = JSON.parse(cleanText);
+             
+             console.log(`[MC_BRAIN] Action: ${decision.action} (${decision.thought})`);
+
+             // Execute Action
+             if (decision.action === 'chat') {
+                 minecraftBot.chat(decision.message);
+             } else if (decision.action === 'goto') {
+                 await minecraftBot.goTo(decision.x, decision.y, decision.z);
+             } else if (decision.action === 'mine') {
+                 const res = await minecraftBot.mineBlockNearby(decision.target);
+                 if (res.error) minecraftBot.chat(`Não consegui minerar: ${res.error}`);
+             }
+
         } catch(e) {
-            console.error(e);
+            console.error('[MC_BRAIN_ERR]', e);
         } finally {
             this.isThinking = false;
         }
