@@ -227,37 +227,36 @@ export const GamerModal: React.FC<GamerModalProps> = ({ isOpen, onClose }) => {
                 />
 
                 {/* Minecraft Connection Modal Overlap */}
-                <AnimatePresence>
-                    {showMcInput && (
-                         <div className="absolute inset-0 z-[102] flex items-center justify-center bg-black/80 backdrop-blur-sm">
-                             <motion.div 
-                                initial={{scale: 0.9}} animate={{scale: 1}} exit={{scale: 0.9}}
-                                className="bg-[#1a1a1c] p-6 rounded-2xl border border-emerald-500/30 w-96 flex flex-col gap-4 shadow-2xl"
-                             >
-                                <div className="flex items-center gap-3 text-emerald-400">
-                                    <Server size={24} />
-                                    <h3 className="font-bold text-lg">Server Address</h3>
-                                </div>
-                                <p className="text-gray-400 text-sm">
-                                    Enter IP of your server or Ngrok address.<br/>
-                                    Example: <code>0.tcp.ngrok.io:12345</code> or <code>localhost:25565</code>
-                                </p>
-                                <input 
-                                    value={minecraftAddress}
-                                    onChange={(e) => setMinecraftAddress(e.target.value)}
-                                    placeholder="localhost:25565"
-                                    className="bg-black/50 border border-white/10 rounded-lg p-3 text-white font-mono focus:border-emerald-500 outline-none"
-                                />
-                                <div className="flex justify-end gap-2 mt-2">
-                                    <button onClick={() => setShowMcInput(false)} className="px-4 py-2 text-gray-400 hover:text-white">Cancel</button>
-                                    <button onClick={handleStartMinecraft} className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold">
-                                        Connect
-                                    </button>
-                                </div>
-                             </motion.div>
-                         </div>
-                    )}
-                </AnimatePresence>
+                {showMcInput && (
+                        <div className="absolute inset-0 z-[200] flex items-center justify-center bg-black/90 backdrop-blur-md" onClick={(e) => e.stopPropagation()}>
+                            <motion.div 
+                            initial={{scale: 0.9, opacity: 0}} animate={{scale: 1, opacity: 1}}
+                            className="bg-[#1a1a1c] p-6 rounded-2xl border border-emerald-500/30 w-96 flex flex-col gap-4 shadow-2xl"
+                            >
+                            <div className="flex items-center gap-3 text-emerald-400">
+                                <Server size={24} />
+                                <h3 className="font-bold text-lg">Server Address</h3>
+                            </div>
+                            <p className="text-gray-400 text-sm">
+                                Enter IP of your server or Ngrok address.<br/>
+                                Example: <code>0.tcp.ngrok.io:12345</code>
+                            </p>
+                            <input 
+                                value={minecraftAddress}
+                                onChange={(e) => setMinecraftAddress(e.target.value)}
+                                placeholder="localhost:25565"
+                                className="bg-black/50 border border-white/10 rounded-lg p-3 text-white font-mono focus:border-emerald-500 outline-none"
+                                autoFocus
+                            />
+                            <div className="flex justify-end gap-2 mt-2">
+                                <button onClick={() => setShowMcInput(false)} className="px-4 py-2 text-gray-400 hover:text-white">Cancel</button>
+                                <button onClick={handleStartMinecraft} className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold">
+                                    Connect
+                                </button>
+                            </div>
+                            </motion.div>
+                        </div>
+                )}
 
                 <motion.div
                     className="relative w-full max-w-5xl h-[80vh] bg-[#0c0c0e] border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex"

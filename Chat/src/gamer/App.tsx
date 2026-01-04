@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Activity, Brain, Eye, Terminal, Zap, ShieldAlert, Wifi, Power, Lock, MonitorPlay, ChevronRight, Cpu } from 'lucide-react'
+import { Activity, Brain, Eye, Terminal, Zap, ShieldAlert, Wifi, Power, Lock, MonitorPlay, ChevronRight, Cpu, Server } from 'lucide-react'
 import { getCurrentUser, isAuthenticated } from '../../services/userService'
 
 // Reusing LiraOS Colors & Glassmorphism
@@ -11,6 +11,10 @@ function App() {
     const [apm, setApm] = useState(0);
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [latency, setLatency] = useState(12);
+
+    // Minecraft State
+    const [minecraftAddress, setMinecraftAddress] = useState("localhost:25565");
+    const [showMcInput, setShowMcInput] = useState(false);
 
     const addLog = (msg: string) => setLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev].slice(0, 50));
 
@@ -133,8 +137,8 @@ function App() {
                 setApm(Math.round(60000 / (loopTime + 100))); // Est. APM
 
             } catch (e) {
-                console.error("NeuroLoop Error:", e);
-                addLog(`❌ CORTEX_ERROR: ${e}`);
+               // console.error("NeuroLoop Error:", e);
+               // addLog(`❌ CORTEX_ERROR: ${e}`);
             } finally {
                 setIsThinking(false);
             }
@@ -143,6 +147,36 @@ function App() {
         const interval = setInterval(brainLoop, 1000); // 1 Action/sec max rate
         return () => clearInterval(interval);
     }, [status, isAuthorized, visionImage, isThinking, logs]);
+
+    const handleMinecraftConnect = async () => {
+        addLog(`[MC] Connecting to ${minecraftAddress}...`);
+        try {
+             const parts = minecraftAddress.split(':');
+             const host = parts[0];
+             const port = parts.length > 1 ? parseInt(parts[1]) : 25565;
+             
+             // IMPORTANT: Use default backend URL logic since this App might be served differently
+             // Assuming requests to /api are proxied or absolute URL needed?
+             // Trying relative '/api' first as per Lira config
+             const res = await fetch(`/api/gamer/minecraft/connect`, {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ host, port, username: 'LiraBot' })
+             });
+             const d = await res.json();
+             
+             if (d.success) {
+                 setShowMcInput(false);
+                 setStatus('ACTIVE');
+                 addLog(`[MC] Connected! Check game chat.`);
+                 addLog(`[MC] TIP: Type 'lira auto on' in game.`);
+             } else {
+                 addLog(`[MC_ERR] ${d.error}`);
+             }
+        } catch(e) {
+            addLog(`[MC_ERR] Network Fail: ${e}`);
+        }
+    };
 
     if (!isAuthorized) {
         return (
@@ -355,7 +389,16 @@ function App() {
                         <h3 className="text-xs font-bold text-white/40 uppercase tracking-widest mb-4">Target Profiles</h3>
                         <div className="space-y-2">
                             {['Minecraft', 'Osu!', 'Honkai: Star Rail', 'Chrome'].map((game) => (
-                                <button key={game} className="w-full flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5 hover:border-purple-500/50 hover:bg-purple-500/10 transition-all group" onClick={() => addLog(`Loading config: ${game}.json...`)}>
+                                <button 
+                                key={game} 
+                                className="w-full flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5 hover:border-purple-500/50 hover:bg-purple-500/10 transition-all group" 
+                                onClick={() => {
+                                    if (game === 'Minecraft') {
+                                        setShowMcInput(true);
+                                    } else {
+                                        addLog(`Loading config: ${game}.json...`);
+                                    }
+                                }}>
                                     <span className="text-sm text-white/80 group-hover:text-white">{game}</span>
                                     <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 text-purple-400 -translate-x-2 group-hover:translate-x-0 transition-all" />
                                 </button>
@@ -379,6 +422,48 @@ function App() {
                 </div>
 
             </main>
+
+             {/* MINECRAFT INPUT MODAL */}
+             {showMcInput && (
+                <div 
+                    className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+                    onClick={(e) => { e.stopPropagation(); }}
+                >
+                    <div className="bg-[#1a1a1c] border border-white/10 p-6 rounded-2xl w-full max-w-md shadow-2xl relative">
+                         <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                            <Server size={20} className="text-emerald-500"/>
+                            Connect to Minecraft
+                         </h3>
+                         <p className="text-white/40 text-sm mb-4">
+                            Enter the server address (IP:Port).<br/>
+                            For Ngrok: <code>0.tcp.ngrok.io:12345</code>
+                         </p>
+                         
+                         <input 
+                            className="w-full bg-black/50 border border-white/10 rounded-lg p-3 text-white font-mono focus:border-emerald-500 outline-none mb-4"
+                            placeholder="localhost:25565"
+                            value={minecraftAddress}
+                            onChange={e => setMinecraftAddress(e.target.value)}
+                            autoFocus
+                         />
+
+                         <div className="flex justify-end gap-3">
+                            <button 
+                                onClick={() => setShowMcInput(false)}
+                                className="px-4 py-2 rounded-lg text-white/60 hover:bg-white/5"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={handleMinecraftConnect}
+                                className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-white font-bold transition-all"
+                            >
+                                Connect
+                            </button>
+                         </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
