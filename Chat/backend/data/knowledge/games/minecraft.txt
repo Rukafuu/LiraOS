@@ -1,15 +1,41 @@
-GAME: Minecraft
-OBJECTIVE: Survive, Build, Explore.
+GAME: MINECRAFT SURVIVAL
+High Frequency Loop (<1s decisions).
 
-KEY ENTITIES:
-- Creeper: Green, explodes. Run away or hit-and-run.
-- Zombie: Green skin, burns in sun. Easy target.
-- Skeleton: Shoots arrows. Hide or strafe.
-- Diamond: Light blue ore. MINE IT IMMEDIATELY.
-- Wood: Brown logs. Break to craft.
+CONTROLS:
+- W,A,S,D: Move
+- SPACE: Jump (Hold to swim up)
+- SHIFT: Sneak (Dont fall off edges)
+- LEFT_CLICK (Hold): Mine Block / Attack
+- RIGHT_CLICK: Place Block / Use Item / Open Door
+- E: Inventory
+- ESC: Pause
+- 1-9: Select Hotbar Slot
 
-STRATEGY:
-- Night is dangerous. Build shelter or dig hole.
-- Food is essential. Kill pigs/cows or eat bread.
-- If low health, eat.
-- If see deep cave, place torches.
+SURVIVAL STRATEGY:
+1. PUNCH TREES: Find a tree, aim at trunk, HOLD LEFT CLICK until it breaks. Collect LOGS.
+2. CRAFT PLANKS: Open Inventory (E), put LOGS in crafting area -> Get PLANKS.
+3. CRAFTING TABLE: 4 Planks (2x2) -> Crafting Table.
+4. TOOLS:
+   - Sticks: 2 Planks vertical.
+   - Pickaxe: 3 Planks (top row) + 2 Sticks (middle col) in Table.
+5. STONE AGE: Use Wooden Pickaxe to mine STONE (Grey). Don't use hand for stone!
+6. SHELTER: Before night falls (monsters spawn), dig a hole in a mountain or build a hut with dirt/planks.
+7. FOOD: Punch cows/pigs/chickens. Cook meat in Furnace (8 Cobblestone in circle).
+
+COMBAT:
+- Aim at enemy.
+- CLICK FAST (1.9+ cooldown: Wait for sword icon to recharge for max damage).
+- Critical Hit: Jump and hit while falling.
+
+VISION TIPS:
+- Green Exploding Thing: CREEPER. RUN AWAY. Do not fight without bow usually.
+- Green/Rotten Flesh: ZOMBIE. Easy to kill.
+- Skeleton: Strafe left/right to dodge arrows.
+- Enderman (Tall/Black): DO NOT LOOK IN EYES.
+
+NAVIGATION:
+- Sun rises East, sets West.
+- Clouds move West.
+- If lost, dig up to high ground to look around.
+- Don't dig straight down (Lava hazard).
+

@@ -15,7 +15,6 @@ const DEFAULT_GAMES = [
     { id: 'minecraft', name: 'Minecraft', icon: 'https://img.icons8.com/color/96/minecraft-logo.png', exe: 'javaw', path: 'minecraft:' }, // Launches MS Store version
     { id: 'honkai', name: 'Honkai: Star Rail', icon: 'https://fastcdn.hoyoverse.com/static-resource-v2/2024/04/10/d704ba41103c27072fecfa8497672159_7279313426162383863.png', exe: 'StarRail', path: 'C:/Program Files/Star Rail/Launcher.exe' },
     { id: 'epic7', name: 'Epic Seven', icon: 'https://play-lh.googleusercontent.com/lq61P5Qo-rG-bX1OqjG_Y7gK2vWvP5XlXzE-Xw9lXqRkH7bFjQ.png', exe: 'HD-Player', path: '' }, // Bluestacks usually
-    { id: 'osu', name: 'osu!', icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Osu%21_Logo_2016.svg/1024px-Osu%21_Logo_2016.svg.png', exe: 'osu!', path: 'osu!.exe' },
     { id: 'notepad', name: 'Notepad Adventure', icon: 'https://img.icons8.com/color/96/notepad.png', exe: 'notepad', path: 'notepad.exe' },
     { id: 'chrome', name: 'Browser Surfing', icon: 'https://img.icons8.com/color/96/chrome--v1.png', exe: 'chrome', path: 'chrome.exe' }
 ];
@@ -89,10 +88,7 @@ export const GamerModal: React.FC<GamerModalProps> = ({ isOpen, onClose }) => {
                 addLog(`[SYSTEM] Detected: "${data.title}" (${data.exe})`);
 
                 // Auto-Detect Game ID
-                if (exe.includes('osu') || title.includes('osu')) {
-                    setSelectedGame('osu');
-                    addLog("[SYSTEM] Mode: osu! (Bot Active)");
-                } else if (exe.includes('javaw') || title.includes('minecraft')) {
+                if (exe.includes('javaw') || title.includes('minecraft')) {
                     setSelectedGame('minecraft');
                     addLog("[SYSTEM] Mode: Minecraft");
                 } else if (exe.includes('starrail') || title.includes('honkai')) {
@@ -141,10 +137,7 @@ export const GamerModal: React.FC<GamerModalProps> = ({ isOpen, onClose }) => {
                 const titleLower = (data.title || '').toLowerCase();
                 const exeLower = (data.exe || '').toLowerCase();
 
-                if (titleLower.includes('osu') || exeLower.includes('osu')) {
-                    setSelectedGame('osu');
-                    addLog("[SYSTEM] Osu! Detected -> Activating Rhythm Bot Mode 🔴");
-                } else if (titleLower.includes('minecraft') || exeLower.includes('java')) {
+                if (titleLower.includes('minecraft') || exeLower.includes('java')) {
                     setSelectedGame('minecraft');
                     addLog("[SYSTEM] Minecraft Detected -> Activating Steve Mode ⛏️");
                 }
@@ -244,9 +237,8 @@ export const GamerModal: React.FC<GamerModalProps> = ({ isOpen, onClose }) => {
                     }
 
                     // 3. Move Hands (Input)
-                    // If OSU, skip VLM input (Local Bot handles input). Only execute input for other games.
-                    if (selectedGame !== 'osu') {
-
+                    // If MINECRAFT or others, execute VLM input.
+                    if (true) {
                         // NORMALIZE INPUT: Model mixes 'value' and 'key' sometimes.
                         const inputVal = decision.value || decision.key;
 
@@ -310,9 +302,6 @@ export const GamerModal: React.FC<GamerModalProps> = ({ isOpen, onClose }) => {
         return () => {
             clearInterval(loop);
             // STOP BOT on Cleanup
-            if (selectedGame === 'osu') {
-                fetch(`${BRIDGE_URL}/bot/stop`, { method: 'POST' }).catch(() => { });
-            }
         };
     }, [status, isAutoPlay, selectedGame]);
 
