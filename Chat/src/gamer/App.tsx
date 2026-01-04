@@ -153,6 +153,7 @@ function App() {
         try {
              // Sanitize Input (Remove tcp:// prefix if pasted from Ngrok)
              const cleanAddress = minecraftAddress.replace('tcp://', '').replace('http://', '').trim();
+             addLog(`[DEBUG] Sanitized: ${cleanAddress}`); // Verify clean
              
              const parts = cleanAddress.split(':');
              const host = parts[0];
@@ -168,7 +169,16 @@ function App() {
                  headers: { 'Content-Type': 'application/json' },
                  body: JSON.stringify({ host, port, username: 'LiraBot' })
              });
-             const d = await res.json();
+
+             const textRes = await res.text(); // Read RAW response
+
+             let d;
+             try {
+                 d = JSON.parse(textRes);
+             } catch(e) {
+                 addLog(`[CRITICAL] Server sent Non-JSON: ${textRes.substring(0, 100)}`);
+                 return;
+             }
              
              if (d.success) {
                  setShowMcInput(false);
