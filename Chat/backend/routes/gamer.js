@@ -48,4 +48,28 @@ router.post('/decide', async (req, res) => {
     }
 });
 
+// --- Mineflayer Bot Routes ---
+import { minecraftBot } from '../modules/gamer/minecraft/botClient.js';
+// Ensure Brain is loaded to listen to events
+import '../modules/gamer/brain/minecraftBrain.js'; 
+
+router.post('/minecraft/connect', (req, res) => {
+    const { host, port, username } = req.body;
+    try {
+        minecraftBot.connect({ 
+            host: host || 'localhost', 
+            port: port || 25565, 
+            username: username || 'LiraBot' 
+        });
+        res.json({ success: true, message: `Connecting to ${host}...` });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+router.post('/minecraft/stop', (req, res) => {
+    minecraftBot.disconnect();
+    res.json({ success: true, message: "Bot Disconnected." });
+});
+
 export default router;

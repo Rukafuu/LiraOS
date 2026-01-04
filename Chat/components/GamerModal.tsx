@@ -111,7 +111,36 @@ export const GamerModal: React.FC<GamerModalProps> = ({ isOpen, onClose }) => {
     };
 
     const startGame = async (gameId: string) => {
-        // Find game config
+        // 🟢 MINECRAFT - MINEFLAYER BOT
+        if (gameId === 'minecraft') {
+            setSelectedGame('minecraft');
+            setStatus('connecting');
+            setSessionMemories([]);
+            addLog(`[MC_BOT] Conectando ao Minecraft (localhost)...`);
+            
+            try {
+                 const baseUrl = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:4000';
+                 const res = await fetch(`${baseUrl}/api/gamer/minecraft/connect`, {
+                     method: 'POST',
+                     headers: { 'Content-Type': 'application/json' },
+                     body: JSON.stringify({ host: 'localhost', port: 25565, username: 'LiraBot' })
+                 });
+                 const d = await res.json();
+                 if(d.success) {
+                     setStatus('playing');
+                     addLog(`[MC_BOT] Comando enviado. Aguardando spawn...`);
+                 } else {
+                     setStatus('idle');
+                     addLog(`[ERROR] ${d.error}`);
+                 }
+            } catch(e: any) {
+                 setStatus('idle');
+                 addLog(`[ERROR] Falha ao contatar Backend Lira: ${e.message}`);
+            }
+            return;
+        }
+
+        // Find game config (Legacy / Other Games)
         const game = DEFAULT_GAMES.find(g => g.id === gameId);
         if (!game) return;
 
