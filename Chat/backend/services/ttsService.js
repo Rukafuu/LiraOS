@@ -142,3 +142,79 @@ export async function generateSpeechEdgeTTS(text, voice = 'pt-BR-FranciscaNeural
         });
     });
 }
+
+// ------------------------------------------------------------------
+// MINIMAX TTS IMPLEMENTATION (Premium Anime/Expressive)
+// ------------------------------------------------------------------
+export async function generateSpeechMinimax(text, voiceId = 'English_PlayfulGirl') {
+    const apiKey = process.env.MINIMAX_API_KEY;
+    const groupId = process.env.MINIMAX_GROUP_ID;
+
+    if (!apiKey || !groupId) {
+        throw new Error("Minimax Credentials (API_KEY or GROUP_ID) missing.");
+    }
+
+    console.log(`[TTS] Requesting Minimax: ${voiceId} - "${text.substring(0, 20)}..."`);
+    
+    // Minimax T2A V2 Endpoint
+    const url = `https://api.minimax.chat/v1/t2a_v2?GroupId=${groupId}`;
+    
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model: "speech-01-turbo",
+                text: text,
+                stream: false,
+                voice_setting: {
+                    voice_id: voiceId,
+                    speed: 1.0,
+                    vol: 1.0,
+                    pitch: 0
+                },
+                audio_setting: {
+                    sample_rate: 32000,
+                    bitrate: 128000,
+                    format: "mp3",
+                    channel: 1
+                }
+            })
+        });
+
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`Minimax API Error: ${response.status} - ${errText}`);
+        }
+
+        const data = await response.json();
+        
+        // Minimax usually returns hex audio in data.data.audio
+        if (data.base_resp && data.base_resp.status_code !== 0) {
+             throw new Error(`Minimax Business Error: ${data.base_resp.status_msg}`);
+        }
+
+        if (!data.data || !data.data.audio) {
+            throw new Error("Minimax response missing audio data");
+        }
+
+        // Convert Hex to Buffer
+        const audioHex = data.data.audio;
+        const audioBuffer = Buffer.from(audioHex, 'hex');
+
+        // Async Cache to S3
+        const hash = crypto.createHash('md5').update(`minimax-${voiceId}-${text}`).digest('hex');
+        uploadToS3(audioBuffer, 'audio/mpeg', `voice/cache/${hash}.mp3`)
+            .then(url => console.log(`[TTS] Cached to S3: ${url}`))
+            .catch(() => {});
+
+        return audioBuffer;
+
+    } catch (error) {
+        console.error("[TTS] Minimax Synthesis Failed:", error);
+        throw error;
+    }
+}

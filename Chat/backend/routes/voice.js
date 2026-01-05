@@ -2,7 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import { Readable } from 'stream';
 import { requireAuth } from '../middlewares/authMiddleware.js';
-import { generateSpeechAWSPolly, generateSpeechEdgeTTS } from '../services/ttsService.js';
+import { generateSpeechAWSPolly, generateSpeechEdgeTTS, generateSpeechMinimax } from '../services/ttsService.js';
 import path from 'path';
 import fs from 'fs';
 import { spawn } from 'child_process';
@@ -34,6 +34,27 @@ router.post('/tts', async (req, res) => {
     console.log(`[TTS DEBUG] Original: "${text.substring(0,30)}..." -> Clean: "${cleanText.substring(0,30)}..."`);
 
     const textToSpeak = cleanText.length > 0 ? cleanText : text;
+
+
+    // 🎭 Minimax Premium (Anime V2)
+    if (voiceId.startsWith('minimax-') || voiceId === 'English_PlayfulGirl') {
+        try {
+            // Map generic ID to specific Minimax ID if needed, or pass through
+            const targetId = voiceId === 'minimax-playful' ? 'English_PlayfulGirl' : voiceId;
+            const audioBuffer = await generateSpeechMinimax(textToSpeak, targetId);
+            res.setHeader('Content-Type', 'audio/mpeg');
+            res.send(audioBuffer);
+            return;
+        } catch (e) {
+            console.error('[TTS] Minimax failed:', e);
+            // Fallback to Edge TTS Anime
+            console.warn('[TTS] Falling back to Edge TTS Anime...');
+            const audioBuffer = await generateSpeechEdgeTTS(textToSpeak, 'pt-BR-FranciscaNeural', '+20Hz', '+10%');
+            res.setHeader('Content-Type', 'audio/mpeg');
+            res.send(audioBuffer);
+            return;
+        }
+    }
 
     // ☁️ Lira Local (Primary: Edge TTS Anime, Fallback: AWS Polly)
     if (voiceId === 'lira-local') {
