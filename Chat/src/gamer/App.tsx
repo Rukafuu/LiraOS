@@ -159,13 +159,11 @@ function App() {
              const host = parts[0];
              const port = parts.length > 1 ? parseInt(parts[1]) : 25565;
              
-             // FORCE PROD BACKEND WHEN LOCALHOST
-             const baseUrl = window.location.hostname === 'localhost' 
-                ? 'https://liraos-production.up.railway.app' 
-                : '';
+             // USE LOCAL BOT SERVER (Port 3000)
+             // This runs separately from the main backend
+             const botServerUrl = 'http://localhost:3000';
 
-             // USE V2 ROUTE
-             const res = await fetch(`${baseUrl}/api/gamer/v2/connect`, {
+             const res = await fetch(`${botServerUrl}/minecraft/connect`, {
                  method: 'POST',
                  headers: { 'Content-Type': 'application/json' },
                  body: JSON.stringify({ host, port, username: 'LiraBot' })
