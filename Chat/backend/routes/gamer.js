@@ -106,4 +106,32 @@ router.post('/minecraft/stop', async (req, res) => {
     }
 });
 
+// NEW V2 ROUTE TO BYPASS CACHE
+router.post('/v2/connect', async (req, res) => {
+    const { host, port, username } = req.body;
+    console.log(`[GAMER V2] Connect Request: ${host}:${port}`);
+    
+    // Immediate Success Response
+    res.json({ success: true, message: `V2 Init: Connecting to ${host}...` });
+
+    // Async Logic
+    setTimeout(async () => {
+        try {
+            const { minecraftBot } = await import('../modules/gamer/minecraft/botClient.js');
+            await import('../modules/gamer/brain/minecraftBrain.js');
+            
+            if (!minecraftBot) return console.error("V2: Bot module missing");
+
+            minecraftBot.connect({ 
+                host: host || 'localhost', 
+                port: port || 25565, 
+                username: username || 'LiraBot',
+                version: '1.20.4'
+            });
+        } catch(e) {
+            console.error("V2 Async Error:", e);
+        }
+    }, 500);
+});
+
 export default router;
