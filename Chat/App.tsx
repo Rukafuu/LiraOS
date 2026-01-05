@@ -764,12 +764,19 @@ const LiraAppContent = () => {
       if (isVoiceEnabled && accumulatedResponse && !abortCtrl.signal.aborted && !isVoiceActive) {
         // Determine voice (reuse logic)
         // Determine voice (reuse logic)
-        const voiceId = localStorage.getItem('lira_premium_voice_id') || 'lira-local';
+        let voiceId = localStorage.getItem('lira_premium_voice_id') || 'lira-local';
+        
+        // Auto-Upgrade to Minimax (Playful Girl) if Antares+ (or Pro/HighLevel) and using default
+        const userTier = (stats as any).tier || stats.plan || 'free';
+        if (['antares', 'supernova', 'singularity', 'vega', 'pro', 'architect'].includes(userTier.toLowerCase()) && voiceId === 'lira-local') {
+           voiceId = 'minimax-playful';
+        }
+
         const isPremium = voiceId !== 'google-pt-BR';
 
         liraVoice.speak(accumulatedResponse, {
           usePremium: isPremium,
-          voiceId: voiceId // Use the actual ID (likely 'lira-local')
+          voiceId: voiceId 
         });
       }
 
