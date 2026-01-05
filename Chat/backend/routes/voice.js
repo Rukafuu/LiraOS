@@ -66,8 +66,17 @@ router.post('/tts', async (req, res) => {
 
         return;
       } catch (e) {
-        console.error('XTTS Backend Error:', e);
-        return res.status(503).json({ error: 'XTTS Local Server communication failed', details: e.message });
+        console.warn('[TTS] XTTS Local Server unavailable, falling back to AWS Polly (Vitoria Neural)...', e.message);
+        try {
+            // Fallback to Polly (Vitoria)
+            const audioBuffer = await generateSpeechAWSPolly(textToSpeak, 'Vitoria', 'neural');
+            res.setHeader('Content-Type', 'audio/mpeg');
+            res.send(audioBuffer);
+            return;
+        } catch (pollyErr) {
+            console.error('[TTS] Both XTTS and Polly Fallback failed:', pollyErr);
+            return res.status(503).json({ error: 'TTS Service Unavailable', details: pollyErr.message });
+        }
       }
     }
 
