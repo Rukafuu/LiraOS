@@ -1,10 +1,30 @@
 import express from 'express';
-// import { requireAuth } from '../middlewares/authMiddleware.js'; // Optional security
+// import { requireAuth } from '../middlewares/authMiddleware.js'; 
 import { pcController } from '../services/pcControllerService.js';
 
 const router = express.Router();
 
-// router.use(requireAuth);
+/**
+ * SSE Endpoint for Local PC Agent (Lira Link)
+ * Client should connect here to receive commands
+ */
+router.get('/connect', (req, res) => {
+    // Basic formatting for SSE
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    // Register this connection
+    pcController.addClient(res);
+
+    // Keep alive heartbeat
+    const interval = setInterval(() => {
+        res.write(': heartbeat\n\n');
+    }, 15000);
+
+    req.on('close', () => clearInterval(interval));
+});
 
 router.post('/control', async (req, res) => {
     try {
@@ -42,7 +62,6 @@ router.post('/control', async (req, res) => {
     }
 });
 
-// System Stats (CPU/RAM) - Future Expansion?
 router.get('/stats', async (req, res) => {
     res.json({ status: 'online', uptime: process.uptime() });
 });
