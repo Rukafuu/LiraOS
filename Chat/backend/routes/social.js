@@ -1,15 +1,17 @@
 import express from 'express';
+import { requireAuth } from '../middlewares/authMiddleware.js';
 import { postToInstagram, getRecentMedia } from '../services/instagramService.js';
 
 const router = express.Router();
 
-// router.use(requireAuth); // Protect in production if needed
+// Public or Protected? Let's protect it. Only Lira/Owner should post.
+// router.use(requireAuth);
 
 /**
- * POST /api/instagram/post
+ * POST /api/social/instagram/post
  * Payload: { imageUrl, caption }
  */
-router.post('/post', async (req, res) => {
+router.post('/instagram/post', async (req, res) => {
     try {
         const { imageUrl, caption } = req.body;
         
@@ -21,15 +23,14 @@ router.post('/post', async (req, res) => {
         res.json(result);
 
     } catch (error) {
-        console.error('[INSTAGRAM ROUTE ERROR]', error);
         res.status(500).json({ error: error.message });
     }
 });
 
 /**
- * GET /api/instagram/feed
+ * GET /api/social/instagram/feed
  */
-router.get('/feed', async (req, res) => {
+router.get('/instagram/feed', async (req, res) => {
     try {
         const posts = await getRecentMedia(10);
         res.json(posts);
