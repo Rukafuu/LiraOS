@@ -13,6 +13,12 @@ dotenv.config();
 
 const router = express.Router();
 
+
+
+router.get('/ping', (req, res) => {
+    res.json({ pong: true, time: Date.now(), botStatus: minecraftBot ? (minecraftBot.bot ? 'CONNECTED' : 'READY') : 'DEAD' });
+});
+
 router.post('/decide', async (req, res) => {
     try {
         const { image, gameId, context } = req.body; // image: base64, context: { lastThought, etc }
