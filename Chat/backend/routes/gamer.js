@@ -16,7 +16,14 @@ const router = express.Router();
 
 
 router.get('/ping', (req, res) => {
-    res.json({ pong: true, time: Date.now(), botStatus: minecraftBot ? (minecraftBot.bot ? 'CONNECTED' : 'READY') : 'DEAD' });
+    // Safe Ping for Lazy Load
+    let status = 'LAZY_STANDBY';
+    try {
+        // We can't easily check internal state of lazy module without importing.
+        // For now, just say UP.
+        status = 'SERVER_UP_LAZY';
+    } catch(e) {}
+    res.json({ pong: true, time: Date.now(), botStatus: status });
 });
 
 router.post('/decide', async (req, res) => {
@@ -54,47 +61,49 @@ router.post('/decide', async (req, res) => {
     }
 });
 
-// --- Mineflayer Bot Routes ---
-import { minecraftBot } from '../modules/gamer/minecraft/botClient.js';
-// Ensure Brain is loaded to listen to events
-import '../modules/gamer/brain/minecraftBrain.js'; 
+// REMOVE TOP LEVEL IMPORTS
+// import { minecraftBot } from '../modules/gamer/minecraft/botClient.js';
+// import '../modules/gamer/brain/minecraftBrain.js'; 
 
-router.post('/minecraft/connect', (req, res) => {
+router.post('/minecraft/connect', async (req, res) => {
     const { host, port, username } = req.body;
     console.log(`[GAMER] Request to connect MC to ${host}:${port}`);
-    try {
-        if (!minecraftBot) {
-            throw new Error("MinecraftBot module not initialized");
+
+    // RESPOND FIRST
+    res.json({ success: true, message: `Init sequence for ${host}...` });
+
+    // ASYNC INIT & CONNECT
+    setTimeout(async () => {
+        try {
+            // Lazy Load Bot Client
+            console.log('[GAMER] Lazy loading Mineflayer...');
+            const { minecraftBot } = await import('../modules/gamer/minecraft/botClient.js');
+            // Ensure Brain is active
+            await import('../modules/gamer/brain/minecraftBrain.js');
+
+            if (!minecraftBot) throw new Error("Bot module failed to load");
+
+            console.log(`[GAMER] Launching Bot for ${host}:${port}...`);
+            minecraftBot.connect({ 
+                host: host || 'localhost', 
+                port: port || 25565, 
+                username: username || 'LiraBot',
+                version: '1.20.4' 
+            });
+        } catch (innerErr) {
+            console.error(`[GAMER] Lazy Connect Crash:`, innerErr);
         }
-
-        // RESPOND FIRST (Prevent Timeout/Crash affecting UI)
-        res.json({ success: true, message: `Queued connection to ${host}...` });
-
-        // CONNECT LATER (Next Tick)
-        setTimeout(() => {
-            try {
-                console.log(`[GAMER] Launching Bot for ${host}:${port}...`);
-                minecraftBot.connect({ 
-                    host: host || 'localhost', 
-                    port: port || 25565, 
-                    username: username || 'LiraBot',
-                    version: '1.20.4' // FORCE VERSION to skip Ping Crash
-                });
-            } catch (innerErr) {
-                console.error(`[GAMER] Async Connect Crash:`, innerErr);
-            }
-        }, 100);
-
-    } catch (e) {
-        console.error(`[GAMER] Request Error:`, e);
-        // Only reply if we haven't already
-        if (!res.headersSent) res.status(500).json({ error: `Bot Start Failed: ${e.message}` });
-    }
+    }, 100);
 });
 
-router.post('/minecraft/stop', (req, res) => {
-    minecraftBot.disconnect();
-    res.json({ success: true, message: "Bot Disconnected." });
+router.post('/minecraft/stop', async (req, res) => {
+    try {
+        const { minecraftBot } = await import('../modules/gamer/minecraft/botClient.js');
+        if(minecraftBot) minecraftBot.disconnect();
+        res.json({ success: true, message: "Bot Disconnected." });
+    } catch(e) {
+        res.status(500).json({error: e.message});
+    }
 });
 
 export default router;
