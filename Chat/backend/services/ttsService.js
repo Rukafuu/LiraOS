@@ -2,6 +2,8 @@ import { PollyClient, SynthesizeSpeechCommand } from "@aws-sdk/client-polly";
 import { uploadToS3 } from './storageService.js';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
+import { WebSocket } from 'ws';
+import { v4 as uuidv4 } from 'uuid';
 dotenv.config();
 
 const REGION = process.env.AWS_REGION || 'us-east-1';
@@ -26,7 +28,7 @@ if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
  * @param {string} engine - 'neural', 'standard', or 'generative'
  * @returns {Promise<Buffer>} Audio buffer
  */
-export async function generateSpeechAWSPolly(text, voiceId = 'Camila', engine = 'neural') {
+export async function generateSpeechAWSPolly(text, voiceId = 'Francisca', engine = 'neural') {
     if (!pollyClient) throw new Error("AWS Credentials missing for Polly.");
 
     console.log(`[TTS] Requesting AWS Polly: ${voiceId} (${engine}) - "${text.substring(0, 20)}..."`);
@@ -73,4 +75,70 @@ export async function generateSpeechAWSPolly(text, voiceId = 'Camila', engine = 
         console.error("[TTS] Polly Synthesis Failed:", error);
         throw error;
     }
+}
+
+// ------------------------------------------------------------------
+// EDGE TTS IMPLEMENTATION (Direct WebSocket - Zero Dependency Hell)
+// ------------------------------------------------------------------
+export async function generateSpeechEdgeTTS(text, voice = 'pt-BR-FranciscaNeural', pitch = '+20Hz', rate = '+10%') {
+    console.log(`[TTS] EdgeTTS Request: ${voice} (Pitch: ${pitch}, Rate: ${rate})`);
+    
+    return new Promise((resolve, reject) => {
+        const ws = new WebSocket('wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4-EB77-4785-A779-A21604C1F59D');
+        const chunks = [];
+
+        ws.on('open', () => {
+             const requestId = uuidv4().replace(/-/g, '');
+             ws.send(`X-Timestamp:${new Date().toString()}\r\nContent-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"false"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}\r\n`);
+             
+             const ssml = `<speak version='1.0' xmlns='http://www.w3.org/2001/10/synthesis' xml:lang='pt-BR'><voice name='${voice}'><prosody pitch='${pitch}' rate='${rate}'>${text}</prosody></voice></speak>`;
+             ws.send(`X-RequestId:${requestId}\r\nContent-Type:application/ssml+xml\r\nX-Timestamp:${new Date().toString()}\r\nPath:ssml\r\n\r\n${ssml}`);
+        });
+
+        ws.on('message', (data, isBinary) => {
+            if (isBinary) {
+                // Find 'Path:audio\r\n' in the header part of the binary message
+                const separator = Buffer.from('Path:audio\r\n');
+                const idx = data.indexOf(separator);
+                if (idx !== -1) {
+                     // The header is text, then \r\n, then binary data.
+                     // The end of header is marked by detecting where the ascii text ends, 
+                     // usually simpler to look for the known separator and skip a known offset?
+                     // Actually, binary messages from Edge have a 2-byte size header for the text header.
+                     // Let's rely on finding "Path:audio\r\n" and looking for the start of content.
+                     // Usually it's roughly after the text header.
+                     // Let's just scan for '\r\n\r\n' after the 'Path:audio'
+                     const headerEndInfo = data.indexOf(Buffer.from('\r\n\r\n'), idx);
+                     if (headerEndInfo !== -1) {
+                         const audioData = data.subarray(headerEndInfo + 4);
+                         chunks.push(audioData);
+                     }
+                }
+            }
+        });
+
+        ws.on('close', () => {
+            if (chunks.length > 0) {
+                const audioBuffer = Buffer.concat(chunks);
+                
+                // Cache to S3 (Async)
+                const hash = crypto.createHash('md5').update(`edge-${voice}-${pitch}-${rate}-${text}`).digest('hex');
+                uploadToS3(audioBuffer, 'audio/mpeg', `voice/cache/${hash}.mp3`)
+                    .then(url => console.log(`[TTS] Cached to S3: ${url}`))
+                    .catch(() => {});
+
+                resolve(audioBuffer);
+            } else {
+                // Sometimes close happens before we get chunks if error
+                // But usually we get at least something. 
+                // If empty, reject.
+                if (chunks.length === 0) reject(new Error('EdgeTTS closed without audio'));
+            }
+        });
+
+        ws.on('error', (err) => {
+            console.error('[TTS] EdgeTTS Error:', err);
+            reject(err);
+        });
+    });
 }

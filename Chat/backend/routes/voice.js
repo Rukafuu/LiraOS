@@ -2,7 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import { Readable } from 'stream';
 import { requireAuth } from '../middlewares/authMiddleware.js';
-import { generateSpeechAWSPolly } from '../services/ttsService.js';
+import { generateSpeechAWSPolly, generateSpeechEdgeTTS } from '../services/ttsService.js';
 import path from 'path';
 import fs from 'fs';
 import { spawn } from 'child_process';
@@ -35,18 +35,30 @@ router.post('/tts', async (req, res) => {
 
     const textToSpeak = cleanText.length > 0 ? cleanText : text;
 
-    // ☁️ Lira Local (Now AWS Polly Cloud)
+    // ☁️ Lira Local (Primary: Edge TTS Anime, Fallback: AWS Polly)
     if (voiceId === 'lira-local') {
-      // Use 'Vitoria' or 'Camila' (Neural) for best PT-BR experience
-      // 'generative' engine is experimental for PT-BR, defaulting to neural in service if needed.
-      const audioBuffer = await generateSpeechAWSPolly(textToSpeak, 'Vitoria', 'neural'); 
-      
-      res.setHeader('Content-Type', 'audio/mpeg');
-      res.send(audioBuffer);
-      return;
+      try {
+        // Try Edge TTS (Francisca Anime Tuned) first
+        const audioBuffer = await generateSpeechEdgeTTS(textToSpeak, 'pt-BR-FranciscaNeural', '+20Hz', '+10%');
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.send(audioBuffer);
+        return;
+      } catch (edgeErr) {
+        console.warn('[TTS] EdgeTTS failed, falling back to AWS Polly:', edgeErr.message);
+        try {
+            // Fallback to Polly (Francisca Neural)
+            const audioBuffer = await generateSpeechAWSPolly(textToSpeak, 'Francisca', 'neural'); 
+            res.setHeader('Content-Type', 'audio/mpeg');
+            res.send(audioBuffer);
+            return;
+        } catch (pollyErr) {
+            console.error('[TTS] All Fallbacks failed (Edge + Polly):', pollyErr);
+            return res.status(503).json({ error: 'TTS Service Unavailable', details: pollyErr.message });
+        }
+      }
     }
 
-    // 🟢 XTTS Local Support
+    // 🟢 XTTS Local Support (Fallback to Edge TTS if unreachable)
     if (voiceId === 'xtts-local') {
       try {
         const xttsRes = await fetch('http://127.0.0.1:5002/tts', {
@@ -66,16 +78,16 @@ router.post('/tts', async (req, res) => {
 
         return;
       } catch (e) {
-        console.warn('[TTS] XTTS Local Server unavailable, falling back to AWS Polly (Vitoria Neural)...', e.message);
+        console.warn('[TTS] XTTS Local Server unavailable, falling back to Edge TTS (Anime)...', e.message);
         try {
-            // Fallback to Polly (Vitoria)
-            const audioBuffer = await generateSpeechAWSPolly(textToSpeak, 'Vitoria', 'neural');
+            // Fallback to Edge TTS (closer to Anime voice than Polly)
+            const audioBuffer = await generateSpeechEdgeTTS(textToSpeak, 'pt-BR-FranciscaNeural', '+20Hz', '+10%');
             res.setHeader('Content-Type', 'audio/mpeg');
             res.send(audioBuffer);
             return;
-        } catch (pollyErr) {
-            console.error('[TTS] Both XTTS and Polly Fallback failed:', pollyErr);
-            return res.status(503).json({ error: 'TTS Service Unavailable', details: pollyErr.message });
+        } catch (edgeErr) {
+             console.error('[TTS] XTTS and Edge Fallback failed:', edgeErr);
+             return res.status(503).json({ error: 'TTS Service Unavailable', details: edgeErr.message });
         }
       }
     }
