@@ -66,15 +66,29 @@ router.post('/minecraft/connect', (req, res) => {
         if (!minecraftBot) {
             throw new Error("MinecraftBot module not initialized");
         }
-        minecraftBot.connect({ 
-            host: host || 'localhost', 
-            port: port || 25565, 
-            username: username || 'LiraBot' 
-        });
-        res.json({ success: true, message: `Connecting to ${host}...` });
+
+        // RESPOND FIRST (Prevent Timeout/Crash affecting UI)
+        res.json({ success: true, message: `Queued connection to ${host}...` });
+
+        // CONNECT LATER (Next Tick)
+        setTimeout(() => {
+            try {
+                console.log(`[GAMER] Launching Bot for ${host}:${port}...`);
+                minecraftBot.connect({ 
+                    host: host || 'localhost', 
+                    port: port || 25565, 
+                    username: username || 'LiraBot',
+                    version: '1.20.4' // FORCE VERSION to skip Ping Crash
+                });
+            } catch (innerErr) {
+                console.error(`[GAMER] Async Connect Crash:`, innerErr);
+            }
+        }, 100);
+
     } catch (e) {
-        console.error(`[GAMER] Connect Crash:`, e);
-        res.status(500).json({ error: `Bot Start Failed: ${e.message}` });
+        console.error(`[GAMER] Request Error:`, e);
+        // Only reply if we haven't already
+        if (!res.headersSent) res.status(500).json({ error: `Bot Start Failed: ${e.message}` });
     }
 });
 
