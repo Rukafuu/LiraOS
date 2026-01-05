@@ -55,7 +55,11 @@ import '../modules/gamer/brain/minecraftBrain.js';
 
 router.post('/minecraft/connect', (req, res) => {
     const { host, port, username } = req.body;
+    console.log(`[GAMER] Request to connect MC to ${host}:${port}`);
     try {
+        if (!minecraftBot) {
+            throw new Error("MinecraftBot module not initialized");
+        }
         minecraftBot.connect({ 
             host: host || 'localhost', 
             port: port || 25565, 
@@ -63,7 +67,8 @@ router.post('/minecraft/connect', (req, res) => {
         });
         res.json({ success: true, message: `Connecting to ${host}...` });
     } catch (e) {
-        res.status(500).json({ error: e.message });
+        console.error(`[GAMER] Connect Crash:`, e);
+        res.status(500).json({ error: `Bot Start Failed: ${e.message}` });
     }
 });
 
