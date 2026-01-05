@@ -8,6 +8,9 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@aws-sdk/client-polly": "^3.962.0",
+    "@aws-sdk/client-s3": "^3.962.0",
+    "@aws-sdk/lib-storage": "^3.962.0",
     "@discordjs/voice": "^0.19.0",
     "@google/genai": "^1.31.0",
     "@google/generative-ai": "^0.24.1",

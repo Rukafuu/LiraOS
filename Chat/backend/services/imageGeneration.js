@@ -1,6 +1,8 @@
 import fetch from 'node-fetch';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
+import { uploadBase64ToS3, isStorageEnabled } from './storageService.js';
+
 dotenv.config();
 
 const POLLINATIONS_BASE = 'https://image.pollinations.ai';
@@ -15,7 +17,7 @@ const PROVIDERS = {
     gemini: {
         name: 'Google Gemini 3',
         model: 'gemini-3-pro-image-preview',
-        tiers: ['sirius', 'antares', 'supernova', 'singularity', 'vega'], // Added Vega here
+        tiers: ['sirius', 'antares', 'supernova', 'singularity', 'vega'],
         quality: 'ultra'
     },
     pollinations: {
@@ -211,6 +213,23 @@ export async function generateImage(prompt, userTier = 'free', hfApiKey = null) 
                 imageUrl = generatePollinationsUrl(prompt, seed);
                 break;
         }
+
+        // ☁️ S3 UPLOAD INTEGRATION
+        // If we have a Base64 image and Storage is enabled, upload it!
+        if (isBase64 && isStorageEnabled()) {
+            try {
+                console.log('[IMAGE_GEN] Uploading generated image to S3...');
+                const s3Url = await uploadBase64ToS3(imageUrl, 'images/gen');
+                if (s3Url) {
+                    imageUrl = s3Url;
+                    isBase64 = false; // It's now a reliable URL
+                    console.log('[IMAGE_GEN] S3 Upload Complete:', s3Url);
+                }
+            } catch (uploadErr) {
+                console.error('[IMAGE_GEN] S3 Upload failed (using Base64 fallback):', uploadErr.message);
+                // We keep imageUrl as Base64 so the user still gets their image
+            }
+        }
         
         return {
             success: true,
@@ -240,10 +259,25 @@ export async function generateImage(prompt, userTier = 'free', hfApiKey = null) 
                 if (resp.ok) {
                    const buf = await resp.arrayBuffer();
                    const b64 = Buffer.from(buf).toString('base64');
+                   
+                   let fallbackImageUrl = `data:image/jpeg;base64,${b64}`;
+                   let fallbackIsBase64 = true;
+
+                   // Try upload fallback to S3 too
+                   if (isStorageEnabled()) {
+                        try {
+                            const s3Url = await uploadBase64ToS3(fallbackImageUrl, 'images/fallback');
+                            if (s3Url) {
+                                fallbackImageUrl = s3Url;
+                                fallbackIsBase64 = false;
+                            }
+                        } catch (e) {}
+                   }
+
                    return {
                        success: true,
-                       imageUrl: `data:image/jpeg;base64,${b64}`,
-                       isBase64: true,
+                       imageUrl: fallbackImageUrl,
+                       isBase64: fallbackIsBase64,
                        provider: 'Pollinations.ai (Fallback Proxy)',
                        model: 'Flux',
                        quality: 'standard',

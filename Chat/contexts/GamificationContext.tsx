@@ -241,7 +241,9 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             headers: getAuthHeaders()
           });
           if (r.status === 401) {
-            logout();
+            console.warn('[Gamification] 401 Unauthorized. Token might be invalid or from a different environment.');
+            // Only force logout if we are sure it's not a temporary glitch
+            // For now, let's just abort this fetch to avoid crash loop
             return;
           }
           if (r.ok) {

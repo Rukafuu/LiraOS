@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import { Readable } from 'stream';
 import { requireAuth } from '../middlewares/authMiddleware.js';
+import { generateSpeechAWSPolly } from '../services/ttsService.js';
 import path from 'path';
 import fs from 'fs';
 import { spawn } from 'child_process';
@@ -20,61 +21,28 @@ router.post('/tts', async (req, res) => {
     console.log(`[TTS] 🗣️ Requesting audio for: "${text.substring(0, 50)}..."`);
 
     // 🧹 Text Cleaning
+    // Remove [EMOTION], (Action), *Action*, and Markdown
     const cleanText = text
-      .replace(/[*#_`~]/g, '')
-      .replace(/-{2,}/g, '')
-      .replace(/\[.*?\]/g, '')
-      .replace(/\(.*?\)/g, '')
-      .replace(/\s+/g, ' ')
+      .replace(/\[[\s\S]*?\]/g, '') // Remove [Tags] with newlines
+      .replace(/\([\s\S]*?\)/g, '') // Remove (Parentheses) with newlines
+      .replace(/\*[\s\S]*?\*/g, '') // Remove *Asterisks* actions
+      .replace(/[*#_`~]/g, '')      // Remove remaining markdown chars
+      .replace(/-{2,}/g, '')        // Remove long dashes
+      .replace(/\s+/g, ' ')         // Collapse whitespace
       .trim();
+
+    console.log(`[TTS DEBUG] Original: "${text.substring(0,30)}..." -> Clean: "${cleanText.substring(0,30)}..."`);
 
     const textToSpeak = cleanText.length > 0 ? cleanText : text;
 
-    // 🟢 Lira Local (Edge-TTS)
+    // ☁️ Lira Local (Now AWS Polly Cloud)
     if (voiceId === 'lira-local') {
-      const pythonScript = path.join(process.cwd(), 'python', 'tts_engine.py');
-
-      // 🐧 Cross-Platform Command
-      // Windows uses 'python', Linux/Mac uses 'python3'
-      const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
-
-      // Spawn python process with --generate-only
-      const pyProcess = spawn(pythonCommand, [pythonScript, textToSpeak, '--generate-only']);
-
-      let audioPath = '';
-
-      pyProcess.stdout.on('data', (data) => {
-        audioPath += data.toString().trim();
-      });
-
-      pyProcess.stderr.on('data', (data) => {
-        console.error('[TTS Engine Error]', data.toString());
-      });
-
-      pyProcess.on('close', (code) => {
-        if (code !== 0 || !audioPath) {
-          return res.status(500).json({ error: 'TTS Generation Failed' });
-        }
-
-        // Read file and send
-        try {
-          if (fs.existsSync(audioPath)) {
-            const buffer = fs.readFileSync(audioPath);
-
-            res.setHeader('Content-Type', 'audio/mpeg');
-            // res.setHeader('Content-Length', buffer.length); // Optional, chunked transfer is fine
-            res.send(buffer);
-
-            // Cleanup
-            fs.unlinkSync(audioPath);
-          } else {
-            res.status(500).json({ error: 'Audio file not found' });
-          }
-        } catch (err) {
-          console.error(err);
-          res.status(500).json({ error: 'Error reading audio file' });
-        }
-      });
+      // Use 'Vitoria' or 'Camila' (Neural) for best PT-BR experience
+      // 'generative' engine is experimental for PT-BR, defaulting to neural in service if needed.
+      const audioBuffer = await generateSpeechAWSPolly(textToSpeak, 'Vitoria', 'neural'); 
+      
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.send(audioBuffer);
       return;
     }
 
