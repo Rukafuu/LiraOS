@@ -1,372 +1,182 @@
-
-import path from 'path';
-import fs from 'fs';
-import os from 'os';
-import { exec } from 'child_process';
-import open from 'open';
-import axios from 'axios';
-
-// Utility to promisify exec
-const execAsync = (cmd) => new Promise((resolve, reject) => {
-    exec(cmd, (error, stdout, stderr) => {
-        if (error) return reject(error);
-        resolve(stdout ? stdout.trim() : '');
-    });
-});
+import { spawn } from 'child_process';
+import openPkg from 'open'; // Using the 'open' package we saw in package.json
 
 class PCControllerService {
     constructor() {
-        this.system = os.platform(); // 'win32' for Windows
-        this.aliases = {
-            'documentos': path.join(os.homedir(), 'Documents'),
-            'docs': path.join(os.homedir(), 'Documents'),
-            'desktop': path.join(os.homedir(), 'Desktop'),
-            'downloads': path.join(os.homedir(), 'Downloads'),
-            'pictures': path.join(os.homedir(), 'Pictures'),
-            'imagens': path.join(os.homedir(), 'Pictures'),
-            'music': path.join(os.homedir(), 'Music'),
-            'musica': path.join(os.homedir(), 'Music'),
-            'videos': path.join(os.homedir(), 'Videos'),
-            'home': os.homedir(),
-            'lira': process.cwd(),
+        console.log('[PC Controller] Service Initialized');
+    }
+
+    /**
+     * Executes a PowerShell command
+     */
+    async runPowershell(command) {
+        return new Promise((resolve, reject) => {
+            const ps = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', command]);
+            
+            let stdout = '';
+            let stderr = '';
+
+            ps.stdout.on('data', (data) => stdout += data.toString());
+            ps.stderr.on('data', (data) => stderr += data.toString());
+
+            ps.on('close', (code) => {
+                if (code === 0) resolve(stdout.trim());
+                else reject(new Error(`PowerShell Exited ${code}: ${stderr}`));
+            });
+        });
+    }
+
+    /**
+     * Opens an application or URL
+     * @param {string} target - App name or URL (e.g., "spotify", "notepad", "google.com")
+     */
+    async openApp(target) {
+        console.log(`[PC Controller] Opening: ${target}`);
+        
+        // Mapeamento de nomes comuns para executáveis/protocólos
+        const appMap = {
+            'spotify': 'spotify:',
+            'discord': 'com.squirrel.Discord.Discord', // Tenta via protocolo ou nome
+            'notepad': 'notepad.exe',
+            'calc': 'calc.exe',
+            'calculator': 'calc.exe',
+            'chrome': 'chrome',
+            'browser': 'chrome',
+            'code': 'code',
+            'vscode': 'code',
+            'terminal': 'wt.exe',
+            'cmd': 'cmd.exe',
+            'explorer': 'explorer.exe'
         };
+
+        let command = target.toLowerCase();
+        if (appMap[command]) {
+            command = appMap[command];
+        }
+
+        try {
+            // Tenta usar package 'open' primeiro (melhor para URLs e defaults)
+            await openPkg(command);
+            return { success: true, message: `Opened ${target}` };
+        } catch (e) {
+            console.warn('[PC Controller] open pkg failed, trying powershell fallback...');
+            // Fallback para PowerShell Start-Process
+            try {
+                await this.runPowershell(`Start-Process "${command}"`);
+                return { success: true, message: `Opened ${target} via PS` };
+            } catch (err) {
+                throw new Error(`Failed to open ${target}`);
+            }
+        }
+    }
+
+    /**
+     * Sets System Volume (0-100)
+     * Requires a trick script because PS doesn't have native volume cmd easily accessible without dlls.
+     * Use VBScript trick or nircmd if available. Let's use the WScript.Shell SendKeys equivalent for relative changes,
+     * OR a comprehensive PS audio script.
+     * 
+     * Simpler approach: Simulate Key Presses for VolUp/VolDown/Mute
+     */
+    async setVolume(action) {
+        // action: 'up', 'down', 'mute', 'max', 'min'
+        let keys = '';
+        const loops = 5; // how many steps
+
+        switch (action) {
+            case 'up': 
+                // 0xAF is VK_VOLUME_UP
+                keys = `for($i=0;$i -lt ${loops};$i++) { $obj = New-Object -ComObject WScript.Shell; $obj.SendKeys([char]175) }`; 
+                break;
+            case 'down':
+                // 0xAE is VK_VOLUME_DOWN
+                keys = `for($i=0;$i -lt ${loops};$i++) { $obj = New-Object -ComObject WScript.Shell; $obj.SendKeys([char]174) }`;
+                break;
+            case 'mute':
+                // 0xAD is VK_VOLUME_MUTE
+                keys = `$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys([char]173)`;
+                break;
+             // Specific volume level is hard without external tools like nircmd.
+        }
+
+        if (keys) {
+             await this.runPowershell(keys);
+             return { success: true, message: `Volume ${action}` };
+        }
+        return { success: false, message: 'Unknown volume action' };
+    }
+
+    /**
+     * Controls Media (Play/Pause, Next, Prev)
+     */
+    async mediaControl(action) {
+        let key = '';
+        switch(action) {
+            case 'playpause': key = '179'; break; // VK_MEDIA_PLAY_PAUSE
+            case 'next': key = '176'; break;      // VK_MEDIA_NEXT_TRACK
+            case 'prev': key = '177'; break;      // VK_MEDIA_PREV_TRACK
+            case 'stop': key = '178'; break;      // VK_MEDIA_STOP
+        }
+
+        if (key) {
+            const script = `$obj = New-Object -ComObject WScript.Shell; $obj.SendKeys([char]${key})`;
+            await this.runPowershell(script);
+            return { success: true, message: `Media ${action}` };
+        }
+        return { success: false, message: 'Invalid media action' };
+    }
+
+    /**
+     * Types text using keyboard simulation
+     */
+    async typeText(text) {
+        // Safe characters escaping for SendKeys
+        // SendKeys is tricky with special chars.
+        console.log(`[PC Controller] Typing: ${text}`);
+        const escaped = text.replace(/[{}+^%~()]/g, "{$&}"); // Escape special SendKeys chars
+        const script = `
+        $wshell = New-Object -ComObject WScript.Shell;
+        $wshell.SendKeys('${escaped}')
+        `;
+        await this.runPowershell(script);
+        return { success: true };
+    }
+    
+    /**
+     * Handles a generic instruction from the AI Agent (e.g. "open chrome")
+     */
+    async handleInstruction(command) {
+        console.log(`[PC Controller] Handling instruction: "${command}"`);
+        const cmd = command.toLowerCase().trim();
+
+        if (cmd.startsWith('open ') || cmd.startsWith('start ') || cmd.startsWith('abrir ')) {
+            const target = cmd.replace(/^(open|start|abrir)\s+/, '').trim();
+            return await this.openApp(target);
+        }
+
+        if (cmd.includes('volume') || cmd.includes('som')) {
+            if (cmd.includes('up') || cmd.includes('aumentar') || cmd.includes('+')) return await this.setVolume('up');
+            if (cmd.includes('down') || cmd.includes('diminuir') || cmd.includes('-')) return await this.setVolume('down');
+            if (cmd.includes('mute') || cmd.includes('udo')) return await this.setVolume('mute');
+        }
+
+        if (cmd.startsWith('type ') || cmd.startsWith('digita ') || cmd.startsWith('escreve ')) {
+            const text = cmd.replace(/^(type|digita|escreve)\s+/, '');
+            return await this.typeText(text);
+        }
+        
+        // Media controls
+        if (cmd.includes('play') || cmd.includes('pause')) return await this.mediaControl('playpause');
+        if (cmd.includes('next') || cmd.includes('proxima')) return await this.mediaControl('next');
+        if (cmd.includes('prev') || cmd.includes('anterior')) return await this.mediaControl('prev');
+
+        // Fallback: Try to open whatever it is
+        console.log('[PC Controller] Unknown command pattern, trying to open as app/url...');
+        return await this.openApp(cmd);
     }
     
     start() {
-        console.log('[PC_CONTROLLER] Service started.');
-    }
-
-    async handleInstruction(instruction) {
-        if (!instruction || !instruction.trim()) return "Instrução vazia.";
-        
-        const lower = instruction.toLowerCase().trim();
-
-        // 0. Smart YouTube / Google (High Priority)
-        // Handles: "abrir youtube no video X", "pesquisar X no youtube", "tocar X no youtube"
-        if (lower.includes('youtube')) {
-             const query = lower.replace(/abrir|tocar|ouvir|assistir|pesquisar|procurar|no|no|youtube|o|a|video|música/gi, '').trim();
-             if (query.length > 2) {
-                 const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
-                 await this.openWebsite(url);
-                 return `Abrindo YouTube com: "${query}"`;
-             } else {
-                 await this.openWebsite('youtube');
-                 return "Abrindo YouTube...";
-             }
-        }
-        
-        if (lower.includes('google') && (lower.includes('pesquisar') || lower.includes('procurar') || lower.includes('buscar'))) {
-             const query = lower.replace(/pesquisar|procurar|buscar|no|google|sobre|por|o|a/gi, '').trim();
-             const url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-             await this.openWebsite(url);
-             return `Pesquisando no Google: "${query}"`;
-        }
-
-
-        // 1. Media Controls
-        if (this.containsKeywords(lower, ['play', 'pause', 'pausar', 'tocar', 'parar música', 'continuar música'])) {
-            // Se tiver "tocar X", assume que é busca genérica se não for mídia
-            // Mas vamos manter media key simples por enquanto ou tentar abrir spotify?
-            // Se for só "tocar" ou "pausar", usa media key.
-            if (lower.split(' ').length <= 2) return await this.sendMediaKey('play_pause');
-        }
-        if (this.containsKeywords(lower, ['next', 'próxima', 'avançar', 'pular'])) return await this.sendMediaKey('next');
-        if (this.containsKeywords(lower, ['prev', 'anterior', 'voltar música', 'retroceder'])) return await this.sendMediaKey('prev');
-        
-        // 2. Volume Controls
-        if (this.containsKeywords(lower, ['mudo', 'mute', 'silenciar'])) return await this.sendMediaKey('mute');
-        if (this.containsKeywords(lower, ['aumentar', 'subir', 'mais alto', 'aumenta'])) return await this.changeVolume('up');
-        if (this.containsKeywords(lower, ['diminuir', 'baixar', 'abaixar', 'mais baixo', 'diminui'])) return await this.changeVolume('down');
-
-        // 3. System Apps & Navigation
-        if (this.containsKeywords(lower, ['abrir', 'abre', 'open', 'start', 'iniciar'])) {
-            return await this.handleOpen(lower);
-        }
-        if (this.containsKeywords(lower, ['procurar', 'buscar', 'pesquisar', 'search', 'find'])) {
-            return await this.handleSearch(lower);
-        }
-        if (this.containsKeywords(lower, ['listar', 'lista', 'list', 'ls', 'dir'])) {
-            return await this.handleList(lower);
-        }
-
-        return "Comando não reconhecido. Tente 'abrir X', 'tocar música' ou 'aumentar volume'.";
-    }
-
-    containsKeywords(text, keywords) {
-        return keywords.some(k => text.includes(k));
-    }
-
-    extractTarget(instruction, keywords) {
-        let target = instruction;
-        keywords.forEach(k => {
-            // Replace keyword case-insensitive
-            const regex = new RegExp(k, 'gi');
-            target = target.replace(regex, '');
-        });
-        
-        // Remove common prepositions
-        const preps = ['de', 'do', 'da', 'dos', 'das', 'em', 'no', 'na', 'nos', 'nas', 'por', 'sobre', 'the', 'a', 'an', 'o', 'video', 'programa', 'app', 'aplicativo'];
-        target = target.split(' ').filter(w => !preps.includes(w)).join(' ');
-        
-        return target.trim();
-    }
-
-    // --- Media & Volume Implementation ---
-
-    async sendMediaKey(action) {
-        let key = 0;
-        let msg = "";
-
-        switch(action) {
-            case 'play_pause': key = 179; msg = "⏯️ Play/Pause"; break;
-            case 'next': key = 176; msg = "⏭️ Próxima"; break;
-            case 'prev': key = 177; msg = "⏮️ Anterior"; break;
-            case 'mute': key = 173; msg = "🔇 Mute Toggled"; break;
-        }
-
-        if (key > 0) {
-            const cmd = `powershell -c "$ws = New-Object -ComObject WScript.Shell; $ws.SendKeys([char]${key})"`;
-            try {
-                await execAsync(cmd);
-                return msg;
-            } catch (e) {
-                console.error("Media Key Error:", e);
-                return "Falha ao controlar mídia.";
-            }
-        }
-        return "Comando de mídia inválido.";
-    }
-
-    async changeVolume(direction) {
-        const key = direction === 'up' ? 175 : 174;
-        const cmd = `powershell -c "$ws = New-Object -ComObject WScript.Shell; for($i=0;$i-lt 5;$i++){ $ws.SendKeys([char]${key}) }"`;
-        
-        try {
-            await execAsync(cmd);
-            return direction === 'up' ? "🔊 Aumentando volume..." : "🔉 Baixando volume...";
-        } catch (e) {
-            return "Erro ao ajustar volume.";
-        }
-    }
-
-    // --- System Actions ---
-
-    async handleOpen(instruction) {
-        const target = this.extractTarget(instruction, ['abrir', 'abre', 'open', 'start', 'iniciar']);
-        if (!target) return "O que você quer abrir?";
-
-        // 1. Check Smart Aliases first
-        const programResult = await this.openProgram(target);
-        if (programResult) return programResult;
-
-        // 2. Check Paths
-        if (this.aliases[target]) {
-            return await this.openPath(this.aliases[target]);
-        }
-        if (fs.existsSync(target)) {
-            return await this.openPath(target);
-        }
-
-        // 3. Fallback to Website
-        const siteResult = await this.openWebsite(target);
-        if (siteResult) return siteResult;
-
-        return `Não consegui encontrar ou abrir '${target}'.`;
-    }
-
-    async openPath(targetPath) {
-        try {
-            await open(targetPath);
-            return `Aberto: ${path.basename(targetPath)}`;
-        } catch (e) {
-            return `Erro ao abrir: ${e.message}`;
-        }
-    }
-
-    async openProgram(target) {
-        // Expanded Dictionary
-        const common = {
-            'calculadora': 'calc',
-            'bloco de notas': 'notepad',
-            'paint': 'mspaint',
-            'explorer': 'explorer',
-            'vscode': 'code',
-            'visual studio code': 'code',
-            'chrome': 'chrome',
-            'firefox': 'firefox',
-            'edge': 'msedge',
-            'discord': 'discord',
-            'spotify': 'spotify',
-            'obs': 'obs64',
-            'obs studio': 'obs64',
-            'steam': 'steam',
-            'fl studio': 'fl64', // or FL64.exe
-            'fl': 'fl64',
-            'fruity loops': 'fl64',
-            'word': 'winword',
-            'excel': 'excel',
-            'powerpoint': 'powerpnt',
-            'photoshop': 'photoshop',
-            'illustrator': 'illustrator',
-            'premiere': 'Adobe Premiere Pro.exe', // Tricky without full path, often needs shortcut or registry
-            'after effects': 'AfterFX',
-            'terminal': 'wt',
-            'cmd': 'cmd',
-            'powershell': 'powershell'
-        };
-        
-        const key = Object.keys(common).find(k => target.includes(k) || k.includes(target));
-        let exe = key ? common[key] : target;
-        
-        // Special case for complex names that might fail 'run'
-        if (exe === 'fl64' && os.platform() === 'win32') exe = 'FL64.exe'; 
-        // Need to rely on PATH or App Paths in registry. 
-        // For FL64 usually it works if in path, otherwise might fail.
-        
-        try {
-            await open.openApp(exe).catch(() => open(exe)); 
-            return `Programa iniciado: ${exe}`;
-        } catch {
-             try {
-                await execAsync(`start "" "${exe}"`);
-                return `Programa iniciado (fallback): ${exe}`;
-             } catch(e) {
-                return null;
-             }
-        }
-    }
-
-    async openWebsite(target) {
-        let url = target;
-        if (!url.includes('.') && !url.includes(':')) {
-           if (['google', 'youtube', 'github'].includes(target)) url = `https://${target}.com`;
-           else return null;
-        }
-        if (!url.startsWith('http')) url = 'https://' + url;
-
-        try {
-            await open(url);
-            return `Site aberto: ${url}`;
-        } catch (e) {
-            return `Erro ao abrir site: ${e.message}`;
-        }
-    }
-
-    async handleSearch(instruction) {
-        const target = this.extractTarget(instruction, ['procurar', 'buscar', 'pesquisar', 'search', 'find']);
-        if (instruction.includes('youtube')) {
-            const query = target.replace('youtube', '').trim();
-            const url = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
-            await this.openWebsite(url);
-            return `Pesquisando '${query}' no YouTube...`;
-        }
-        const url = `https://www.google.com/search?q=${encodeURIComponent(target)}`;
-        await this.openWebsite(url);
-        return `Pesquisando '${target}' no Google...`;
-    }
-
-    async handleList(instruction) {
-        const target = this.extractTarget(instruction, ['listar', 'lista', 'list', 'ls', 'dir']) || '.';
-        let dirToRead = this.aliases[target] || target;
-        if (dirToRead === '.') dirToRead = process.cwd();
-
-        try {
-            const files = await fs.promises.readdir(dirToRead);
-            const preview = files.slice(0, 15).join(', ');
-            return `Conteúdo de ${path.basename(dirToRead)}: ${preview} ${files.length > 15 ? '...' : ''}`;
-        } catch (e) {
-            return `Erro ao listar: ${e.message}`;
-        }
-    }
-
-    async getSystemStats() {
-        // ... (existing code)
-        const psCmd = `powershell -c "
-            $cpu = (Get-CimInstance Win32_Processor).LoadPercentage;
-            $mem = Get-CimInstance Win32_OperatingSystem;
-            $totalRam = [math]::Round($mem.TotalVisibleMemorySize / 1KB, 1);
-            $freeRam = [math]::Round($mem.FreePhysicalMemory / 1KB, 1);
-            $usedRam = $totalRam - $freeRam;
-            $batt = (Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue).EstimatedChargeRemaining;
-            if (!$batt) { $batt = 'AC/Desktop' };
-            Write-Output \"CPU:$cpu|RAM:$usedRam/$totalRam|BATT:$batt\"
-        "`;
-        
-        try {
-            const output = await execAsync(psCmd);
-            const [cpuStr, ramStr, battStr] = output.split('|');
-            
-            return {
-                cpu_load: `${cpuStr.split(':')[1]}%`,
-                ram_usage: `${ramStr.split(':')[1]} MB`,
-                battery: battStr.split(':')[1],
-                platform: os.platform(),
-                uptime: `${Math.round(os.uptime() / 60)} min`
-            };
-        } catch (e) {
-            console.error("Stats Error:", e);
-            return { error: "Failed to retrieve stats" };
-        }
-    }
-
-    async organizeFolder(folderName) {
-        const targetPath = this.aliases[folderName.toLowerCase()] || folderName;
-        
-        // Safety Checks
-        if (!fs.existsSync(targetPath)) return { error: "Pasta não encontrada." };
-        if (targetPath.length < 10 && !targetPath.includes('Users')) return { error: "Por segurança, não organizo pastas raiz ou de sistema." };
-
-        const categories = {
-            '_Images': ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'],
-            '_Docs': ['.pdf', '.doc', '.docx', '.txt', '.md', '.xlsx', '.csv', '.pptx'],
-            '_Installers': ['.exe', '.msi', '.iso', '.bat'],
-            '_Archives': ['.zip', '.rar', '.7z', '.tar', '.gz'],
-            '_Audio': ['.mp3', '.wav', '.ogg', '.flac'],
-            '_Video': ['.mp4', '.mkv', '.avi', '.mov']
-        };
-
-        const movedLog = [];
-        let count = 0;
-
-        try {
-            const files = await fs.promises.readdir(targetPath);
-
-            for (const file of files) {
-                const filePath = path.join(targetPath, file);
-                const stat = await fs.promises.stat(filePath).catch(() => null);
-                
-                if (!stat || !stat.isFile()) continue; // Skip directories
-                
-                const ext = path.extname(file).toLowerCase();
-                let destFolder = null;
-
-                // Determine category
-                for (const [cat, exts] of Object.entries(categories)) {
-                    if (exts.includes(ext)) {
-                        destFolder = cat;
-                        break;
-                    }
-                }
-
-                if (destFolder) {
-                    const destPath = path.join(targetPath, destFolder);
-                    // Create subfolder if needed
-                    if (!fs.existsSync(destPath)) {
-                        await fs.promises.mkdir(destPath);
-                    }
-                    
-                    const newFilePath = path.join(destPath, file);
-                    await fs.promises.rename(filePath, newFilePath);
-                    movedLog.push(file);
-                    count++;
-                }
-            }
-            
-            return { success: true, count, moved: movedLog.slice(0, 5), message: `Organizei ${count} arquivos em subpastas!` };
-
-        } catch (e) {
-            return { error: `Erro ao organizar: ${e.message}` };
-        }
+        console.log('[PC Controller] Ready to serve.');
     }
 }
 
