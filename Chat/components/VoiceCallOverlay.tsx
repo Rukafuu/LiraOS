@@ -71,7 +71,7 @@ export const VoiceCallOverlay: React.FC<VoiceCallOverlayProps> = ({
   
   // Settings
   const [showSettings, setShowSettings] = useState(false);
-  const [selectedVoiceId, setSelectedVoiceId] = useState(localStorage.getItem('lira_premium_voice_id') || PREMIUM_VOICES[0].id);
+  const [selectedVoiceId, setSelectedVoiceId] = useState(localStorage.getItem('lira_premium_voice_id') || 'lira-local');
   const [localVoices, setLocalVoices] = useState<any[]>([]);
   
   // Microphone Settings
@@ -139,7 +139,7 @@ export const VoiceCallOverlay: React.FC<VoiceCallOverlayProps> = ({
 
              liraVoice.speak(textToSpeak, {
                 usePremium: selectedVoiceId !== 'google-pt-BR',
-                voiceId: selectedVoiceId !== 'google-pt-BR' ? 'xtts-local' : 'google-pt-BR'
+                voiceId: selectedVoiceId
              }).then(res => {
                 if (res.ok) setCallState('speaking');
              });

@@ -19,14 +19,7 @@ export interface SpeakResult {
 }
 
 export const PREMIUM_VOICES = [
-  { id: 'lira-local', name: 'Lira Local (Anime 18yo)', description: 'Fast & Cute', color: 'from-pink-500 to-rose-500' },
-  { id: 'xtts-local', name: 'XTTS v2 (Local GPU)', description: 'Free Neural Voice', color: 'from-emerald-500 to-teal-500' },
-  { id: '2RrzVoV9QVqHnD8bujTu', name: 'Lira', description: 'Voz Padrão', color: 'from-pink-500 to-rose-500' },
-  { id: 'WtA85syCrJwasGeHGH2p', name: 'Mira', description: 'Oposto', color: 'from-purple-500 to-indigo-500' },
-  { id: 'BpjGufoPiobT79j2vtj4', name: 'Carina', description: 'Extra', color: 'from-blue-500 to-cyan-500' },
-  { id: 'oJebhZNaPllxk6W0LSBA', name: 'Spica', description: 'Extra', color: 'from-green-500 to-emerald-500' },
-  { id: 'JS6C6yu2x9Byh4i1a8lX', name: 'Alfa', description: 'Extra', color: 'from-yellow-500 to-orange-500' },
-  { id: 'lWq4KDY8znfkV0DrK8Vb', name: 'Alcyone', description: 'Extra', color: 'from-red-500 to-pink-500' }
+  { id: 'lira-local', name: 'Lira', description: 'Voz Oficial (Neural)', color: 'from-pink-500 to-rose-500' },
 ];
 
 class LiraVoice {
