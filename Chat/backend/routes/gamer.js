@@ -88,7 +88,7 @@ router.post('/minecraft/connect', async (req, res) => {
                 host: host || 'localhost', 
                 port: port || 25565, 
                 username: username || 'LiraBot',
-                version: '1.20.4' 
+                version: '1.20.2' 
             });
         } catch (innerErr) {
             console.error(`[GAMER] Lazy Connect Crash:`, innerErr);
@@ -126,7 +126,7 @@ router.post('/v2/connect', async (req, res) => {
                 host: host || 'localhost', 
                 port: port || 25565, 
                 username: username || 'LiraBot',
-                version: '1.20.4'
+                version: '1.20.2'
             });
         } catch(e) {
             console.error("V2 Async Error:", e);

@@ -22,7 +22,7 @@ app.post('/minecraft/connect', (req, res) => {
             host: host || 'localhost',
             port: port || 25565,
             username: username || 'LiraBot',
-            version: '1.20.4' 
+            version: false // Auto-detect version 
         });
         res.json({ success: true, message: "Local Bot Launching..." });
     } catch (e) {
