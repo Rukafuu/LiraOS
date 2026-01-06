@@ -3,11 +3,11 @@ import express from 'express';
 import dotenv from 'dotenv';
 import { requireAuth } from '../middlewares/authMiddleware.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { globalContext } from '../utils/globalContext.js';
 
 dotenv.config();
 
 const router = express.Router();
-
 router.use(requireAuth);
 
 const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
@@ -15,6 +15,41 @@ const MISTRAL_VISION_API_KEY = process.env.MISTRAL_PIXTRAL_API_KEY || MISTRAL_AP
 const PIXTRAL_MODEL = process.env.PIXTRAL_MODEL || 'pixtral-12b-2409';
 const PADDLE_OCR_URL = process.env.PADDLE_OCR_URL || 'http://127.0.0.1:5001/ocr';
 const PADDLE_OCR_LANG = process.env.PADDLE_OCR_LANG || 'en';
+
+const geminiClient = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
+
+// Vision Tick (Called by Lira Link)
+router.post('/tick', async (req, res) => {
+    try {
+        const { screenshot } = req.body; // Base64
+        if (!screenshot) return res.status(400).json({ error: 'No screenshot' });
+
+        if (!geminiClient) return res.status(503).json({ error: 'Vision AI unavailable' });
+
+        // Fire and Forget Analysis (to not block client too much, though we should await to not leak memory)
+        // Let's await for Gemini Flash (it's fast)
+        const model = geminiClient.getGenerativeModel({ model: "gemini-2.0-flash-lite-preview-02-05" }); // Or a very fast model. Let's use standard flash for now if lite not avail.
+        // Actually, gemini-2.0-flash is the standard fast one.
+
+        const prompt = "Describe very briefly (1 sentence) what the user is doing on their screen. Focus on active apps, content, or errors. Be concise.";
+        
+        const result = await model.generateContent([
+            prompt,
+            { inlineData: { data: screenshot, mimeType: 'image/jpeg' } }
+        ]);
+        
+        const response = await result.response;
+        const description = response.text();
+
+        globalContext.updateVision(description);
+
+        res.json({ success: true, description });
+
+    } catch (error) {
+        console.error('[VISION TICK FAILURE]', error.message);
+        res.status(500).json({ error: error.message });
+    }
+});
 
 async function paddleOCR(b64, mt) {
   try {
@@ -32,8 +67,6 @@ async function paddleOCR(b64, mt) {
     return null;
   }
 }
-
-const geminiClient = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
 
 router.post('/analyze', async (req, res) => {
   try {

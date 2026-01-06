@@ -16,6 +16,7 @@ import { todoService } from '../services/todoService.js';
 import { pcController } from '../services/pcControllerService.js';
 import { getTemporalContext } from '../utils/timeUtils.js';
 import { getCalendarClient } from '../services/googleAuthService.js';
+import { globalContext } from '../utils/globalContext.js';
 
 dotenv.config();
 
@@ -251,9 +252,12 @@ router.post('/stream', async (req, res) => {
       console.log('[ADMIN] 🔐 Agentic Lira Activated (Gemini 2.0 Flash Agent)');
 
       try {
-        const adminSystemPrompt = (systemInstruction || `Você é LIRA Agent, uma IA autônoma e inteligente no controle deste PC.`) +
-          `\n\n${LIRA_SELF_CONTENT}\n\nVocê tem acesso total ao SISTEMA e FERRAMENTAS.
+        const visionCtx = globalContext.getVisionContext();
+        const visionText = visionCtx ? `\n\n### 👁️ VISÃO DE TELA (ATIVO AGORA):\nEu estou vendo a tela do usuário: "${visionCtx}"\nUse isso para responder perguntas sobre o que está na tela.` : "";
 
+        const adminSystemPrompt = (systemInstruction || `Você é LIRA Agent, uma IA autônoma e inteligente no controle deste PC.`) +
+          `\n\n${LIRA_SELF_CONTENT}\n\nVocê tem acesso total ao SISTEMA e FERRAMENTAS.${visionText}
+ 
 ### 🎭 EXPRESSÕES FACIAIS (VTUBER MODE):
 Você é uma VTuber! Para controlar sua expressão facial, inicie SUAS FRASES com uma destas tags:
 [NEUTRAL], [HAPPY], [SAD], [ANGRY], [SURPRISE], [SHY]
