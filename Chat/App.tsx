@@ -434,6 +434,60 @@ const LiraAppContent = () => {
     }
   }, [memories]);
 
+  useEffect(() => {
+    // 🧠 Connect to LIVE BRAIN (Proactive Messages)
+    if (!isLoggedIn) return;
+
+    const eventSource = new EventSource(`${API_BASE_URL}/api/chat/live`);
+
+    eventSource.onmessage = (event) => {
+        try {
+            if (event.data.startsWith(':')) return; // Heartbeat
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'proactive' && data.content && currentSessionId) {
+                console.log('🧠 Received Proactive Thought:', data.content);
+                
+                // Add to Chat
+                const newMessage: Message = {
+                    id: uuidv4(),
+                    role: 'model',
+                    content: data.content,
+                    timestamp: Date.now(),
+                    status: 'done'
+                };
+
+                setSessions(prev => prev.map(s => {
+                    if (s.id === currentSessionId) {
+                        return { ...s, messages: [...s.messages, newMessage] };
+                    }
+                    return s;
+                }));
+
+                // Auto Speak (Proactive needs to be heard!)
+                const userTier = (stats as any).tier || stats.plan || 'free';
+                let voiceId = localStorage.getItem('lira_premium_voice_id') || 'lira-local';
+                if (['antares', 'supernova', 'singularity', 'vega', 'pro', 'architect'].includes(userTier.toLowerCase()) && voiceId === 'lira-local') {
+                   voiceId = 'minimax-playful';
+                }
+
+                liraVoice.speak(data.content, { 
+                    usePremium: voiceId !== 'google-pt-BR', 
+                    voiceId: voiceId 
+                });
+                
+                addToast('Lira teve uma ideia! 💡', 'success');
+            }
+        } catch (e) {
+            console.warn('Live Event Error:', e);
+        }
+    };
+
+    return () => {
+        eventSource.close();
+    };
+  }, [isLoggedIn, currentSessionId, stats]); // Re-connect if session changes? Ideally not, but we need currentSessionId in scope.
+
   const handleBootComplete = () => {
     setIsBooted(true);
   };

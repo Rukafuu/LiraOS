@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { requireAuth } from '../middlewares/authMiddleware.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { globalContext } from '../utils/globalContext.js';
+import { agentBrain } from '../services/agentBrain.js';
 
 dotenv.config();
 
@@ -42,6 +43,9 @@ router.post('/tick', async (req, res) => {
         const description = response.text();
 
         globalContext.updateVision(description);
+        
+        // Trigger Proactive Thought
+        agentBrain.evaluate('vision_update');
 
         res.json({ success: true, description });
 

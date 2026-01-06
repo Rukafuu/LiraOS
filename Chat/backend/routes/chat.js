@@ -17,6 +17,7 @@ import { pcController } from '../services/pcControllerService.js';
 import { getTemporalContext } from '../utils/timeUtils.js';
 import { getCalendarClient } from '../services/googleAuthService.js';
 import { globalContext } from '../utils/globalContext.js';
+import { agentBrain } from '../services/agentBrain.js';
 
 dotenv.config();
 
@@ -186,6 +187,31 @@ router.post('/generate-title', async (req, res) => {
   }
 });
 
+
+/**
+ * SSE Endpoint for Proactive Messages (Frontend Listen)
+ */
+router.get('/live', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const onMessage = (msg) => {
+        res.write(`data: ${JSON.stringify({ type: 'proactive', content: msg })}\n\n`);
+    };
+
+    // Subscribe to Brain
+    agentBrain.on('proactive_message', onMessage);
+
+    // Heartbeat
+    const heart = setInterval(() => res.write(': heartbeat\n\n'), 15000);
+
+    req.on('close', () => {
+        agentBrain.off('proactive_message', onMessage);
+        clearInterval(heart);
+    });
+});
 
 // --- Chat Streaming ---
 
