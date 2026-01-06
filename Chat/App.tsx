@@ -19,6 +19,7 @@ const CompanionPage = React.lazy(() => import('./components/CompanionPage').then
 import { CookiePreferences } from './components/CookieConsentModal';
 const ShortcutsModal = React.lazy(() => import('./components/ShortcutsModal').then(m => ({ default: m.ShortcutsModal })));
 const GamerModal = React.lazy(() => import('./components/GamerModal').then(m => ({ default: m.GamerModal })));
+const JarvisDashboard = React.lazy(() => import('./components/JarvisDashboard').then(m => ({ default: m.JarvisDashboard })));
 const DailyQuestsModal = React.lazy(() => import('./components/DailyQuestsModal').then(m => ({ default: m.DailyQuestsModal })));
 import { LoadingScreen } from './components/LoadingScreen';
 import { ParticleBackground } from './components/ui/ParticleBackground';
@@ -99,6 +100,7 @@ const LiraAppContent = () => {
   const [isCookieModalOpen, setIsCookieModalOpen] = useState(false);
   const [isGamerOpen, setIsGamerOpen] = useState(false);
   const [isDailyQuestsOpen, setIsDailyQuestsOpen] = useState(false);
+  const [isJarvisDashboardOpen, setIsJarvisDashboardOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isTodoPanelOpen, setIsTodoPanelOpen] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -1086,7 +1088,7 @@ const LiraAppContent = () => {
         onNewChat={createNewChat}
         onDeleteSession={handleDeleteSession}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenDashboard={() => setIsDashboardOpen(true)}
+        onOpenDashboard={() => setIsJarvisDashboardOpen(true)}
         onOpenStore={() => setIsStoreOpen(true)}
         onOpenShortcuts={() => setIsShortcutsOpen(true)}
         onOpenLegal={() => setIsLegalModalOpen(true)}
@@ -1381,6 +1383,18 @@ const LiraAppContent = () => {
           <CalendarApp
             onClose={() => setIsCalendarOpen(false)}
           />
+        )}
+        
+        {isJarvisDashboardOpen && (
+            <div className="fixed inset-0 z-[100] bg-black">
+                <button 
+                    onClick={() => setIsJarvisDashboardOpen(false)}
+                    className="absolute top-4 right-4 z-[110] text-cyan-500 hover:text-white"
+                >
+                    ✕ CLOSE SYSTEM
+                </button>
+                <JarvisDashboard />
+            </div>
         )}
       </Suspense>
     </div>
