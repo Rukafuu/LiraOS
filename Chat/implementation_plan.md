@@ -51,6 +51,20 @@
 
 ## 🛠 Next Immediate Steps
 
-1. **Design JARVIS Dashboard UI** (Frontend).
-2. **Expand `lira-link` telemetry** (CPU/RAM stats).
-3. **Prototype Self-Coding** (Simple file edits with confirmation).
+1. **Initialize Tauri** infrastructure (`src-tauri`).
+2. **Build Web Frontend** correctly.
+3. **Verify Rust Environment** (cargo check).
+
+## 🖥️ Phase 5: Lira Desktop (The Tauri Twin)
+
+**Goal:** Create a high-performance, low-RAM native executable while keeping the Web version active.
+
+- **Technology:** Tauri v2 (Rust + React).
+- **Strategy:**
+  - Wrap existing React Frontend in Tauri Webview.
+  - Re-implement `lira-link.js` logic (screenshots, shell commands) in Rust/Tauri for native speed.
+  - Distribute as `.msi` or `.exe` installer.
+- **Benefits:**
+  - ~50-100MB RAM usage (vs 400MB+ Web).
+  - Global Hotkeys (Alt+Space to summon Lira).
+  - System Tray icon.
