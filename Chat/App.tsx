@@ -28,6 +28,7 @@ import { ToastProvider, useToast } from './contexts/ToastContext';
 import { useAmbientGlow } from './hooks/useAmbientGlow';
 import { useKeyboardManager } from './hooks/useKeyboardManager';
 import { ChatSession, Message, Attachment, Memory } from './types';
+import { useWakeWord } from './hooks/useWakeWord';
 import { generateChatTitle, streamResponse, textToSpeech, fetchMemories, addMemoryServer, deleteMemoryServer, addIntelligentMemory, getRelevantMemories, deleteAllMemoriesForUser, imageUrlToDataUrl, saveSessionServer, deleteSessionServer } from './services/ai';
 import { LIRA_AVATAR } from './constants';
 import { getCurrentUser, isAuthenticated, logout as userLogout, getAuthHeaders, handleOAuthCallback, getSettings } from './services/userService';
@@ -176,6 +177,13 @@ const LiraAppContent = () => {
       setIsDailyQuestsOpen(false);
     },
     onGodMode: handleGodMode
+  });
+  
+  // 👂 Wake Word Listener ("Lira tá aí?")
+  // Só ativa se estiver logado e não estiver já em chamada
+  useWakeWord(isLoggedIn && !isVoiceActive, () => {
+    setIsVoiceActive(true);
+    addToast('🎙️ Lira está ouvindo...', 'success');
   });
 
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
