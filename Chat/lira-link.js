@@ -15,6 +15,7 @@ import screenshot from 'screenshot-desktop';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import si from 'systeminformation';
 
 // CONFIGURATION ============================================================
 // 👇 TCHANGE THIS TO YOUR REAL RAILWAY URL (No trailing slash)
@@ -55,6 +56,7 @@ setInterval(async () => {
     }
 }, VISION_INTERVAL_MS);
 
+startTelemetryLoop(); // Start CPU/RAM monitor
 
 // --- COMMAND RECEIVER ---
 const es = new EventSource(CONNECT_ENDPOINT);
@@ -98,6 +100,7 @@ async function executeCommand(cmd, payload) {
             case 'type': await typeText(payload); break;
             case 'system': await runSystemCommand(payload); break;
             case 'organize': await organizeFolder(payload); break;
+            case 'maintenance': await performMaintenance(payload); break;
             default: console.warn('Unknown command:', cmd);
         }
     } catch (err) {
@@ -170,8 +173,64 @@ async function organizeFolder(targetPath) {
     console.log('✅ Organization Complete');
 }
 
-// --- LOCAL EXECUTION LOGIC ---
+// --- TELEMETRY & MAINTENANCE ---
+async function startTelemetryLoop() {
+    console.log('📊 Telemetry System Online (CPU/RAM/Temp)');
+    
+    setInterval(async () => {
+        try {
+            const cpu = await si.currentLoad();
+            const mem = await si.mem();
+            const temp = await si.cpuTemperature();
+            
+            const stats = {
+                cpuLoad: Math.round(cpu.currentLoad),
+                memUsed: Math.round((mem.active / mem.total) * 100),
+                temp: temp.main || 'N/A'
+            };
 
+            // Send to Backend (Optional: create endpoint /api/system/stats if desired later)
+            // For now, we log locally or could piggyback on vision context
+            // console.log(`[VITALS] CPU: ${stats.cpuLoad}% | RAM: ${stats.memUsed}% | Temp: ${stats.temp}°C`);
+            
+            // Proactive Alert: High Usage
+            if (stats.memUsed > 90) {
+                 console.warn('⚠️ High Memory Usage Alert!');
+                 // TODO: trigger proactive alert to Lira Brain
+            }
+        } catch (e) {
+            // console.warn('Telemetry Error:', e.message);
+        }
+    }, 60000); // Check every minute
+}
+
+async function performMaintenance(type) {
+    console.log(`🔧 Performing maintenance: ${type}`);
+    try {
+        if (type === 'clean_temp') {
+            const tempDir = os.tmpdir();
+            console.log(`Cleaning TEMP: ${tempDir}`);
+            // Safety: Only delete files, catch errors per file
+            const files = fs.readdirSync(tempDir);
+            for (const file of files) {
+                try {
+                    const p = path.join(tempDir, file);
+                    fs.unlinkSync(p); 
+                } catch {}
+            }
+            await runPowershell('Clear-DnsClientCache'); // Flush DNS too
+            console.log('✅ Temporary files cleaned & DNS flushed.');
+        } 
+        else if (type === 'empty_recycle') {
+             await runPowershell('Clear-RecycleBin -Force -ErrorAction SilentlyContinue');
+             console.log('✅ Recycle Bin emptied.');
+        }
+    } catch (e) {
+        console.error(`Maintenance Failed: ${e.message}`);
+    }
+}
+
+// --- LOCAL EXECUTION LOGIC ---
 async function runPowershell(command) {
     return new Promise((resolve, reject) => {
         const ps = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', command]);

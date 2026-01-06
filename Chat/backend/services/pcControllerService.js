@@ -235,6 +235,17 @@ class PCControllerService {
             }
         }
 
+        // System Maintenance
+        if (cmd.includes('clean') || cmd.includes('limpar sistema') || cmd.includes('otimizar') || cmd.includes('manutenção')) {
+            let action = 'clean_temp';
+            if (cmd.includes('recycle') || cmd.includes('lixeira')) action = 'empty_recycle';
+            
+            if (this.clients.size > 0) {
+                 this.broadcast({ type: 'maintenance', payload: action });
+                 return { success: true, message: `Running maintenance: ${action}` };
+            }
+        }
+
         // Fallback: Try to open whatever it is
         console.log('[PC Controller] Unknown command pattern, trying to open as app/url...');
         return await this.openApp(cmd);
