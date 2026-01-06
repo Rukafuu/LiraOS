@@ -12,6 +12,9 @@ import EventSource from 'eventsource';
 import { spawn } from 'child_process';
 import openPkg from 'open';
 import screenshot from 'screenshot-desktop';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
 // CONFIGURATION ============================================================
 // 👇 TCHANGE THIS TO YOUR REAL RAILWAY URL (No trailing slash)
@@ -94,11 +97,77 @@ async function executeCommand(cmd, payload) {
             case 'media': await mediaControl(payload); break;
             case 'type': await typeText(payload); break;
             case 'system': await runSystemCommand(payload); break;
+            case 'organize': await organizeFolder(payload); break;
             default: console.warn('Unknown command:', cmd);
         }
     } catch (err) {
         console.error('Execution Failed:', err.message);
     }
+}
+
+// --- FILE ORGANIZER ---
+async function organizeFolder(targetPath) {
+    // Resolve shortcuts like "Downloads", "Desktop"
+    let fullPath = targetPath;
+    const home = os.homedir();
+    
+    if (targetPath.toLowerCase() === 'downloads') fullPath = path.join(home, 'Downloads');
+    else if (targetPath.toLowerCase() === 'desktop') fullPath = path.join(home, 'Desktop');
+    else if (targetPath.toLowerCase() === 'documents') fullPath = path.join(home, 'Documents');
+
+    if (!fs.existsSync(fullPath)) {
+        console.warn(`⚠️ Path not found: ${fullPath}`);
+        return;
+    }
+
+    console.log(`🧹 Organizing: ${fullPath}`);
+
+    const categories = {
+        'Images': ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp'],
+        'Videos': ['.mp4', '.mkv', '.mov', '.avi', '.webm'],
+        'Documents': ['.pdf', '.doc', '.docx', '.txt', '.xlsx', '.pptx', '.md'],
+        'Archives': ['.zip', '.rar', '.7z', '.tar', '.gz'],
+        'Installers': ['.exe', '.msi', '.dmg', '.pkg'],
+        'Code': ['.js', '.py', '.html', '.css', '.ts', '.json', '.java', '.c', '.cpp']
+    };
+
+    const files = fs.readdirSync(fullPath);
+
+    for (const file of files) {
+        const filePath = path.join(fullPath, file);
+        const stat = fs.statSync(filePath);
+        
+        if (stat.isDirectory()) continue; // Skip folders
+
+        const ext = path.extname(file).toLowerCase();
+        let targetCategory = 'Others';
+
+        for (const [category, exts] of Object.entries(categories)) {
+            if (exts.includes(ext)) {
+                targetCategory = category;
+                break;
+            }
+        }
+
+        // Don't move sensitive/system files or shortcuts (Lira stays safe)
+        if (file === 'desktop.ini' || ext === '.lnk') continue;
+
+        const categoryPath = path.join(fullPath, targetCategory);
+        if (!fs.existsSync(categoryPath)) fs.mkdirSync(categoryPath);
+
+        const destPath = path.join(categoryPath, file);
+        
+        // Avoid overwriting
+        try {
+            if (!fs.existsSync(destPath)) {
+                fs.renameSync(filePath, destPath);
+                console.log(`Moved: ${file} -> ${targetCategory}`);
+            }
+        } catch (err) {
+            console.error(`Failed to move ${file}: ${err.message}`);
+        }
+    }
+    console.log('✅ Organization Complete');
 }
 
 // --- LOCAL EXECUTION LOGIC ---

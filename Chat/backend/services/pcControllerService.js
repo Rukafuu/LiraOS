@@ -221,6 +221,20 @@ class PCControllerService {
         if (cmd.includes('next') || cmd.includes('proxima')) return await this.mediaControl('next');
         if (cmd.includes('prev') || cmd.includes('anterior')) return await this.mediaControl('prev');
 
+        // File Organization
+        if (cmd.includes('organize') || cmd.includes('organizar') || cmd.includes('limpar pasta') || cmd.includes('arrumar')) {
+            let target = 'Downloads'; // Default
+            if (cmd.includes('desktop') || cmd.includes('área de trabalho')) target = 'Desktop';
+            if (cmd.includes('documents') || cmd.includes('documentos')) target = 'Documents';
+            
+            // Broadcast to local clients if connected
+            if (this.clients.size > 0) {
+                console.log(`[PC Controller] Broadcasting ORGANIZE: ${target}`);
+                this.broadcast({ type: 'organize', payload: target });
+                return { success: true, message: `Organizing ${target}...` };
+            }
+        }
+
         // Fallback: Try to open whatever it is
         console.log('[PC Controller] Unknown command pattern, trying to open as app/url...');
         return await this.openApp(cmd);
