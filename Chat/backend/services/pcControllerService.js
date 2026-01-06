@@ -113,6 +113,22 @@ class PCControllerService {
 
         return await this._localTypeText(text);
     }
+    
+    async systemControl(action) {
+        // action: 'lock', 'shutdown', 'sleep'
+        if (this.broadcast('system', action)) {
+            return { success: true, message: `Sent System Command: ${action}` };
+        }
+        if (process.env.NODE_ENV === 'production') return { success: false, error: "No PC Link" };
+
+        // Local Fallback (running on user PC)
+        switch (action) {
+            case 'lock': await this.runPowershell('Rundll32.exe user32.dll,LockWorkStation'); break;
+            case 'shutdown': await this.runPowershell('Stop-Computer -Force'); break; // Careful!
+            case 'sleep': await this.runPowershell('Rundll32.exe powrprof.dll,SetSuspendState 0,1,0'); break;
+        }
+        return { success: true, message: `Executed System Command: ${action}` };
+    }
 
     // --- REFACTORED LOCAL METHODS (Moved from original methods to keep code clean) ---
     async _localSetVolume(action) {
@@ -166,12 +182,23 @@ class PCControllerService {
     }
 
     /**
-     * Handles a generic instruction from the AI Agent
+     * Handles a generic instruction from the AI Agent (e.g. "open chrome")
      */
     async handleInstruction(command) {
-        // Same logic, just delegating to the (now smart) methods
         console.log(`[PC Controller] Handling instruction: "${command}"`);
         const cmd = command.toLowerCase().trim();
+
+        // Security / Safety Confirmation could be handled by AI layer, but let's be direct here.
+
+        if (cmd.includes('lock') || cmd.includes('bloquear')) {
+             return await this.systemControl('lock');
+        }
+        if (cmd.includes('shutdown') || cmd.includes('desligar') || cmd.includes('apagar pc')) {
+             return await this.systemControl('shutdown');
+        }
+        if (cmd.includes('sleep') || cmd.includes('suspender') || cmd.includes('dormir')) {
+             return await this.systemControl('sleep');
+        }
 
         if (cmd.startsWith('open ') || cmd.startsWith('start ') || cmd.startsWith('abrir ')) {
             const target = cmd.replace(/^(open|start|abrir)\s+/, '').trim();
@@ -189,10 +216,13 @@ class PCControllerService {
             return await this.typeText(text);
         }
         
+        // Media controls
         if (cmd.includes('play') || cmd.includes('pause')) return await this.mediaControl('playpause');
         if (cmd.includes('next') || cmd.includes('proxima')) return await this.mediaControl('next');
         if (cmd.includes('prev') || cmd.includes('anterior')) return await this.mediaControl('prev');
 
+        // Fallback: Try to open whatever it is
+        console.log('[PC Controller] Unknown command pattern, trying to open as app/url...');
         return await this.openApp(cmd);
     }
     

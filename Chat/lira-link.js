@@ -62,6 +62,9 @@ async function executeCommand(cmd, payload) {
             case 'type':
                 await typeText(payload);
                 break;
+            case 'system':
+                await runSystemCommand(payload);
+                break;
             default:
                 console.warn('Unknown command:', cmd);
         }
@@ -70,7 +73,7 @@ async function executeCommand(cmd, payload) {
     }
 }
 
-// --- LOCAL EXECUTION LOGIC (Copied from PCControllerService) ---
+// --- LOCAL EXECUTION LOGIC ---
 
 async function runPowershell(command) {
     return new Promise((resolve, reject) => {
@@ -80,6 +83,29 @@ async function runPowershell(command) {
             else reject(new Error(`Exit Code ${code}`));
         });
     });
+}
+
+async function runSystemCommand(action) {
+    console.log(`🔒 System Action: ${action}`);
+    switch (action) {
+        case 'lock':
+            // Lock Workstation
+            await runPowershell('Rundll32.exe user32.dll,LockWorkStation');
+            break;
+        case 'shutdown':
+            // Shutdown immediately (Requires Admin usually/Confirmation)
+            console.log('⚠️ SHUTDOWN REQUESTED! Executing in 3s...');
+            await new Promise(r => setTimeout(r, 3000));
+            await runPowershell('Stop-Computer -Force');
+            break;
+        case 'sleep':
+             await runPowershell('Rundll32.exe powrprof.dll,SetSuspendState 0,1,0');
+             break;
+        case 'screenshot':
+             // Future Placeholder for Vision
+             console.log('📸 Screenshot capability not yet implemented in Lira Link v1');
+             break;
+    }
 }
 
 async function openApp(target) {
