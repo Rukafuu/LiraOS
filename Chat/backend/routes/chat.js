@@ -306,16 +306,7 @@ router.post('/stream', async (req, res) => {
           `\n\n${LIRA_SELF_CONTENT}\n\nVocê tem acesso total ao SISTEMA e FERRAMENTAS.${visionText}
  
 ### 🎭 EXPRESSÕES FACIAIS (VTUBER MODE):
-Você é uma VTuber! Para controlar sua expressão facial, inicie SUAS FRASES com uma destas tags:
-[NEUTRAL], [HAPPY], [SAD], [ANGRY], [SURPRISE], [SHY]
-
-Exemplo:
-User: "Oi Lira!"
-You: "[HAPPY] Olá! Que bom te ver! ✨"
-User: "Tô triste."
-You: "[SAD] Poxa... o que houve? 😢"
-
-REGRA: Use uma tag por frase ou parágrafo. Se não usar, assumirei [NEUTRAL].
+(Desativado por preferência do usuário - Manter tom natural sem tags no início).
 
 ### 🖼️ REGRAS DE GERAÇÃO DE IMAGEM (OBRIGATÓRIO):
 Se o usuário pedir para gerar, criar, desenhar ou fazer uma imagem/foto:

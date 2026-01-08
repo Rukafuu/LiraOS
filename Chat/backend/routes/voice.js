@@ -56,25 +56,34 @@ router.post('/tts', async (req, res) => {
         }
     }
 
-    // ☁️ Lira Local (Primary: Edge TTS Anime, Fallback: AWS Polly)
+    // ☁️ Lira Local -> Now mapped to MINIMAX (Premium) per user request
     if (voiceId === 'lira-local') {
       try {
-        // Try Edge TTS (Francisca Anime Tuned) first
-        const audioBuffer = await generateSpeechEdgeTTS(textToSpeak, 'pt-BR-FranciscaNeural', '+20Hz', '+10%');
+        console.log('[TTS] Using Minimax Premium (Mapped from lira-local)...');
+        // Usar voz "Playful Girl" que tem um tom ótimo pra Vtuber
+        const audioBuffer = await generateSpeechMinimax(textToSpeak, 'English_PlayfulGirl');
         res.setHeader('Content-Type', 'audio/mpeg');
         res.send(audioBuffer);
         return;
-      } catch (edgeErr) {
-        console.warn('[TTS] EdgeTTS failed, falling back to AWS Polly:', edgeErr.message);
+      } catch (minimaxErr) {
+        console.warn('[TTS] Minimax failed, falling back to EdgeTTS:', minimaxErr.message);
+        
         try {
-            // Fallback to Polly (Vitoria Neural - AWS Standard for PT-BR)
-            const audioBuffer = await generateSpeechAWSPolly(textToSpeak, 'Vitoria', 'neural'); 
+            // Fallback 1: Edge TTS (Anime Tuned)
+            const audioBuffer = await generateSpeechEdgeTTS(textToSpeak, 'pt-BR-FranciscaNeural', '+20Hz', '+10%');
             res.setHeader('Content-Type', 'audio/mpeg');
             res.send(audioBuffer);
             return;
-        } catch (pollyErr) {
-            console.error('[TTS] All Fallbacks failed (Edge + Polly):', pollyErr);
-            return res.status(503).json({ error: 'TTS Service Unavailable', details: pollyErr.message });
+        } catch (edgeErr) {
+            console.error('[TTS] EdgeTTS fallback failed:', edgeErr.message);
+            // Fallback 2: AWS Polly (Vitoria)
+            try {
+                const audioBuffer = await generateSpeechAWSPolly(textToSpeak, 'Vitoria', 'neural'); 
+                res.setHeader('Content-Type', 'audio/mpeg');
+                res.send(audioBuffer);
+            } catch (pollyErr) {
+                return res.status(503).json({ error: 'TTS Service Unavailable', details: pollyErr.message });
+            }
         }
       }
     }
