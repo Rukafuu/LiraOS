@@ -81,11 +81,13 @@ router.post('/tts', async (req, res) => {
                 const audioBuffer = await generateSpeechAWSPolly(textToSpeak, 'Vitoria', 'neural'); 
                 res.setHeader('Content-Type', 'audio/mpeg');
                 res.send(audioBuffer);
+                return; // 🛑 STOP EXECUTION
             } catch (pollyErr) {
                 return res.status(503).json({ error: 'TTS Service Unavailable', details: pollyErr.message });
             }
         }
       }
+      return; // 🛑 Ensure function exits after lira-local block finishes (success or handled error)
     }
 
     // 🟢 XTTS Local Support (Fallback to Edge TTS if unreachable)
