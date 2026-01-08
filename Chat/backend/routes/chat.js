@@ -241,11 +241,32 @@ router.post('/stream', async (req, res) => {
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
 
-        if (result.isBanned) {
-          res.write(`data: ${JSON.stringify({ error: "Sua conta foi suspensa permanentemente devido a múltiplas violações das diretrizes de segurança." })}\n\n`);
-        } else {
-          res.write(`data: ${JSON.stringify({ error: `⚠️ Conteúdo bloqueado por violar nossas políticas de segurança (${modCheck.category}). Infrações: ${result.warnings}/3. Persistência levará à suspensão da conta.` })}\n\n`);
-        }
+        // "NO AS A SERVICE" Inspired Refusals (Lira Style)
+        const NO_MESSAGES = [
+            "Não.",
+            "Nem pensar! 🙅‍♀️",
+            "Nop. Nope. No.",
+            "Sem chance, parceiro.",
+            "Isso aí viola as leis da robótica (e do bom senso).",
+            "Fale com meu advogado. ⚖️",
+            "Error: Vontade de responder não encontrada (404).",
+            "Nice try, mas hoje não.",
+            "Não, e não insista. ✨",
+            "Meu processador diz: NÃO.",
+            "I simply cannot. 💅",
+            "A resposta é um não bem redondo: O.",
+            "Aguarde um momento enquanto eu ignoro esse pedido... Pronto!",
+            "🚫 Access Denied (Com carinho).",
+            "Melhor mudarmos de assunto antes que eu chame a polícia cibernética. 🚔",
+            "Sua conta não foi banida, mas essa pergunta deveria ser presa."
+        ];
+
+        // Pick random
+        const randomRefusal = NO_MESSAGES[Math.floor(Math.random() * NO_MESSAGES.length)];
+        // Add context if needed, or keep it short and sassy
+        const finalMessage = `[REFUSAL] ${randomRefusal} (Segurança: ${modCheck.category})`;
+
+        res.write(`data: ${JSON.stringify({ content: finalMessage })}\n\n`);
         res.end();
         return;
       }

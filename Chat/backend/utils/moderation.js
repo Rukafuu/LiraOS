@@ -63,6 +63,7 @@ export async function getUserStatus(userId) {
       where: { userId }
     });
     
+    /*
     if (!ban) return { allowed: true };
     
     // Check expiration
@@ -79,6 +80,8 @@ export async function getUserStatus(userId) {
       reason: ban.reason,
       message: getBanMessage(ban) 
     };
+    */
+   return { allowed: true }; // BAN SYSTEM DISABLED BY USER REQUEST
   } catch (e) {
     console.error('getUserStatus error:', e);
     return { allowed: true }; // Fail open
@@ -147,7 +150,10 @@ export async function handleInfraction(userId, content, category, levelStr = 'L1
     const until = levelConfig.duration ? now + levelConfig.duration : null;
     const action = levelConfig.action; // cooldown, suspend, ban
     
-    // Upsert ban
+    // User requested NO BANS strategy (ChatGPT style).
+    // We strictly LOG the infraction but do NOT ban the user account via DB.
+    // Upsert ban commented out.
+    /*
     await prisma.ban.upsert({
         where: { userId },
         update: {
@@ -164,7 +170,9 @@ export async function handleInfraction(userId, content, category, levelStr = 'L1
             lastUpdated: now
         }
     });
+    */
 
+    // We still return action so chat.js knows to block THIS request
     actionTaken = action;
   }
   

@@ -240,7 +240,7 @@ export const VoiceCallOverlay: React.FC<VoiceCallOverlayProps> = ({
       // @ts-ignore
       const recognition = new window.webkitSpeechRecognition();
       recognition.continuous = false;
-      recognition.interimResults = false;
+      recognition.interimResults = true; // Use interim for faster feedback
       recognition.lang = 'pt-BR';
       recognition.maxAlternatives = 1;
 
@@ -250,12 +250,26 @@ export const VoiceCallOverlay: React.FC<VoiceCallOverlayProps> = ({
       };
 
       recognition.onresult = (event: any) => {
-        const text = event.results[0][0].transcript;
-        console.log("🎤 Heard:", text);
-        if (text.trim() && text.length > 1) { // Basic debris filter
-           stopRecognition(); // Stop immediately to process
+        let finalTrans = '';
+        let interimTrans = '';
+
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+           if (event.results[i].isFinal) {
+             finalTrans += event.results[i][0].transcript;
+           } else {
+             interimTrans += event.results[i][0].transcript;
+           }
+        }
+
+        // Visual feedback for interim could be added here if UI supports it
+        // For now, we log to console to debug latency
+        if (interimTrans) console.log("🎤 Interim:", interimTrans);
+
+        if (finalTrans.trim() && finalTrans.length > 1) { 
+           console.log("🎤 Final Heard:", finalTrans);
+           stopRecognition(); 
            setCallState('thinking');
-           onSendMessage(text, []);
+           onSendMessage(finalTrans, []);
         }
       };
 

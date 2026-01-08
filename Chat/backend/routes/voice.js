@@ -67,8 +67,8 @@ router.post('/tts', async (req, res) => {
       } catch (edgeErr) {
         console.warn('[TTS] EdgeTTS failed, falling back to AWS Polly:', edgeErr.message);
         try {
-            // Fallback to Polly (Francisca Neural)
-            const audioBuffer = await generateSpeechAWSPolly(textToSpeak, 'Francisca', 'neural'); 
+            // Fallback to Polly (Vitoria Neural - AWS Standard for PT-BR)
+            const audioBuffer = await generateSpeechAWSPolly(textToSpeak, 'Vitoria', 'neural'); 
             res.setHeader('Content-Type', 'audio/mpeg');
             res.send(audioBuffer);
             return;

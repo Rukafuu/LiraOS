@@ -28,7 +28,7 @@ if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
  * @param {string} engine - 'neural', 'standard', or 'generative'
  * @returns {Promise<Buffer>} Audio buffer
  */
-export async function generateSpeechAWSPolly(text, voiceId = 'Francisca', engine = 'neural') {
+export async function generateSpeechAWSPolly(text, voiceId = 'Vitoria', engine = 'neural') {
     if (!pollyClient) throw new Error("AWS Credentials missing for Polly.");
 
     console.log(`[TTS] Requesting AWS Polly: ${voiceId} (${engine}) - "${text.substring(0, 20)}..."`);
