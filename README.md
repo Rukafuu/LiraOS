@@ -1,4 +1,4 @@
-div align="center">
+<div align="center">
 
 ![Lira Banner](./Chat/assets/lira-banner.png)
 
