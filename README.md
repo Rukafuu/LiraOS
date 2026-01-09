@@ -2,10 +2,6 @@
 
 ![Lira Banner](./Chat/assets/lira-banner.png)
 
-<div align="center">
-
-![Lira Banner](./Chat/assets/lira-banner.png)
-
 # 🌟 LiraOS — Advanced AI Companion Platform
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge\&logo=typescript\&logoColor=white)](https://www.typescriptlang.org/)
