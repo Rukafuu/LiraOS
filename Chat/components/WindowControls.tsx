@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getCurrentWindow } from '@tauri-apps/api/window';
+import { IS_DESKTOP } from '../src/config';
 
 interface WindowControlsProps {
   onToggleWidget?: () => void;
@@ -7,29 +7,48 @@ interface WindowControlsProps {
 }
 
 export const WindowControls: React.FC<WindowControlsProps> = ({ onToggleWidget, isWidgetMode }) => {
-  // In Tauri v2, getCurrentWindow returns the Window instance directly
-  const appWindow = getCurrentWindow();
+  const [appWindow, setAppWindow] = useState<any>(null);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [isTauri, setIsTauri] = useState(false);
 
-  // Check state on mount and listen for resize
   useEffect(() => {
-     const updateState = () => {
-         appWindow?.isMaximized().then(setIsMaximized).catch(() => {});
-     };
-     
-     updateState();
-     
-     // Listen to Tauri window resize event (or generic window resize as proxy)
-     const unlistenPromise = appWindow.onResized(updateState);
-     return () => {
-         unlistenPromise.then(unlisten => unlisten());
-     };
+    let unlisten: (() => void) | undefined;
+    let mounted = true;
+
+    const initTauri = async () => {
+      if (!IS_DESKTOP) return;
+
+      try {
+        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+        const win = getCurrentWindow();
+        
+        if (mounted) {
+            setAppWindow(win);
+            setIsTauri(true);
+            
+            // Check initial state
+            win.isMaximized().then(setIsMaximized).catch(() => {});
+            
+            // Listen for resize
+            // Note: onResized is async in some versions, treating as promise
+            unlisten = await win.onResized(() => {
+                if (mounted) win.isMaximized().then(setIsMaximized).catch(() => {});
+            });
+        }
+      } catch (e) {
+        console.warn('Failed to load Tauri Window API:', e);
+      }
+    };
+
+    initTauri();
+
+    return () => {
+      mounted = false;
+      if (unlisten) unlisten();
+    };
   }, []);
-  
-  // If we are not in Tauri (e.g. browser), appWindow might throw or be mocked.
-  // But let's assume if it exists we show buttons.
-  
-  if (!appWindow) return null;
+
+  if (!isTauri || !appWindow) return null;
 
   return (
     <div className="fixed top-0 right-0 z-[100000] flex items-center h-8">
@@ -48,7 +67,6 @@ export const WindowControls: React.FC<WindowControlsProps> = ({ onToggleWidget, 
       )}
       <button
         onClick={() => {
-            console.log('Minimize clicked');
             appWindow.minimize();
         }}
         className="h-full w-12 flex items-center justify-center hover:bg-white/10 text-gray-400 hover:text-white transition-colors group"
