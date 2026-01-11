@@ -198,6 +198,10 @@ router.post('/analyze', async (req, res) => {
         throw new Error('Could not analyze image via any available method');
     }
 
+  } catch (error) {
+    console.error('[VISION ANALYZE ERROR]', error.message);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Video Generation Endpoint
