@@ -33,13 +33,8 @@ WORKDIR /app/backend
 COPY --from=builder /app/backend/node_modules ./node_modules
 COPY --from=builder /app/backend/prisma ./prisma
 
-# Copiar código essencial do backend
-COPY Chat/backend/*.js ./
-COPY Chat/backend/routes ./routes
-COPY Chat/backend/services ./services
-COPY Chat/backend/middlewares ./middlewares
-COPY Chat/backend/modules ./modules
-COPY Chat/backend/utils ./utils
+# Copiar TODO o código do backend de uma vez
+COPY Chat/backend .
 
 # Expor porta
 EXPOSE 4000
