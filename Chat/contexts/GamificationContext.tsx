@@ -3,6 +3,7 @@ import { Bot, Zap, Heart, Sun, Skull, Feather } from 'lucide-react';
 import { UserStats, Quest, Achievement, LeaderboardEntry, LiraThemeId, Persona, PersonaId } from '../types';
 import { getCurrentUser, getAuthHeaders, logout } from '../services/userService';
 import { useToast } from './ToastContext';
+import { API_BASE_URL } from '../src/config';
 
 interface GamificationContextType {
   stats: UserStats;
@@ -210,7 +211,7 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [unlockedThemes, setUnlockedThemes] = useState<LiraThemeId[]>(['lira-dark']);
   const [unlockedPersonas, setUnlockedPersonas] = useState<PersonaId[]>(['default']);
   const [activePersonaId, setActivePersonaId] = useState<PersonaId>('default');
-  const backendUrl = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
+  const backendUrl = API_BASE_URL;
 
   // Helper to map DB response structure to Frontend UserStats
   const mapBackendToFrontend = (data: any): UserStats => {
@@ -241,9 +242,8 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             headers: getAuthHeaders()
           });
           if (r.status === 401) {
-            console.warn('[Gamification] 401 Unauthorized. Token might be invalid or from a different environment.');
-            // Only force logout if we are sure it's not a temporary glitch
-            // For now, let's just abort this fetch to avoid crash loop
+            console.warn('[Gamification] 401 Unauthorized. Session expired or invalid. Logging out.');
+            logout();
             return;
           }
           if (r.ok) {

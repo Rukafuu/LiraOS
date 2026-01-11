@@ -1,6 +1,8 @@
-const SYNTHESIS = typeof window !== 'undefined' ? window.speechSynthesis : null;
-const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
+// @ts-ignore
+import { API_BASE_URL } from '../src/config';
 import { getAuthHeaders } from './userService';
+
+const SYNTHESIS = typeof window !== 'undefined' ? window.speechSynthesis : null;
 
 export interface VoiceOptions {
   pitch?: number;

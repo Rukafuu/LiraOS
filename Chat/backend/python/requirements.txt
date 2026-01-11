@@ -2,3 +2,6 @@ requests
 edge-tts
 pygame
 asyncio
+mss
+flask
+Pillow

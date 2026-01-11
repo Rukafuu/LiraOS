@@ -38,6 +38,9 @@ import { cleanupExpiredBans } from './utils/moderation.js';
 
 dotenv.config();
 
+console.log('[DEBUG] MINIMAX_API_KEY:', process.env.MINIMAX_API_KEY ? 'Língua preservada (Presente)' : 'AUSENTE ❌');
+console.log('[DEBUG] MINIMAX_GROUP_ID:', process.env.MINIMAX_GROUP_ID || 'AUSENTE ❌');
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -45,17 +48,21 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 // Middleware
 // Middleware - MANUAL CORS OVERRIDE
 app.use((req, res, next) => {
-  // Allow any origin that comes in
   const origin = req.headers.origin;
   if (origin) {
     res.header("Access-Control-Allow-Origin", origin);
+  } else {
+    res.header("Access-Control-Allow-Origin", "*");
+  }
+
+  if (req.url.includes('/api/voice/tts')) {
+    console.log(`[TTS] 🔊 Request from ${origin || 'local/unknown'}: "${req.body?.text?.substring(0, 20)}..."`);
   }
 
   res.header("Access-Control-Allow-Methods", "GET, PUT, POST, DELETE, OPTIONS, PATCH");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept, Origin");
   res.header("Access-Control-Allow-Credentials", "true");
 
-  // Handle preflight immediately
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -102,6 +109,9 @@ app.get('/api/songs', (req, res) => {
   });
 });
 
+const videosPath = path.join(__dirname, 'videos');
+app.use('/videos', express.static(videosPath));
+
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/recovery', recoveryRoutes);
@@ -111,9 +121,15 @@ app.use('/api/system', systemRoutes);
 app.use('/api/discord', discordRoutes);
 app.use('/api/discord', discordRoutes);
 app.use('/api/patreon', patreonRoutes);
+import copilotRoutes from './routes/copilot.js';
+
 app.use('/api/instagram', instagramRoutes);
+app.use('/api/copilot', copilotRoutes);
 app.use('/api/todos', todosRoutes);
 app.use('/api/auth/google', googleAuthRoutes);
+import whatsappHook from './routes/whatsappHook.js';
+app.use('/api/webhook/whatsapp', whatsappHook);
+
 // Generic fallback (must be last)
 app.use('/api', chatRoutes);
 console.log('[DEBUG] All routes mounted successfully');
@@ -142,8 +158,79 @@ app.use((err, req, res, next) => {
   res.status(status).json({ error: message, id: Date.now() });
 });
 
+// 🎭 WEBSOCKET SERVER FOR COMPANION APP
+import { WebSocketServer } from 'ws';
+import http from 'http';
+
+const server = http.createServer(app);
+const wss = new WebSocketServer({ noServer: true });
+
+// Store connected companions
+const companions = new Set();
+
+wss.on('connection', (ws, request) => {
+  console.log('🎭 Lira Companion connected!');
+  companions.add(ws);
+  
+  // Send welcome message
+  ws.send(JSON.stringify({
+    type: 'welcome',
+    message: 'Connected to Lira Backend!',
+    timestamp: Date.now()
+  }));
+  
+  // Handle messages from companion
+  ws.on('message', (data) => {
+    try {
+      const message = JSON.parse(data.toString());
+      console.log('[COMPANION] Message:', message);
+      
+      // Handle different message types
+      if (message.type === 'ping') {
+        ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+      }
+    } catch (e) {
+      console.error('[COMPANION] Failed to parse message:', e);
+    }
+  });
+  
+  ws.on('close', () => {
+    console.log('🎭 Companion disconnected');
+    companions.delete(ws);
+  });
+  
+  ws.on('error', (err) => {
+    console.error('[COMPANION] WebSocket error:', err);
+    companions.delete(ws);
+  });
+});
+
+// Upgrade HTTP to WebSocket for /companion endpoint
+server.on('upgrade', (request, socket, head) => {
+  if (request.url === '/companion' || request.url === '/companion/') {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit('connection', ws, request);
+    });
+  } else {
+    socket.destroy();
+  }
+});
+
+// Broadcast function for sending messages to all companions
+export function broadcastToCompanions(message) {
+  const data = JSON.stringify(message);
+  companions.forEach((ws) => {
+    if (ws.readyState === 1) { // WebSocket.OPEN
+      ws.send(data);
+    }
+  });
+}
+
+// Make it globally available
+global.broadcastToCompanions = broadcastToCompanions;
+
 // Start Server & Services
-app.listen(PORT, '0.0.0.0', async () => {
+server.listen(PORT, '0.0.0.0', async () => {
   console.log(`[SYSTEM] LiraOS Backend v1.1 Starter (Deploy Timestamp: ${new Date().toISOString()})`);
   console.log(`[SYSTEM] Server running on port ${PORT}`);
   console.log(`[SYSTEM] Environment: ${process.env.NODE_ENV}`);

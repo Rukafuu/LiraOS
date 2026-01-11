@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, Gift, Loader2, Trophy, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { getCurrentUser } from '../services/userService';
+import { getAuthHeaders } from '../services/userService';
+import { API_BASE_URL } from '../src/config';
 
-// Types (Defining here for speed, better in types.ts)
 interface Quest {
     id: string;
     title: string;
@@ -27,14 +27,11 @@ export const DailyQuestsModal: React.FC<DailyQuestsModalProps> = ({ isOpen, onCl
   const [loading, setLoading] = useState(false);
   const [claimingId, setClaimingId] = useState<string | null>(null);
   
-  const currentUser = getCurrentUser();
-  const API_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL as string;
-
   const fetchQuests = async () => {
       setLoading(true);
       try {
           const res = await fetch(`${API_BASE_URL}/api/gamification`, {
-             headers: { 'Authorization': `Bearer ${currentUser?.token}` }
+             headers: getAuthHeaders()
           });
           if (res.ok) {
               const data = await res.json();
@@ -60,7 +57,7 @@ export const DailyQuestsModal: React.FC<DailyQuestsModalProps> = ({ isOpen, onCl
               method: 'POST',
               headers: { 
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${currentUser?.token}` 
+                  ...getAuthHeaders() 
               },
               body: JSON.stringify({ questId })
           });

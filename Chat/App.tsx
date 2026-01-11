@@ -21,11 +21,13 @@ const ShortcutsModal = React.lazy(() => import('./components/ShortcutsModal').th
 const GamerModal = React.lazy(() => import('./components/GamerModal').then(m => ({ default: m.GamerModal })));
 const JarvisDashboard = React.lazy(() => import('./components/JarvisDashboard').then(m => ({ default: m.JarvisDashboard })));
 const DailyQuestsModal = React.lazy(() => import('./components/DailyQuestsModal').then(m => ({ default: m.DailyQuestsModal })));
+const SupportersModal = React.lazy(() => import('./components/SupportersModal').then(m => ({ default: m.SupportersModal })));
 import { LoadingScreen } from './components/LoadingScreen';
 import { ParticleBackground } from './components/ui/ParticleBackground';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { GamificationProvider, useGamification } from './contexts/GamificationContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
+import { useCopilot } from './hooks/useCopilot';
 import { useAmbientGlow } from './hooks/useAmbientGlow';
 import { useKeyboardManager } from './hooks/useKeyboardManager';
 import { ChatSession, Message, Attachment, Memory } from './types';
@@ -35,7 +37,7 @@ import { LIRA_AVATAR } from './constants';
 import { getCurrentUser, isAuthenticated, logout as userLogout, getAuthHeaders, handleOAuthCallback, getSettings } from './services/userService';
 import { liraVoice } from './services/lira_voice';
 import { initialMoodState, updateMood, MoodState } from './services/moodEngine';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Zap } from 'lucide-react';
 import { LoginModal } from './components/LoginModal';
 import { LegalModal } from './components/LegalModal';
@@ -48,22 +50,111 @@ import { DiscordModal } from './components/DiscordModal';
 import { MaintenanceScreen } from './components/MaintenanceScreen';
 import { PhotoBooth } from './components/PhotoBooth';
 import { AdminPanel } from './components/AdminPanel';
+import { WindowControls } from './components/WindowControls';
+import { API_BASE_URL, IS_DESKTOP } from './src/config';
+import { apiFetch } from './services/apiClient';
+import { enterWidgetMode, exitWidgetMode } from './services/desktopService';
+import { syncVoiceState, syncEmotionState } from './services/overlayService';
 
-
-const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
+// const API_BASE_URL = ... (Removed, using import)
 const LOCAL_STORAGE_KEY = 'lira_chat_sessions';
 const MEMORY_STORAGE_KEY = 'lira_memories';
 const COOKIE_CONSENT_KEY = 'lira_cookie_consent';
 
 const LiraAppContent = () => {
+    // State for Desktop Widget Mode
+    const [isWidgetMode, setIsWidgetMode] = useState(false);
+    const [isSpeaking, setIsSpeaking] = useState(false);
+    const [isOverlayMode, setIsOverlayMode] = useState(false);
+
+    // Subscribe to Voice State and sync to overlay
+    useEffect(() => {
+        const unsub = liraVoice.subscribe({
+            onStart: () => {
+                setIsSpeaking(true);
+                if (IS_DESKTOP) syncVoiceState(true);
+            },
+            onEnd: () => {
+                setIsSpeaking(false);
+                if (IS_DESKTOP) syncVoiceState(false);
+            }
+        });
+        return unsub;
+    }, []);
+
+    const handleToggleWidgetMode = async () => {
+        if (!IS_DESKTOP) return;
+        
+        const newState = !isWidgetMode;
+        setIsWidgetMode(newState);
+        
+        if (newState) {
+            await enterWidgetMode();
+            addToast('Modo Widget Ativado! 🧩', 'success');
+        } else {
+            await exitWidgetMode();
+        }
+    };
+
+    const handleToggleOverlay = async () => {
+        if (!IS_DESKTOP) return;
+        
+        const { toggleOverlayMode } = await import('./services/overlayService');
+        const isActive = await toggleOverlayMode();
+        setIsOverlayMode(isActive);
+        
+        if (isActive) {
+            addToast('🎭 Modo VTuber Overlay Ativado!', 'success');
+        } else {
+            addToast('Overlay Desativado', 'info');
+        }
+    };
+
+    // Force exit Widget Mode on Logout (Moved down)
+
   const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
+  
+  // 🎭 OVERLAY MODE: Separate window for VTuber overlay
+  if (pathname === '/overlay') {
+    const LiraOverlayMode = React.lazy(() => import('./components/LiraOverlayMode').then(m => ({ default: m.LiraOverlayMode })));
+    return (
+      <Suspense fallback={<div className="w-screen h-screen bg-transparent" />}>
+        <LiraOverlayMode />
+      </Suspense>
+    );
+  }
+  
   if (pathname === '/reset') {
-    return <ResetPassword backendUrl={API_BASE_URL} />;
+    return (
+      <>
+        <div data-tauri-drag-region className="fixed top-0 left-0 right-0 h-8 z-[99999] cursor-move" />
+        <WindowControls onToggleWidget={handleToggleWidgetMode} isWidgetMode={isWidgetMode} />
+        <ResetPassword backendUrl={API_BASE_URL} />
+      </>
+    );
   }
   const [isBooted, setIsBooted] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showLoadingScreen, setShowLoadingScreen] = useState(true); // Default to showing loading screen
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isGodMode, setIsGodMode] = useState(false);
+  const { isActive: isCopilotActive, toggle: toggleCopilot } = useCopilot(isLoggedIn);
+
+  // Force exit Widget Mode on Logout
+  useEffect(() => {
+      if (!isLoggedIn && isWidgetMode) {
+          setIsWidgetMode(false);
+          exitWidgetMode();
+      }
+  }, [isLoggedIn, isWidgetMode]);
+
+  // Initial Boot Sequence
+  useEffect(() => {
+      const timer = setTimeout(() => {
+          setShowLoadingScreen(false);
+      }, 4000); // 4 seconds boot time
+      return () => clearTimeout(timer);
+  }, []);
 
   // Handle OAuth Callback on Load
   useEffect(() => {
@@ -81,6 +172,8 @@ const LiraAppContent = () => {
     };
     checkOAuth();
   }, []);
+
+
 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -104,6 +197,7 @@ const LiraAppContent = () => {
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isTodoPanelOpen, setIsTodoPanelOpen] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isSupportersOpen, setIsSupportersOpen] = useState(false);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -188,7 +282,9 @@ const LiraAppContent = () => {
     addToast('🎙️ Lira está ouvindo...', 'success');
   });
 
+  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+const [connectionError, setConnectionError] = useState('');
 
   useEffect(() => {
     // Detecta se o usuário perdeu a internet
@@ -204,29 +300,57 @@ const LiraAppContent = () => {
     };
   }, []);
 
-  useEffect(() => {
-    const checkBackend = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/health`, { headers: getAuthHeaders() });
-        if (response.ok) {
-          setBackendStatus('online');
-        } else if (response.status === 503) {
-          setIsOffline(true); // Trigger maintenance screen on 503
-        } else {
-          setBackendStatus('offline');
-        }
-      } catch (error) {
+  const checkBackend = async () => {
+    try {
+      // Use controller to timeout faster
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const response = await apiFetch(`${API_BASE_URL}/health`, { 
+          headers: getAuthHeaders(),
+          signal: controller.signal
+      }).catch(err => {
+         // Fallback to simpler check if health fails
+         return apiFetch(API_BASE_URL, { method: 'HEAD', signal: controller.signal });
+      });
+      
+      clearTimeout(timeoutId);
+
+      if (response && (response.ok || response.status < 500)) {
+        setBackendStatus('online');
+        setIsOffline(false);
+      } else {
         setBackendStatus('offline');
       }
-    };
+    } catch (error: any) {
+      setBackendStatus('offline');
+      setConnectionError(error?.message || String(error));
+    }
+  };
+
+  useEffect(() => {
     checkBackend();
     const interval = setInterval(checkBackend, 30000);
     return () => clearInterval(interval);
   }, []);
 
   if (isOffline) {
-    return <MaintenanceScreen />;
+    return (
+      <>
+        <div data-tauri-drag-region className="fixed top-0 left-0 right-0 h-8 z-[99999] cursor-move" />
+        <WindowControls onToggleWidget={handleToggleWidgetMode} isWidgetMode={isWidgetMode} />
+        <MaintenanceScreen 
+            onRetry={() => {
+                setIsOffline(false); // Optimistically reset
+                checkBackend();
+            }} 
+            errorDetails={connectionError || (backendStatus === 'offline' ? 'Backend Unreachable' : undefined)} 
+        />
+      </>
+    );
   }
+
+
 
   useEffect(() => {
     const currentUser = getCurrentUser();
@@ -993,12 +1117,12 @@ const LiraAppContent = () => {
 
   const handleTTS = async (text: string) => {
     // Determine voice (reuse overlay logic or default)
-    const voiceId = localStorage.getItem('lira_premium_voice_id') || 'xtts-local';
+    const voiceId = localStorage.getItem('lira_premium_voice_id') || 'lira-local';
     const isPremium = voiceId !== 'google-pt-BR';
 
     liraVoice.speak(text, {
       usePremium: isPremium,
-      voiceId: isPremium ? 'xtts-local' : 'google-pt-BR'
+      voiceId: isPremium ? voiceId : 'google-pt-BR'
     });
   };
 
@@ -1016,7 +1140,6 @@ const LiraAppContent = () => {
     const userId = u?.id;
     if (!userId) return;
     const patch = { selectedModel, isDeepMode, isSidebarOpen, themeId: currentTheme.id };
-    const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
     fetch(`${API_BASE_URL}/api/settings`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
@@ -1034,6 +1157,9 @@ const LiraAppContent = () => {
   if (!isLoggedIn) {
     return (
       <>
+        {/* Tauri Drag Region - Invisible Titlebar */}
+        <div data-tauri-drag-region className="fixed top-0 left-0 right-0 h-8 z-[99999] cursor-move" />
+        <WindowControls onToggleWidget={handleToggleWidgetMode} isWidgetMode={isWidgetMode} />
         <div className={`fixed inset-0 bg-black text-white ${isBarrelRoll ? 'do-a-barrel-roll' : ''} ${isMatrixMode ? 'matrix-mode' : ''} z-0`}>
           <LandingChat onLoginReq={() => setIsLoginOpen(true)} />
           <LoginModal
@@ -1065,8 +1191,29 @@ const LiraAppContent = () => {
   }
 
   return (
-    <div className={`
-        flex h-[100dvh] w-full relative bg-lira-bg text-white overflow-hidden font-sans selection:bg-lira-pink/30 transition-colors duration-500
+    <>
+      {/* --- DESKTOP WIDGET MODE OVERLAY --- */}
+      {isWidgetMode && IS_DESKTOP && (
+          <div className="fixed inset-0 z-[999999] bg-transparent">
+             <div data-tauri-drag-region className="absolute inset-0 z-0 cursor-move" />
+             <WindowControls onToggleWidget={handleToggleWidgetMode} isWidgetMode={true} />
+             <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+                 <div className="pointer-events-auto w-full h-full">
+                    <Suspense fallback={null}>
+                       <LiraCompanionWidget 
+                           onClose={handleToggleWidgetMode} 
+                           isSpeaking={isSpeaking} 
+                           currentEmotion={moodState && moodState.mood}
+                       />
+                    </Suspense>
+                 </div>
+             </div>
+          </div>
+      )}
+
+      {/* --- MAIN APP INTERFACE --- */}
+      <div className={`
+        ${isWidgetMode ? 'hidden' : 'flex'} h-[100dvh] w-full relative bg-lira-bg text-white overflow-hidden font-sans selection:bg-lira-pink/30 transition-colors duration-500
         ${isBarrelRoll ? 'do-a-barrel-roll' : ''}
         ${isMatrixMode ? 'matrix-mode' : ''}
         ${isGodMode ? 'god-mode' : ''}
@@ -1076,6 +1223,11 @@ const LiraAppContent = () => {
       <ParticleBackground isHyperSpeed={isBarrelRoll || isGodMode} />
       <div className={`absolute inset-0 bg-gradient-to-b ${glowClassName} blur-[120px] pointer-events-none z-0 transition-all duration-1000`} />
 
+      {/* Tauri Drag Region - Invisible Titlebar */}
+      <div data-tauri-drag-region className="fixed top-0 left-0 right-0 h-8 z-[99999] cursor-move" />
+      <WindowControls onToggleWidget={handleToggleWidgetMode} isWidgetMode={isWidgetMode} />
+      
+      {/* Background Layer */}
       {showOnboarding && <OnboardingTour onComplete={handleOnboardingComplete} />}
       <LegalModal isOpen={isLegalModalOpen} onClose={() => setIsLegalModalOpen(false)} initialSection={legalSection} />
       <IrisModal isOpen={isIrisOpen} onClose={() => setIsIrisOpen(false)} />
@@ -1096,7 +1248,7 @@ const LiraAppContent = () => {
         onOpenDiscord={() => setIsDiscordOpen(true)}
         onOpenGamer={() => window.location.href = '/gamer/'}
         onOpenDailyQuests={() => setIsDailyQuestsOpen(true)}
-        onOpenSupporters={() => setIsDashboardOpen(true)} // Map to dashboard for now
+        onOpenSupporters={() => setIsSupportersOpen(true)}
         onOpenAdminPanel={() => setIsAdminPanelOpen(true)}
         onOpenTodoPanel={() => setIsTodoPanelOpen(true)}
         onOpenCalendar={() => setIsCalendarOpen(true)}
@@ -1118,6 +1270,8 @@ const LiraAppContent = () => {
           isGenerating={isGenerating}
           onToggleDeepMode={handleToggleDeepMode}
           isDeepMode={isDeepMode}
+          onToggleCopilot={toggleCopilot}
+          isCopilotActive={isCopilotActive}
           displayName={stats.username}
           avatarUrl={LIRA_AVATAR}
           onToggleCompanion={() => setShowCompanion(!showCompanion)}
@@ -1142,6 +1296,8 @@ const LiraAppContent = () => {
           onToggleVoice={handleToggleVoice}
           isExhausted={moodState.mood === 'exausta'}
           fatigue={moodState.fatigue}
+          onToggleOverlay={handleToggleOverlay}
+          isOverlayActive={isOverlayMode}
         />
 
         <div className="flex-1 flex flex-col min-h-0">
@@ -1384,6 +1540,11 @@ const LiraAppContent = () => {
             onClose={() => setIsCalendarOpen(false)}
           />
         )}
+
+        <SupportersModal
+          isOpen={isSupportersOpen}
+          onClose={() => setIsSupportersOpen(false)}
+        />
         
         {isJarvisDashboardOpen && (
             <div className="fixed inset-0 z-[100] bg-black">
@@ -1396,8 +1557,27 @@ const LiraAppContent = () => {
                 <JarvisDashboard />
             </div>
         )}
+        
+        {/* Loading Overlay */}
+        <AnimatePresence>
+          {showLoadingScreen && (
+             <motion.div 
+               initial={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               transition={{ duration: 0.5 }}
+               className="fixed inset-0 z-[99999]"
+             >
+                <div data-tauri-drag-region className="absolute top-0 left-0 right-0 h-8 z-[100000] cursor-move" />
+                <div className="absolute top-0 right-0 z-[100001]">
+                   <WindowControls />
+                </div>
+                <LoadingScreen status="INITIALIZING NEURAL CORE..." />
+             </motion.div>
+          )}
+        </AnimatePresence>
       </Suspense>
     </div>
+    </>
   );
 };
 

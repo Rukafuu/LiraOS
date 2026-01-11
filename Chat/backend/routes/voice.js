@@ -1,17 +1,9 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import { Readable } from 'stream';
-import { requireAuth } from '../middlewares/authMiddleware.js';
-import { generateSpeechAWSPolly, generateSpeechEdgeTTS, generateSpeechMinimax } from '../services/ttsService.js';
-import path from 'path';
-import fs from 'fs';
-import { spawn } from 'child_process';
+import { generateSpeechMinimax, generateSpeechElevenLabs, generateSpeechGoogle } from '../services/ttsService.js';
 
 dotenv.config();
-
 const router = express.Router();
-
-// router.use(requireAuth); // 🔓 Temporarily DISABLED for Voice Debugging
 
 router.post('/tts', async (req, res) => {
   try {
@@ -21,141 +13,62 @@ router.post('/tts', async (req, res) => {
     console.log(`[TTS] 🗣️ Requesting audio for: "${text.substring(0, 50)}..."`);
 
     // 🧹 Text Cleaning
-    // Remove [EMOTION], (Action), *Action*, and Markdown
     const cleanText = text
-      .replace(/\[[\s\S]*?\]/g, '') // Remove [Tags] with newlines
-      .replace(/\([\s\S]*?\)/g, '') // Remove (Parentheses) with newlines
-      .replace(/\*[\s\S]*?\*/g, '') // Remove *Asterisks* actions
-      .replace(/[*#_`~]/g, '')      // Remove remaining markdown chars
-      .replace(/-{2,}/g, '')        // Remove long dashes
-      .replace(/\s+/g, ' ')         // Collapse whitespace
+      .replace(/\[[\s\S]*?\]/g, '')
+      .replace(/\([\s\S]*?\)/g, '')
+      .replace(/\*[\s\S]*?\*/g, '')
+      .replace(/[*#_`~]/g, '')
+      .replace(/-{2,}/g, '')
+      .replace(/\s+/g, ' ')
       .trim();
-
-    console.log(`[TTS DEBUG] Original: "${text.substring(0,30)}..." -> Clean: "${cleanText.substring(0,30)}..."`);
 
     const textToSpeak = cleanText.length > 0 ? cleanText : text;
 
-
-    // 🎭 Minimax Premium (Anime V2)
-    if (voiceId.startsWith('minimax-') || voiceId === 'English_PlayfulGirl') {
+    // 🎭 ROUTING LOGIC: Minimax -> ElevenLabs -> Google
+    if (voiceId.startsWith('minimax-') || voiceId === 'English_PlayfulGirl' || voiceId === 'lira-local' || voiceId === 'xtts-local') {
         try {
-            // Map generic ID to specific Minimax ID if needed, or pass through
-            const targetId = voiceId === 'minimax-playful' ? 'English_PlayfulGirl' : voiceId;
+            console.log(`[TTS] Attempting Minimax...`);
+            const targetId = (voiceId === 'lira-local' || voiceId === 'minimax-playful' || voiceId === 'xtts-local') ? 'English_PlayfulGirl' : voiceId;
             const audioBuffer = await generateSpeechMinimax(textToSpeak, targetId);
             res.setHeader('Content-Type', 'audio/mpeg');
             res.send(audioBuffer);
             return;
         } catch (e) {
-            console.error('[TTS] Minimax failed:', e);
-            // Fallback to Edge TTS Anime
-            console.warn('[TTS] Falling back to Edge TTS Anime...');
-            const audioBuffer = await generateSpeechEdgeTTS(textToSpeak, 'pt-BR-FranciscaNeural', '+20Hz', '+10%');
-            res.setHeader('Content-Type', 'audio/mpeg');
-            res.send(audioBuffer);
-            return;
-        }
-    }
-
-    // ☁️ Lira Local -> Now mapped to MINIMAX (Premium) per user request
-    if (voiceId === 'lira-local') {
-      try {
-        console.log('[TTS] Using Minimax Premium (Mapped from lira-local)...');
-        // Usar voz "Playful Girl" que tem um tom ótimo pra Vtuber
-        const audioBuffer = await generateSpeechMinimax(textToSpeak, 'English_PlayfulGirl');
-        res.setHeader('Content-Type', 'audio/mpeg');
-        res.send(audioBuffer);
-        return;
-      } catch (minimaxErr) {
-        console.warn('[TTS] Minimax failed, falling back to EdgeTTS:', minimaxErr.message);
-        
-        try {
-            // Fallback 1: Edge TTS (Anime Tuned)
-            const audioBuffer = await generateSpeechEdgeTTS(textToSpeak, 'pt-BR-FranciscaNeural', '+20Hz', '+10%');
-            res.setHeader('Content-Type', 'audio/mpeg');
-            res.send(audioBuffer);
-            return;
-        } catch (edgeErr) {
-            console.error('[TTS] EdgeTTS fallback failed:', edgeErr.message);
-            // Fallback 2: AWS Polly (Vitoria)
+            console.warn('[TTS] Minimax failed, trying ElevenLabs fallback...', e.message);
             try {
-                const audioBuffer = await generateSpeechAWSPolly(textToSpeak, 'Vitoria', 'neural'); 
+                const audioBuffer = await generateSpeechElevenLabs(textToSpeak);
                 res.setHeader('Content-Type', 'audio/mpeg');
                 res.send(audioBuffer);
-                return; // 🛑 STOP EXECUTION
-            } catch (pollyErr) {
-                return res.status(503).json({ error: 'TTS Service Unavailable', details: pollyErr.message });
+                return;
+            } catch (elevenErr) {
+                console.warn('[TTS] ElevenLabs failed, trying Google fallback...', elevenErr.message);
+                try {
+                    const audioBuffer = await generateSpeechGoogle(textToSpeak, 'pt-BR');
+                    res.setHeader('Content-Type', 'audio/mpeg');
+                    res.send(audioBuffer);
+                    return;
+                } catch (googleErr) {
+                    console.error('[TTS] All services failed:', googleErr.message);
+                    return res.status(503).json({ error: 'TTS Service Unavailable' });
+                }
             }
         }
-      }
-      return; // 🛑 Ensure function exits after lira-local block finishes (success or handled error)
     }
 
-    // 🟢 XTTS Local Support (Fallback to Edge TTS if unreachable)
-    if (voiceId === 'xtts-local') {
-      try {
-        const xttsRes = await fetch('http://127.0.0.1:5002/tts', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: textToSpeak, language: 'pt' })
-        });
-        if (!xttsRes.ok) throw new Error(await xttsRes.text());
-
-        // BUFFERING PROXY (More robust than stream piping)
-        const arrayBuffer = await xttsRes.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        res.setHeader('Content-Type', 'audio/wav');
-        res.setHeader('Content-Length', buffer.length);
-        res.send(buffer);
-
-        return;
-      } catch (e) {
-        console.warn('[TTS] XTTS Local Server unavailable, falling back to Edge TTS (Anime)...', e.message);
-        try {
-            // Fallback to Edge TTS (closer to Anime voice than Polly)
-            const audioBuffer = await generateSpeechEdgeTTS(textToSpeak, 'pt-BR-FranciscaNeural', '+20Hz', '+10%');
-            res.setHeader('Content-Type', 'audio/mpeg');
-            res.send(audioBuffer);
-            return;
-        } catch (edgeErr) {
-             console.error('[TTS] XTTS and Edge Fallback failed:', edgeErr);
-             return res.status(503).json({ error: 'TTS Service Unavailable', details: edgeErr.message });
-        }
-      }
+    // Default Fallback (Directly to ElevenLabs/Google if no specific voiceId matches)
+    try {
+        const audioBuffer = await generateSpeechElevenLabs(textToSpeak);
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.send(audioBuffer);
+    } catch {
+        const audioBuffer = await generateSpeechGoogle(textToSpeak, 'pt-BR');
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.send(audioBuffer);
     }
 
-    // 🟠 ElevenLabs Fallback
-    const apiKey = (process.env.elevenlabs_api_key || process.env.ELEVENLABS_API_KEY || '').trim();
-    if (!apiKey) return res.status(500).json({ error: 'ElevenLabs API Key missing' });
-
-    const voice = voiceId || '2RrzVoV9QVqHnD8bujTu';
-
-    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice}/stream?output_format=mp3_44100_192`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'audio/mpeg',
-        'Content-Type': 'application/json',
-        'xi-api-key': apiKey
-      },
-      body: JSON.stringify({
-        text: textToSpeak,
-        model_id: 'eleven_multilingual_v2',
-        voice_settings: { stability: 0.5, similarity_boost: 0.75 }
-      })
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      return res.status(response.status).json({ error: 'TTS_upstream_error', details: errText });
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    res.setHeader('Content-Type', 'audio/mpeg');
-    res.send(buffer);
-
-  } catch (e) {
-    res.status(500).json({ error: e.message });
+  } catch (error) {
+    console.error('[TTS ROUTE ERROR]', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 

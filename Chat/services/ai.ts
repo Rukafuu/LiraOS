@@ -1,8 +1,13 @@
 import { Message, Persona, Memory, Attachment } from '../types';
 import { getSettings, getAuthHeaders } from './userService';
 
-const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
+// @ts-ignore
+import { IS_DESKTOP, API_BASE_URL } from '../src/config';
+
 const FRONTEND_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_FRONTEND_URL) || 'http://localhost:5173';
+import { apiFetch } from './apiClient';
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 
 /**
  * Converte um arquivo de imagem para o formato que o Gemini espera (Base64)
@@ -53,7 +58,7 @@ export const imageUrlToDataUrl = async (url: string): Promise<string> => {
 
 export const saveSessionServer = async (session: any): Promise<boolean> => {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/chat/sessions`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/chat/sessions`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -71,7 +76,7 @@ export const saveSessionServer = async (session: any): Promise<boolean> => {
 
 export const deleteSessionServer = async (id: string): Promise<boolean> => {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/chat/sessions/${id}`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/chat/sessions/${id}`, {
       method: 'DELETE',
       headers: getAuthHeaders()
     });
@@ -87,7 +92,7 @@ export const fetchMemories = async (userId?: string): Promise<Memory[]> => {
     const token = (() => {
       try { const s = localStorage.getItem('lira_session'); return s ? JSON.parse(s).token : ''; } catch { return ''; }
     })();
-    const res = await fetch(url, { headers: token ? { 'Authorization': `Bearer ${token}` } : undefined });
+    const res = await apiFetch(url, { headers: token ? { 'Authorization': `Bearer ${token}` } : undefined });
     if (!res.ok) return [];
     const data = await res.json();
     return Array.isArray(data) ? data : [];
@@ -98,7 +103,7 @@ export const fetchMemories = async (userId?: string): Promise<Memory[]> => {
 
 export const addMemoryServer = async (content: string, tags: string[] = [], category?: Memory['category'], priority?: Memory['priority'], userId?: string): Promise<Memory | null> => {
   try {
-    const res = await fetch(`${API_BASE_URL}/api/memories`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/memories`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': (() => { try { const s = localStorage.getItem('lira_session'); return s ? `Bearer ${JSON.parse(s).token}` : ''; } catch { return ''; } })() },
       body: JSON.stringify({ content, tags, category, priority, userId })
@@ -116,7 +121,7 @@ export const deleteMemoryServer = async (id: string): Promise<boolean> => {
     const token = (() => {
       try { const s = localStorage.getItem('lira_session'); return s ? JSON.parse(s).token : ''; } catch { return ''; }
     })();
-    const res = await fetch(`${API_BASE_URL}/api/memories/${id}`, { method: 'DELETE', headers: token ? { 'Authorization': `Bearer ${token}` } : undefined });
+    const res = await apiFetch(`${API_BASE_URL}/api/memories/${id}`, { method: 'DELETE', headers: token ? { 'Authorization': `Bearer ${token}` } : undefined });
     return res.ok;
   } catch {
     return false;
@@ -128,7 +133,7 @@ export const deleteAllMemoriesForUser = async (userId: string): Promise<boolean>
     const token = (() => {
       try { const s = localStorage.getItem('lira_session'); return s ? JSON.parse(s).token : ''; } catch { return ''; }
     })();
-    const res = await fetch(`${API_BASE_URL}/api/memories`, { method: 'DELETE', headers: token ? { 'Authorization': `Bearer ${token}` } : undefined });
+    const res = await apiFetch(`${API_BASE_URL}/api/memories`, { method: 'DELETE', headers: token ? { 'Authorization': `Bearer ${token}` } : undefined });
     return res.ok;
   } catch {
     return false;
@@ -238,7 +243,7 @@ export const getRelevantMemories = async (query: string, limit: number = 5, user
  */
 export const generateChatTitle = async (firstMessage: string, model: string = 'mistral'): Promise<string> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/generate-title`, {
+    const response = await apiFetch(`${API_BASE_URL}/api/generate-title`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -306,7 +311,7 @@ async function analyzeImageWithFallback(imageData: any, prompt: string): Promise
       try { const s = localStorage.getItem('lira_session'); return s ? JSON.parse(s).token : ''; } catch { return ''; }
     })();
 
-    const response = await fetch(`${API_BASE_URL}/api/vision/analyze`, {
+    const response = await apiFetch(`${API_BASE_URL}/api/vision/analyze`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -425,13 +430,7 @@ Diretrizes de Resposta:
       try { const s = localStorage.getItem('lira_session'); return s ? JSON.parse(s).token : ''; } catch { return ''; }
     })();
     
-    const response = await fetch(`${API_BASE_URL}/api/chat/stream`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-      },
-      body: JSON.stringify({
+    const requestBody = JSON.stringify({
         messages,
         systemInstruction: finalSystemInstruction,
         model: effectiveModel,
@@ -440,69 +439,85 @@ Diretrizes de Resposta:
         userId,
         temperature,
         localDateTime
-      }),
-      signal
     });
 
-    if (!response.ok) {
-      throw new Error('Failed to connect to backend');
-    }
-
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    if (!reader) {
-      throw new Error('No response body');
-    }
-
-    while (true) {
-      const { done, value } = await reader.read();
-      
-      if (done) break;
-      
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      
-      // Keep the last line in the buffer as it might be incomplete
-      buffer = lines.pop() || '';
-      
-      for (const line of lines) {
-        const trimmedLine = line.trim();
-        if (trimmedLine.startsWith('data: ')) {
-          const data = trimmedLine.slice(6);
-          
-          if (data === '[DONE]') {
-            return;
-          }
-          
-          try {
-            const parsed = JSON.parse(data);
-            if (parsed.content) {
-              yield parsed.content;
+    // --- DESKTOP MODE (RUST NATIVE STREAM) ---
+    if (IS_DESKTOP) {
+        let queue: Array<{ type: 'chunk' | 'done' | 'error', val?: any }> = [];
+        let pendingResolve: ((v: any) => void) | null = null;
+        
+        const push = (item: any) => {
+            if (pendingResolve) {
+                const r = pendingResolve;
+                pendingResolve = null;
+                r(item);
+            } else {
+                queue.push(item);
             }
-            if (parsed.error) {
-              yield `\n\n*[Error: ${parsed.error}]*`;
-              return;
+        };
+
+        const unlistenChunk = await listen<string>('chat-stream-chunk', (e) => push({ type: 'chunk', val: e.payload }));
+        const unlistenComplete = await listen('chat-stream-complete', () => push({ type: 'done' }));
+        // Using a generic error listener if you added one, or handling invoke error. 
+        // For simplicity, we assume invoke error is caught below.
+
+        // Start the request
+        invoke('stream_chat_request', {
+            url: `${API_BASE_URL}/api/chat/stream`,
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
+            body: requestBody
+        }).catch(err => {
+             // If invoke fails immediately or during stream
+             push({ type: 'error', val: err });
+        });
+
+        try {
+            let buffer = '';
+            while (true) {
+                const item = queue.length > 0 ? queue.shift()! : await new Promise<any>(r => pendingResolve = r);
+                
+                if (item.type === 'error') throw new Error(String(item.val));
+                if (item.type === 'done') break;
+                
+                if (item.type === 'chunk' && item.val) {
+                    buffer += item.val;
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        const trimmed = line.trim();
+                        if (trimmed.startsWith('data: ')) {
+                            const data = trimmed.slice(6);
+                            if (data === '[DONE]') continue;
+                            try {
+                                const parsed = JSON.parse(data);
+                                if (parsed.content) yield parsed.content;
+                                if (parsed.error) yield `\n\n*[Error: ${parsed.error}]*`;
+                            } catch {}
+                        }
+                    }
+                }
             }
-          } catch (e) {
-            // Log parse error for debugging but don't crash
-            console.warn('SSE Parse warning:', e);
-          }
+        } finally {
+            unlistenChunk();
+            unlistenComplete();
         }
-      }
-      
-      if (signal?.aborted) {
-        reader.cancel();
         return;
-      }
     }
-  } catch (error: any) {
-    if (error.name === 'AbortError' || signal?.aborted) {
+
+    // --- WEB MODE (STANDARD FETCH) ---
+    if (!IS_DESKTOP) {
+      yield "\n\n*[Web Chat Unavailable - Desktop Mode Required]*";
       return;
     }
-    console.error("Streaming error:", error);
-    yield `\n\n*[Connection Error: ${error.message || 'Unable to reach backend'}]*`;
+
+  } catch (error: any) {
+    console.error('Stream error details:', error);
+    yield `\n\n*[Ocorreu um erro na comunicação: ${error?.message || 'Erro desconhecido'}]*`;
   }
 }
 
@@ -511,7 +526,7 @@ Diretrizes de Resposta:
  */
 export const textToSpeech = async (text: string): Promise<string | null> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/voice/tts`, {
+    const response = await apiFetch(`${API_BASE_URL}/api/voice/tts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text })

@@ -42,17 +42,13 @@ export const SystemStatus: React.FC = () => {
 
     if (!stats) return null;
 
-    const parsePercent = (str: string) => parseFloat(str?.replace('%', '') || '0');
-    // RAM is "Used/Total MB", roughly parse percentage?
-    // Backend sends "3000 MB" only for used ram?
-    // Wait, backend logic: CPU:$cpu|RAM:$usedRam/$totalRam|BATT:$batt
-    // pcController returns { ram_usage: "3.5 MB" } ? No, split(':')[1].
-    // Let's re-check backend output logic logic.
-    // In backend: `ram_usage: ${ramStr.split(':')[1]} MB` -> ramStr was "RAM:Used/Total"
-    // So split(':')[1] is "Used/Total". e.g. "4000/16000".
-    
-    // Let's refine parsing robustly in Frontend
-    const ramParts = stats.ram_usage.replace(' MB', '').split('/');
+    const parsePercent = (strValue: any) => {
+        if (typeof strValue !== 'string') return 0;
+        return parseFloat(strValue.replace('%', '') || '0');
+    };
+
+    const rawRamUsage = stats.ram_usage || '0/1 MB';
+    const ramParts = rawRamUsage.replace(' MB', '').split('/');
     const usedRam = parseFloat(ramParts[0] || '0');
     const totalRam = parseFloat(ramParts[1] || '1');
     const ramPercent = (usedRam / totalRam) * 100;

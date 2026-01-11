@@ -9,10 +9,22 @@ edition = "2021"
 tauri-build = { version = "2.0.0", features = [] }
 
 [dependencies]
-tauri = { version = "2.0.0", features = ["devtools"] }
+tauri = { version = "2.0.0", features = ["tray-icon"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+tauri-plugin-global-shortcut = "2.0.0"
+tauri-plugin-autostart = "2.0.0"
+tauri-plugin-clipboard-manager = "2.0.0"
+tauri-plugin-http = "~2.0"
+rusqlite = { version = "0.32", features = ["bundled"] }
+reqwest = { version = "0.12", features = ["json", "stream", "rustls-tls"] }
+futures-util = "0.3"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem
 custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+lto = false
+codegen-units = 16
+strip = true

@@ -23,10 +23,10 @@ export interface AuthSession {
 }
 
 import { LIRA_AVATAR } from '../constants';
+import { API_BASE_URL } from '../src/config';
 
 const SESSION_KEY = 'lira_session';
 const CURRENT_USER_KEY = 'lira_current_user';
-const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
 const API_URL = `${API_BASE_URL}/api/auth`;
 
 // --- Helpers ---

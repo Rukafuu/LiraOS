@@ -8,8 +8,7 @@ import { AudioService } from '../services/avatarAudioService';
 import { Message } from '../types';
 import ReactMarkdown from 'react-markdown';
 import { AudioVisualizer } from './ui/AudioVisualizer';
-
-const API_BASE_URL = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:4000';
+import { API_BASE_URL } from '../src/config';
 
 interface VoiceCallOverlayProps {
   isOpen: boolean;

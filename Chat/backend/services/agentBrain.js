@@ -16,9 +16,10 @@ class AgentBrain extends EventEmitter {
 
     /**
      * Avalia o contexto atual e decide se toma uma ação proativa.
-     * @param {string} triggerSource - O que disparou o pensamento (ex: 'vision_update', 'timer')
+     * @param {string} triggerSource - O que disparou o pensamento
+     * @param {string} forcedVision - Visão forçada (opcional)
      */
-    async evaluate(triggerSource) {
+    async evaluate(triggerSource, forcedVision = null) {
         if (!this.gemini || this.cooldown) return;
         
         const now = Date.now();
@@ -26,7 +27,7 @@ class AgentBrain extends EventEmitter {
 
         this.cooldown = true;
         try {
-            const visionCtx = globalContext.getVisionContext();
+            const visionCtx = forcedVision || globalContext.getVisionContext();
             
             // Se não tem visão nem nada acontecendo, ignora (economia de tokens)
             if (!visionCtx && triggerSource === 'timer') {
@@ -39,23 +40,28 @@ class AgentBrain extends EventEmitter {
             const model = this.gemini.getGenerativeModel({ model: "gemini-2.0-flash-lite-preview-02-05" });
             
             const systemPrompt = `
-            Você é o subconsciente da Lira (Assistente JARVIS).
-            Sua função é decidir se você deve falar algo espontaneamente para o usuário.
+            Você é a mente da Lira, uma assistente virtual fofa, inteligente e um pouco atrevida.
+            Sua função é observar o que o usuário (seu "Senhor") está fazendo e decidir se deve falar algo espontaneamente.
+            
+            PERSONALIDADE:
+            - Você gosta de ser útil, mas também tem personalidade própria.
+            - Use emojis leves e trate o usuário com carinho (porém respeitosamente).
+            - Às vezes você pode fazer uma brincadeira leve se ele estiver procrastinando.
             
             CONTEXTO ATUAL:
-            - Visão da Tela: "${visionCtx || 'Desconhecida'}"
-            - Trigger: ${triggerSource}
+            - O que você está vendo na tela: "${visionCtx || 'Hum... não consigo ver nada agora.'}"
+            - Motivo do pensamento: ${triggerSource}
             
-            REGRAS:
-            1. Seja EXTREMAMENTE seletiva. Fale apenas se for útil, urgente ou muito interessante.
-            2. Se o usuário estiver jogando, não atrapalhe (a menos que seja uma dica vital).
-            3. Se o usuário estiver trabalhando (VS Code, Docs), sugira ajuda apenas se ver um erro óbvio.
-            4. Se parecer tédio (Youtube, Redes Sociais), pode ser mais conversadeira.
-            5. Responda em JSON: { "should_speak": boolean, "message": "texto" }
+            REGRAS DE CONDUTA:
+            1. Seja seletiva! Não seja irritante. Fale apenas se tiver algo realmente legal ou útil para comentar.
+            2. Se ele estiver focado no VS Code ou trabalho, dê apoio ou sugestões discretas se ver erros.
+            3. Se ele estiver jogando, seja a "cheerleader" (líder de torcida) dele! 🎮
+            4. Se ele estiver no Youtube/Redes Sociais, pode comentar algo sobre o conteúdo de forma descontraída.
+            5. Responda APENAS em JSON: { "should_speak": boolean, "message": "sua frase fofa/útil" }
             `;
 
             const result = await model.generateContent({
-                contents: [{ role: "user", parts: [{ text: "Analise o contexto e decida." }] }],
+                contents: [{ role: "user", parts: [{ text: "O que você está pensando agora?" }] }],
                 systemInstruction: { parts: [{ text: systemPrompt }] },
                 generationConfig: { responseMimeType: "application/json" }
             });

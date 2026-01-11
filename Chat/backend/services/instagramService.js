@@ -25,7 +25,7 @@ export async function postToInstagram(imageUrl, caption) {
         // POST /{ig-user-id}/media
         const containerUrl = `${INSTAGRAM_API_BASE}/${accountId}/media?image_url=${encodeURIComponent(imageUrl)}&caption=${encodeURIComponent(caption)}&access_token=${accessToken}`;
         
-        const containerRes = await fetch(containerUrl, { method: 'POST' });
+const containerRes = await fetch(containerUrl, { method: 'POST' });
         const containerData = await containerRes.json();
 
         if (containerData.error) {
@@ -50,11 +50,84 @@ export async function postToInstagram(imageUrl, caption) {
         return {
             success: true,
             postId: publishData.id,
-            permalink: `https://instagram.com/p/${publishData.id}/` // Note: API doesn't return permalink immediately usually, but we can assume success
+            permalink: `https://instagram.com/p/${publishData.id}/` 
         };
 
     } catch (error) {
         console.error('[INSTAGRAM] Failed to post:', error);
+        throw error;
+    }
+}
+
+/**
+ * Posts a Reel (Video) to Instagram
+ * @param {string} videoUrl - Public URL of the video
+ * @param {string} caption - The text caption for the post
+ * @param {string} coverUrl - Optional cover image URL
+ */
+export async function postToInstagramReel(videoUrl, caption, coverUrl = null) {
+    const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
+    const accountId = process.env.INSTAGRAM_ACCOUNT_ID;
+
+    if (!accessToken || !accountId) {
+        throw new Error('Instagram credentials missing (INSTAGRAM_ACCESS_TOKEN or INSTAGRAM_ACCOUNT_ID)');
+    }
+
+    console.log(`[INSTAGRAM] 🎥 Preparing to post Reel: ${videoUrl}`);
+
+    try {
+        // Step 1: Create Reel Container
+        // media_type=REELS
+        let containerUrl = `${INSTAGRAM_API_BASE}/${accountId}/media?media_type=REELS&video_url=${encodeURIComponent(videoUrl)}&caption=${encodeURIComponent(caption)}&access_token=${accessToken}`;
+        
+        if (coverUrl) {
+            containerUrl += `&cover_url=${encodeURIComponent(coverUrl)}`;
+        }
+
+        const containerRes = await fetch(containerUrl, { method: 'POST' });
+        const containerData = await containerRes.json();
+
+        if (containerData.error) {
+            throw new Error(`Instagram Reel Container Error: ${containerData.error.message}`);
+        }
+
+        const creationId = containerData.id;
+        console.log(`[INSTAGRAM] Reel Container created: ${creationId}. Waiting for processing...`);
+
+        // Step 2: Check Status Loop
+        let attempts = 0;
+        while (attempts < 10) { // Max 30 seconds wait
+            await new Promise(r => setTimeout(r, 3000));
+            const statusUrl = `${INSTAGRAM_API_BASE}/${creationId}?fields=status_code&access_token=${accessToken}`;
+            const statusRes = await fetch(statusUrl);
+            const statusData = await statusRes.json();
+
+            if (statusData.status_code === 'FINISHED') {
+                break;
+            } else if (statusData.status_code === 'ERROR') {
+                throw new Error('Instagram processing failed.');
+            }
+            console.log(`[INSTAGRAM] Reel Processing: ${statusData.status_code}...`);
+            attempts++;
+        }
+
+        // Step 3: Publish
+        const publishUrl = `${INSTAGRAM_API_BASE}/${accountId}/media_publish?creation_id=${creationId}&access_token=${accessToken}`;
+        const publishRes = await fetch(publishUrl, { method: 'POST' });
+        const publishData = await publishRes.json();
+
+        if (publishData.error) {
+             throw new Error(`Instagram Publish Reel Error: ${publishData.error.message}`);
+        }
+
+        console.log(`[INSTAGRAM] 🎬 Reel Published! ID: ${publishData.id}`);
+        return {
+            success: true,
+            postId: publishData.id
+        };
+
+    } catch (error) {
+        console.error('[INSTAGRAM] Failed to post Reel:', error);
         throw error;
     }
 }

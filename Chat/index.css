@@ -36,10 +36,18 @@
 }
 
 body {
-  background-color: var(--lira-bg);
+  background-color: transparent; /* Transparent for Tauri */
   color: #e4e4e7; /* Zinc-200 */
   overflow: hidden;
   transition: background-color 0.5s ease;
+}
+
+/* Main app container with acrylic/glass effect */
+#root {
+  background: rgba(9, 9, 11, 0.85); /* Semi-transparent dark */
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  min-height: 100vh;
 }
 
 /* Subtle noise texture */

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Brain, Zap, LogOut, Headset, Volume2, VolumeX, AppWindow } from 'lucide-react';
+import { Brain, Zap, LogOut, Headset, Volume2, VolumeX, AppWindow, Eye, Cast } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { AvatarPulse } from './ui/AvatarPulse';
 import { useTranslation } from 'react-i18next';
@@ -26,6 +26,10 @@ interface ChatHeaderProps {
   isExhausted?: boolean;
   fatigue?: number;
   onToggleCompanion?: () => void;
+  onToggleCopilot?: () => void;
+  isCopilotActive?: boolean;
+  onToggleOverlay?: () => void;
+  isOverlayActive?: boolean;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({ 
@@ -42,7 +46,11 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onToggleVoice,
   isExhausted,
   fatigue,
-  onToggleCompanion
+  onToggleCompanion,
+  onToggleCopilot,
+  isCopilotActive,
+  onToggleOverlay,
+  isOverlayActive
 }) => {
   const [showModelSelector, setShowModelSelector] = useState(false);
   const { t } = useTranslation();
@@ -170,6 +178,26 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             >
                 <AppWindow size={18} />
             </button>
+          )}
+
+          {onToggleOverlay && (
+             <button
+               onClick={onToggleOverlay}
+               className={`p-2.5 rounded-xl transition-all hidden sm:flex items-center gap-2 ${isOverlayActive ? 'text-lira-pink bg-lira-pink/10 animate-pulse' : 'text-cyan-400 hover:text-cyan-300 hover:bg-cyan-400/10'}`}
+               title={isOverlayActive ? "Disable VTuber Overlay" : "Enable VTuber Overlay (Desktop)"}
+             >
+               <Cast size={18} />
+             </button>
+          )}
+
+          {onToggleCopilot && (
+             <button
+               onClick={onToggleCopilot}
+               className={`p-2.5 rounded-xl transition-all ${isCopilotActive ? 'text-lira-pink bg-lira-pink/10 animate-pulse' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+               title={isCopilotActive ? "Disable Copilot (Watcher)" : "Enable Copilot (Watcher)"}
+             >
+               <Eye size={18} />
+             </button>
           )}
           {onLogout && (
             <button onClick={onLogout} className="p-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-colors" title={t('chat_header.logout')}>

@@ -1,11 +1,10 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
 }
 
 model User {
@@ -18,7 +17,7 @@ model User {
   createdAt     BigInt    @map("created_at")
   lastLogin     BigInt?   @default(0) @map("last_login")
   loginCount    Int?      @default(0) @map("login_count")
-  preferences   Json?
+  preferencesStr String? @map("preferences")
   warnings      Int?      @default(0)
   isBanned      Int?      @default(0) @map("is_banned")
   plan          String?   @default("free")
@@ -35,7 +34,7 @@ model Session {
   personaId String?
   createdAt BigInt
   updatedAt BigInt
-  messages  Json
+  messagesStr String @map("messages")
 
   @@map("sessions")
 }
@@ -47,7 +46,7 @@ model Memory {
   category   String
   priority   String
   createdAt  BigInt
-  tags       Json
+  tagsStr    String @map("tags")
   importance Int?    @default(1)
   embedding  String?
 
@@ -79,10 +78,10 @@ model Gamification {
   xp               Int?    @default(0)
   coins            Int?    @default(100)
   level            Int?    @default(1)
-  stats            Json?
-  unlockedThemes   Json?
-  unlockedPersonas Json?
-  achievements     Json?
+  statsStr            String? @map("stats")
+  unlockedThemesStr   String? @map("unlocked_themes")
+  unlockedPersonasStr String? @map("unlocked_personas")
+  achievementsStr     String? @map("achievements")
   activePersonaId  String?
   updatedAt        BigInt?
 
@@ -95,7 +94,7 @@ model Feedback {
   feedback  String?
   type      String?
   rating    Int?
-  context   Json?
+  contextStr String? @map("context")
   status    String? @default("new")
   createdAt BigInt?
 
