@@ -8,10 +8,7 @@
 
 import {GenerateVideoParams} from '../components/iris/types';
 
-// Backend-connected implementation
-import {GenerateVideoParams} from '../components/iris/types';
-import { API_BASE_URL } from '../src/config';
-import { getAuthHeaders } from './userService';
+
 
 // Mock types needed by consumers
 type Video = any; 

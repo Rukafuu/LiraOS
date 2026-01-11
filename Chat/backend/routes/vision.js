@@ -296,6 +296,5 @@ router.post('/generate-video', async (req, res) => {
   }
 });
 
-router.post('/analyze', async (req, res) => {
 
 export default router;
