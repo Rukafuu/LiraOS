@@ -11,15 +11,8 @@ export const ErrorScreen: React.FC<ErrorScreenProps> = ({ error, resetErrorBound
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black overflow-hidden font-sans">
       {/* Background Video */}
       <div className="absolute inset-0 z-0">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="w-full h-full object-cover opacity-60"
-        >
-          <source src="/assets/videos/lira-sorry.mp4" type="video/mp4" />
-        </video>
+        {/* Helper Video Removed to prevent metadata errors during crash */}
+        <div className="absolute inset-0 bg-[#0a0a0a]" />
         {/* Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
       </div>

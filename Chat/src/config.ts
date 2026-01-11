@@ -5,4 +5,4 @@
 
 export const API_BASE_URL = 'https://liraos-production.up.railway.app';
 
-export const IS_DESKTOP = true; // Assume desktop for now
+export const IS_DESKTOP = typeof window !== 'undefined' && ('__TAURI__' in window || '__TAURI_INTERNALS__' in window);
