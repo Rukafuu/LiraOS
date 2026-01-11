@@ -39,6 +39,7 @@ COPY Chat/backend/routes ./routes
 COPY Chat/backend/services ./services
 COPY Chat/backend/middlewares ./middlewares
 COPY Chat/backend/modules ./modules
+COPY Chat/backend/utils ./utils
 
 # Expor porta
 EXPOSE 4000
