@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
 */
-import {Video} from '@google/genai';
+// import {Video} from '@google/genai';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
   AspectRatio,
@@ -253,7 +253,7 @@ const PromptForm: React.FC<PromptFormProps> = ({
   const [inputVideo, setInputVideo] = useState<VideoFile | null>(
     initialValues?.inputVideo ?? null,
   );
-  const [inputVideoObject, setInputVideoObject] = useState<Video | null>(
+  const [inputVideoObject, setInputVideoObject] = useState<any | null>(
     initialValues?.inputVideoObject ?? null,
   );
   const [isLooping, setIsLooping] = useState(initialValues?.isLooping ?? false);

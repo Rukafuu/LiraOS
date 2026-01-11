@@ -1,8 +1,5 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
-*/
-import {Video} from '@google/genai';
+// Video type removed to strip @google/genai dependency
+// import {Video} from '@google/genai';
 
 export enum AppState {
   IDLE,
@@ -54,6 +51,7 @@ export interface GenerateVideoParams {
   referenceImages?: ImageFile[];
   styleImage?: ImageFile | null;
   inputVideo?: VideoFile | null;
-  inputVideoObject?: Video | null;
+  inputVideoObject?: any | null; // Changed from Video to any
   isLooping?: boolean;
 }
+

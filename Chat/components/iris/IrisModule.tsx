@@ -1,6 +1,6 @@
 
 import React, {useCallback, useEffect, useState} from 'react';
-import {Video} from '@google/genai';
+// import {Video} from '@google/genai';
 import {CurvedArrowDownIcon} from './icons';
 import LoadingIndicator from './LoadingIndicator';
 import PromptForm from './PromptForm';
@@ -26,7 +26,7 @@ const IrisModule: React.FC<IrisModuleProps> = ({ onClose }) => {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lastConfig, setLastConfig] = useState<GenerateVideoParams | null>(null);
-  const [lastVideoObject, setLastVideoObject] = useState<Video | null>(null);
+  const [lastVideoObject, setLastVideoObject] = useState<any | null>(null);
   const [lastVideoBlob, setLastVideoBlob] = useState<Blob | null>(null);
   const [moduleMode, setModuleMode] = useState<'video' | 'vision'>('video');
   
