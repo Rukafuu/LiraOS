@@ -1,0 +1,49 @@
+{
+	"Version": 3,
+	"FileReferences": {
+		"Moc": "youling.moc3",
+		"Textures": [
+			"youling.4096/texture_00.png",
+			"youling.4096/texture_01.png",
+			"youling.4096/texture_02.png",
+			"youling.4096/texture_03.png",
+			"youling.4096/texture_04.png",
+			"youling.4096/texture_05.png",
+			"youling.4096/texture_06.png",
+			"youling.4096/texture_07.png"
+		],
+		"Physics": "youling.physics3.json",
+		"DisplayInfo": "youling.cdi3.json",
+		"Expressions": [
+			{"Name": "f01", "File": "expression1.exp3.json"},
+			{"Name": "f02", "File": "expression2.exp3.json"},
+			{"Name": "f03", "File": "expression3.exp3.json"},
+			{"Name": "f04", "File": "expression4.exp3.json"},
+			{"Name": "f05", "File": "expression5.exp3.json"},
+			{"Name": "f06", "File": "expression6.exp3.json"},
+			{"Name": "f07", "File": "expression7.exp3.json"},
+			{"Name": "f08", "File": "expression8.exp3.json"},
+			{"Name": "f09", "File": "expression9.exp3.json"},
+			{"Name": "f10", "File": "expression10.exp3.json"},
+			{"Name": "f11", "File": "expression11.exp3.json"}
+		]
+	},
+	"Groups": [
+		{
+			"Target": "Parameter",
+			"Name": "LipSync",
+			"Ids": [
+				"ParamMouthForm",
+				"ParamMouthOpenY"
+			]
+		},
+		{
+			"Target": "Parameter",
+			"Name": "EyeBlink",
+			"Ids": [
+				"ParamEyeLOpen",
+				"ParamEyeROpen"
+			]
+		}
+	]
+}

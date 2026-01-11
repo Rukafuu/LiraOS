@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cubism.live2d.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cubism.live2d.com; style-src 'self' 'unsafe-inline'; connect-src 'self' http://127.0.0.1:4000 http://127.0.0.1:4001 ws://127.0.0.1:4000 ws://127.0.0.1:4001 blob:; media-src 'self' blob:; img-src 'self' * data: blob:;">
+    <title>Lira Companion</title>
+    
+    <!-- Cubism SDK (Official) -->
+    <script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
+    
+    <!-- PIXI.js v6.5.8 (NOT v7!) -->
+    <script src="https://cdn.jsdelivr.net/npm/pixi.js@6.5.8/dist/browser/pixi.min.js"></script>
+    
+    <!-- pixi-live2d-display (Cubism 4) -->
+    <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            background: transparent;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-app-region: no-drag;
+        }
+
+        #app {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        /* Lira Container */
+        #lira-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            cursor: move;
+            -webkit-app-region: drag;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+        }
+
+        /* Live2D Canvas */
+        #lira-canvas {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* Controls */
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 8px 12px;
+            display: flex;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            -webkit-app-region: no-drag;
+            z-index: 1000;
+        }
+
+        #lira-container:hover #controls {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 6px 12px;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            -webkit-app-region: no-drag;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        /* Speech Bubble */
+        #speech-bubble {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 16px;
+            max-width: 250px;
+            font-size: 13px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+        }
+
+        #speech-bubble.show {
+            opacity: 1;
+        }
+
+        /* Status Indicator */
+        #status {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ff4444;
+            transition: background 0.3s;
+            z-index: 1001;
+        }
+
+        #status.connected {
+            background: #44ff44;
+            box-shadow: 0 0 10px #44ff44;
+        }
+
+        /* System Stats Overlay */
+        #stats-overlay {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            padding: 8px 12px;
+            border-radius: 12px;
+            font-size: 10px;
+            color: white;
+            transition: opacity 0.3s;
+            font-family: 'Consolas', monospace;
+            z-index: 999;
+        }
+
+        .stat-line {
+            margin: 2px 0;
+        }
+
+        .stat-bar {
+            width: 80px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            overflow: hidden;
+            display: inline-block;
+            margin-left: 5px;
+        }
+
+        .stat-bar-fill {
+            height: 100%;
+            transition: width 0.5s, background 0.3s;
+        }
+
+        /* Loading */
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 14px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px 30px;
+            border-radius: 12px;
+            z-index: 2000;
+        }
+
+        #loading::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        @keyframes speak {
+            0%, 100% { height: 25px; }
+            50% { height: 35px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div id="lira-container">
+            <!-- Status Indicator -->
+            <div id="status"></div>
+
+            <!-- System Stats -->
+            <div id="stats-overlay">
+                <div class="stat-line">
+                    CPU: <span id="cpu-text">0%</span>
+                    <div class="stat-bar">
+                        <div id="cpu-bar" class="stat-bar-fill" style="width: 0%; background: #4CAF50;"></div>
+                    </div>
+                </div>
+                <div class="stat-line">
+                    RAM: <span id="ram-text">0%</span>
+                    <div class="stat-bar">
+                        <div id="ram-bar" class="stat-bar-fill" style="width: 0%; background: #2196F3;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Speech Bubble -->
+            <div id="speech-bubble"></div>
+
+            <!-- Placeholder Avatar -->
+            <div id="placeholder-avatar" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 150px; height: 150px;">
+                <div style="width: 100%; height: 100%; background: #ff69b4; border-radius: 50%; position: relative; box-shadow: 0 10px 30px rgba(255, 105, 180, 0.5);">
+                    <div style="width: 20px; height: 20px; background: #000; border-radius: 50%; position: absolute; top: 40%; left: 30%;"></div>
+                    <div style="width: 20px; height: 20px; background: #000; border-radius: 50%; position: absolute; top: 40%; right: 30%;"></div>
+                    <div id="placeholder-mouth" style="width: 50px; height: 25px; border: 3px solid #000; border-top: none; border-radius: 0 0 50px 50px; position: absolute; bottom: 30%; left: 50%; transform: translateX(-50%);"></div>
+                </div>
+            </div>
+
+            <!-- Live2D Canvas -->
+            <canvas id="lira-canvas"></canvas>
+
+            <!-- Controls -->
+            <div id="controls">
+                <button class="control-btn" onclick="toggleClickThrough()" title="Click-through">🖱️</button>
+                <button class="control-btn" onclick="toggleStats()" title="Stats">📊</button>
+                <button class="control-btn" onclick="toggleVisionMode()" id="vision-btn" title="Ativar Visão (Gemini)">👁️</button>
+                <button class="control-btn" onclick="triggerCleaning()" title="Manager Faxina">🧹</button>
+                <button class="control-btn" onclick="openChat()" title="Chat">💬</button>
+                <button class="control-btn" onclick="minimize()" title="Fechar">➖</button>
+            </div>
+        </div>
+
+        <div id="loading">Loading Lira</div>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        const systemMonitor = require('./systemMonitor');
+        
+        let clickThroughEnabled = false;
+        let backendConnected = false;
+        let statsVisible = true;
+        let liraModel = null;
+        let pixiApp = null;
+        
+        // 🏃‍♂️ Walking State
+        let isWalking = false;
+        let walkDirection = 1;
+        let walkSpeed = 1.5;
+        let walkInterval = null;
+
+        // Backend Status
+        ipcRenderer.on('backend-status', (event, status) => {
+            const statusEl = document.getElementById('status');
+            backendConnected = status === 'connected';
+            
+            if (backendConnected) {
+                statusEl.classList.add('connected');
+                showSpeech('Conectada ao backend! ✨');
+            } else {
+                statusEl.classList.remove('connected');
+            }
+        });
+
+        // Backend Messages
+        ipcRenderer.on('backend-message', (event, message) => {
+            console.log('Message from backend:', message);
+            
+            if (message.type === 'voice-state') {
+                handleVoiceState(message.speaking);
+            } else if (message.type === 'proactive') {
+                showSpeech(message.content, 6000);
+                if (message.emotion) {
+                    handleEmotion(message.emotion);
+                }
+            } else if (message.type === 'emotion') {
+                handleEmotion(message.emotion);
+            }
+        });
+
+        // System Stats Update
+        ipcRenderer.on('system-stats-update', (event, stats) => {
+            updateStatsDisplay(stats);
+            
+            // Just handle alerts and expressions, no movement
+            if (stats.cpu.usage > 90 || stats.ram.usage > 92) {
+                handleEmotion('surprised');
+            } else if (stats.cpu.usage < 30) {
+                handleEmotion('happy');
+            }
+        });
+
+        // System Alerts
+        ipcRenderer.on('system-alert-display', (event, alert) => {
+            showSpeech(alert.content, 6000);
+            if (alert.emotion) {
+                handleEmotion(alert.emotion);
+            }
+            
+            if (alert.type === 'ghost-detected' && alert.data) {
+                handleGhostAlert(alert.data);
+            }
+        });
+
+        async function handleGhostAlert(duplicates) {
+            const names = [...new Set(duplicates.map(d => d.name))].join(', ');
+            const confirmKill = confirm(`Senhor, detectei instâncias extras de [${names}] rodando. Deseja que eu encerre esses processos duplicados para economizar tokens?`);
+            
+            if (confirmKill) {
+                showSpeech('Entendido! Eliminando fantasmas... 🔫👻', 4000);
+                handleEmotion('surprised');
+                
+                let successCount = 0;
+                for (const ghost of duplicates) {
+                    const success = await ipcRenderer.invoke('rpa-kill-process', ghost.pid);
+                    if (success) successCount++;
+                }
+                
+                showSpeech(`Pronto! Encerrei ${successCount} processo(s) duplicado(s). Sistemas limpos! ✨`, 5000);
+                handleEmotion('happy');
+            } else {
+                showSpeech('Certo, manterei os processos ativos. Cuidado com os tokens! 💸');
+                handleEmotion('neutral');
+            }
+        }
+
+
+
+        // Update stats display
+        function updateStatsDisplay(stats) {
+            if (!stats) return;
+            
+            const cpuText = document.getElementById('cpu-text');
+            const cpuBar = document.getElementById('cpu-bar');
+            const ramText = document.getElementById('ram-text');
+            const ramBar = document.getElementById('ram-bar');
+            
+            if (stats.cpu) {
+                cpuText.textContent = `${Math.round(stats.cpu.usage)}%`;
+                cpuBar.style.width = `${stats.cpu.usage}%`;
+                cpuBar.style.background = stats.cpu.usage > 80 ? '#f44336' : stats.cpu.usage > 50 ? '#ff9800' : '#4CAF50';
+            }
+            
+            if (stats.ram) {
+                const ramVal = Math.round(stats.ram.usage);
+                ramText.textContent = `${ramVal}%`;
+                ramBar.style.width = `${stats.ram.usage}%`;
+                ramBar.style.background = stats.ram.usage > 85 ? '#f44336' : stats.ram.usage > 70 ? '#ff9800' : '#2196F3';
+            }
+        }
+
+        // Show speech bubble and SPEAK (Minimax Integration)
+        async function showSpeech(text, duration = 3000) {
+            const bubble = document.getElementById('speech-bubble');
+            bubble.textContent = text;
+            bubble.classList.add('show');
+            
+            // 🎙️ TTS INTEGRATION
+            try {
+                console.log('[TTS] Requesting voice for:', text);
+                const response = await fetch('http://127.0.0.1:4000/api/voice/tts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        text: text, 
+                        voiceId: 'lira-local' 
+                    })
+                });
+
+                if (response.ok) {
+                    const audioBlob = await response.blob();
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    const audio = new Audio(audioUrl);
+                    
+                    handleVoiceState(true);
+                    audio.onended = () => {
+                        handleVoiceState(false);
+                        URL.revokeObjectURL(audioUrl);
+                        bubble.classList.remove('show');
+                    };
+                    
+                    await audio.play();
+                } else {
+                    console.warn('[TTS] Backend error (keys missing?), fallback to silent bubble.');
+                    setTimeout(() => bubble.classList.remove('show'), duration);
+                }
+            } catch (err) {
+                console.error('[TTS] Connection error:', err);
+                // Fallback to basic window speech if backend is totally down
+                if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = 'pt-BR';
+                    utterance.onstart = () => handleVoiceState(true);
+                    utterance.onend = () => {
+                        handleVoiceState(false);
+                        bubble.classList.remove('show');
+                    };
+                    window.speechSynthesis.speak(utterance);
+                } else {
+                    setTimeout(() => bubble.classList.remove('show'), duration);
+                }
+            }
+        }
+
+        // Toggle click-through
+        function toggleClickThrough() {
+            clickThroughEnabled = !clickThroughEnabled;
+            ipcRenderer.send('set-click-through', clickThroughEnabled);
+            showSpeech(clickThroughEnabled ? 'Click-through ativado' : 'Click-through desativado');
+            
+            // Icon feedback
+            const btn = document.querySelector('button[onclick="toggleClickThrough()"]');
+            btn.innerHTML = clickThroughEnabled ? '👓' : '🖱️';
+        }
+
+        // 🧠 SMART CLICK-THROUGH (Hover Detection)
+        // When click-through is active, we temporarily disable it when mouse enters UI areas
+        const interactableElements = ['lira-container', 'controls', 'stats-overlay', 'speech-bubble'];
+        
+        interactableElements.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('mouseenter', () => {
+                    if (clickThroughEnabled) ipcRenderer.send('set-ignore-mouse-events', false);
+                });
+                el.addEventListener('mouseleave', (e) => {
+                    // Check if we are moving to another interactable element to avoid flickering
+                    if (clickThroughEnabled) ipcRenderer.send('set-ignore-mouse-events', true);
+                });
+            }
+        });
+
+        // Toggle stats
+        function toggleStats() {
+            statsVisible = !statsVisible;
+            const overlay = document.getElementById('stats-overlay');
+            overlay.style.opacity = statsVisible ? '1' : '0';
+            showSpeech(statsVisible ? 'Stats visíveis' : 'Stats ocultas');
+        }
+
+        // Open main chat
+        function openChat() {
+            require('electron').shell.openExternal('http://localhost:4000');
+        }
+
+        // 🧹 RPA TRIGGER
+        async function triggerCleaning() {
+            showSpeech('Deixa eu dar uma olhada no seu desktop... 👀', 4000);
+            handleEmotion('happy');
+
+            try {
+                const report = await ipcRenderer.invoke('rpa-scan-desktop');
+                console.log('[RPA] Scan Report:', report);
+
+                if (report.filesToMove.length === 0) {
+                    showSpeech('Seu desktop está impecável! Nada para limpar. ✨', 5000);
+                    return;
+                }
+
+                const confirmClean = confirm(`Encontrei ${report.filesToMove.length} arquivos para organizar. Posso movê-los para a pasta "LiraOrganized"?`);
+                
+                if (confirmClean) {
+                    showSpeech('Iniciando Protocolo de Faxina... 🧹💨', 5000);
+                    handleEmotion('surprised');
+                    
+                    const result = await ipcRenderer.invoke('rpa-perform-cleaning');
+                    
+                    showSpeech(`Faxina concluída! Movi ${result.moved} arquivos. 💜✨`, 5000);
+                    handleEmotion('happy');
+
+                    setTimeout(() => {
+                        ipcRenderer.send('rpa-open-folder');
+                    }, 2000);
+                } else {
+                    showSpeech('Entendido! Deixarei tudo como está. 😊');
+                }
+            } catch (err) {
+                console.error('[RPA] Error:', err);
+                showSpeech('Tive um problema ao analisar os arquivos. 😰');
+                handleEmotion('sad');
+            }
+        }
+
+        // 👁️ VISION MODE (Lira's Eyes)
+        let visionModeActive = false;
+        let visionInterval = null;
+
+        async function toggleVisionMode() {
+            visionModeActive = !visionModeActive;
+            const btn = document.getElementById('vision-btn');
+            
+            if (visionModeActive) {
+                btn.style.background = 'rgba(147, 51, 234, 0.5)'; // Purple active
+                showSpeech('Ativando meus olhos digitais! Agora consigo te ver, senhor! 👁️💜', 4000);
+                handleEmotion('happy');
+                startVisionLoop();
+            } else {
+                btn.style.background = '';
+                showSpeech('Desativando visão... voltando pro escuro! 🙈', 3000);
+                clearInterval(visionInterval);
+            }
+        }
+
+        async function startVisionLoop() {
+            if (!visionModeActive) return;
+            
+            // Analyze every 30 seconds to save tokens/performance
+            visionInterval = setInterval(async () => {
+                if (!visionModeActive) return;
+
+                try {
+                    console.log('[Vision] Capturing screen...');
+                    const screenshot = await ipcRenderer.invoke('rpa-capture-screen');
+                    
+                    // Send to backend for analysis
+                    // We extract only the base64 part (remove data:image/jpeg;base64,)
+                    const base64Data = screenshot.split(',')[1];
+                    
+                    const response = await fetch('http://127.0.0.1:4001/api/vision/tick', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ screenshot: base64Data })
+                    });
+
+                    const result = await response.json();
+                    if (result.description) {
+                        console.log('[Vision] Analysis:', result.description);
+                        // Lira reacts to what she sees (if anything interesting)
+                        if (Math.random() > 0.6) { // 40% chance to comment to not be annoying
+                             showSpeech(`Vejo que você está ${result.description.toLowerCase()}... interessante! 👀💜`, 5000);
+                        }
+                    }
+                } catch (err) {
+                    console.error('[Vision] Analysis error:', err);
+                }
+            }, 30000);
+        }
+
+        // Minimize to tray
+        function minimize() {
+            ipcRenderer.send('minimize-to-tray');
+        }
+
+        // Quit app
+        function quit() {
+            window.close();
+        }
+
+        // Voice state handler
+        function handleVoiceState(speaking) {
+            // Animate placeholder mouth
+            const placeholderMouth = document.getElementById('placeholder-mouth');
+            if (placeholderMouth) {
+                if (speaking) {
+                    placeholderMouth.style.animation = 'speak 0.2s infinite';
+                } else {
+                    placeholderMouth.style.animation = 'none';
+                }
+            }
+            
+            // Animate Live2D mouth if available
+            if (liraModel) {
+                if (speaking) {
+                    window.mouthInterval = setInterval(() => {
+                        try {
+                            const params = liraModel.internalModel.coreModel;
+                            if (params) {
+                                params.setParameterValueById('ParamMouthOpenY', Math.random());
+                            }
+                        } catch (e) {}
+                    }, 100);
+                } else {
+                    if (window.mouthInterval) {
+                        clearInterval(window.mouthInterval);
+                        window.mouthInterval = null;
+                    }
+                    try {
+                        const params = liraModel.internalModel.coreModel;
+                        if (params) {
+                            params.setParameterValueById('ParamMouthOpenY', 0);
+                        }
+                    } catch (e) {}
+                }
+            }
+        }
+
+        // Emotion handler
+        function handleEmotion(emotion) {
+            if (liraModel && liraModel.expression) {
+                const emotionMap = {
+                    'happy': 0,
+                    'sad': 1,
+                    'angry': 2,
+                    'surprised': 3,
+                    'neutral': 4
+                };
+                const idx = emotionMap[emotion] || 0;
+                liraModel.expression(idx);
+            }
+        }
+
+        // Initialize Live2D
+        async function initLive2D() {
+            const loading = document.getElementById('loading');
+            const placeholder = document.getElementById('placeholder-avatar');
+            const canvas = document.getElementById('lira-canvas');
+            
+            try {
+                console.log('[Init] Starting Live2D initialization...');
+                console.log('[Init] PIXI available:', typeof PIXI !== 'undefined');
+                console.log('[Init] PIXI.live2d available:', typeof PIXI !== 'undefined' && typeof PIXI.live2d !== 'undefined');
+                console.log('[Init] window.Live2D available:', typeof window.Live2D !== 'undefined');
+                
+                loading.textContent = 'Initializing PIXI';
+                
+                // Create PIXI Application
+                pixiApp = new PIXI.Application({
+                    view: canvas,
+                    width: 300,
+                    height: 400,
+                    backgroundAlpha: 0,
+                    antialias: true,
+                    resolution: window.devicePixelRatio || 1,
+                    autoDensity: true
+                });
+                
+                console.log('[Live2D] PIXI initialized successfully');
+                
+                loading.textContent = 'Loading Live2D Model';
+                
+                // Check if Live2DModel is available
+                if (!PIXI.live2d || !PIXI.live2d.Live2DModel) {
+                    throw new Error('PIXI.live2d.Live2DModel not available. Check if pixi-live2d-display loaded correctly.');
+                }
+                
+                console.log('[Live2D] Attempting to load model from:', './assets/model/lira/youling.model3.json');
+                
+                // Load Live2D model
+                liraModel = await PIXI.live2d.Live2DModel.from('./assets/model/lira/youling.model3.json');
+                
+                console.log('[Live2D] Model loaded!', liraModel);
+                
+                // POSITIONING AND SCALE (Optimized for full body)
+                // Scale smaller to fit feet in the 400px height
+                liraModel.scale.set(0.045); 
+                
+                // Center horizontally
+                liraModel.x = 150; 
+                
+                // Position vertically - Center anchor to fit whole body
+                liraModel.anchor.set(0.5, 0.5); 
+                liraModel.y = 200; // Middle of the window
+                
+                // 🚫 REMOVE WATERMARK (The black box/square)
+                try {
+                    console.log('[Live2D] Attempting to remove watermark...');
+                    if (liraModel.internalModel && liraModel.internalModel.coreModel) {
+                        liraModel.internalModel.coreModel.setParameterValueById('Param', 1);
+                        console.log('[Live2D] Watermark parameter set to 1');
+                    }
+                } catch (e) {
+                    console.warn('[Live2D] Failed to remove watermark:', e);
+                }
+                
+                // Add to stage
+                pixiApp.stage.addChild(liraModel);
+                
+                console.log('[Live2D] Model added to stage successfully!');
+                
+                // Hide placeholder and loading
+                if (placeholder) placeholder.style.display = 'none';
+                loading.style.display = 'none';
+                
+                // Remove gradient background
+                document.getElementById('lira-container').style.background = 'transparent';
+                
+                showSpeech('Oi! Sou a Lira! 💜', 3000);
+                
+                // Start system monitoring
+                systemMonitor.start(3000);
+                
+            } catch (err) {
+                console.error('[Init] Failed with error:', err);
+                console.error('[Init] Error stack:', err.stack);
+                console.error('[Init] Error message:', err.message);
+                
+                loading.textContent = `Erro: ${err.message}`;
+                loading.style.fontSize = '11px';
+                loading.style.maxWidth = '250px';
+                
+                // Keep placeholder visible and hide loading after showing error
+                setTimeout(() => {
+                    loading.style.display = 'none';
+                    showSpeech('Usando modo placeholder', 3000);
+                    systemMonitor.start(3000);
+                }, 5000);
+            }
+        }
+
+        // Initialize when ready
+        window.addEventListener('DOMContentLoaded', () => {
+            initLive2D();
+        });
+
+        // Click on Lira
+        document.getElementById('lira-canvas').addEventListener('click', (e) => {
+            if (!clickThroughEnabled) {
+                const phrases = [
+                    'Oi! 💜',
+                    'Precisa de ajuda?',
+                    'Tá tudo bem?',
+                    'Vamos conversar?',
+                    'Clica no 💬 pra abrir o chat!',
+                    'CPU tá de boa! 😊',
+                    'Tudo tranquilo por aqui! ✨'
+                ];
+                const randomPhrase = phrases[Math.floor(Math.random() * phrases.length)];
+                showSpeech(randomPhrase);
+                
+                if (liraModel && liraModel.tap) {
+                    liraModel.tap(e.offsetX, e.offsetY);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+{
+  "name": "lira-companion",
+  "version": "1.0.0",
+  "description": "Lira Desktop Companion - Your AI friend on desktop",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "dev": "electron . --enable-logging"
+  },
+  "keywords": [
+    "lira",
+    "ai",
+    "companion",
+    "desktop",
+    "mascot"
+  ],
+  "author": "Lira Team",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "systeminformation": "^5.30.2",
+    "ws": "^8.16.0"
+  },
+  "build": {
+    "appId": "com.lira.companion",
+    "productName": "Lira Companion",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

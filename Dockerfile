@@ -36,12 +36,8 @@ COPY --from=builder /app/backend/prisma ./prisma
 # Copiar TODO o código do backend de uma vez
 COPY Chat/backend .
 
-# Criar script de start com migrations
-RUN echo '#!/bin/sh\n\
-    echo "[PRISMA] Running database migrations..."\n\
-    npx prisma db push --accept-data-loss || echo "[PRISMA] Migration failed, continuing..."\n\
-    echo "[SERVER] Starting application..."\n\
-    node server.js' > /app/backend/start.sh && chmod +x /app/backend/start.sh
+# Tornar start.sh executável
+RUN chmod +x start.sh
 
 # Expor porta
 EXPOSE 4000
@@ -50,5 +46,5 @@ EXPOSE 4000
 ENV NODE_ENV=production
 ENV PORT=4000
 
-# Comando de start com migrations
-CMD ["/app/backend/start.sh"]
+# Comando de start usando o script
+CMD ["./start.sh"]

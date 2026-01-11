@@ -1,0 +1,17 @@
+--- DISK USAGE FOR: C:\Users\conta\Documents\Lira\Chat ---
+[DIR] backend: 15779.73 MB
+[DIR] dist: 271.21 MB
+[DIR] public: 227.67 MB
+[DIR] node_modules: 157.29 MB
+[FILE] Liraofficial model.zip: 154.55 MB
+[DIR] assets: 121.26 MB
+[DIR] .venv: 77.48 MB
+[DIR] LiraVtuber Model: 3.39 MB
+[FILE] ViGEmBus.pdb: 2.26 MB
+[FILE] nefconw.exe: 0.72 MB
+[DIR] components: 0.43 MB
+[FILE] ViGEmBus.sys: 0.24 MB
+[DIR] _archive: 0.18 MB
+[FILE] package-lock.json: 0.18 MB
+[DIR] docs: 0.08 MB
+------------------

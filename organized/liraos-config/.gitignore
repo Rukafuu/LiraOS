@@ -1,0 +1,105 @@
+# Dependencies
+node_modules/
+**/node_modules/
+.pnp
+.pnp.js
+venv/
+**/venv/
+.venv/
+**/.venv/
+env/
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# API Keys & Secrets
+.env
+.env.production
+.env.development
+.env.*
+!.env.example
+!.env.production.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# Databases & Local Storage
+*.sqlite
+*.db
+*.sqlite3
+lira.db
+/Data/
+/db/
+
+# Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+**/python/lib/
+**/venv/lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+.pytest_cache/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Build Outputs
+/dist/
+/build/
+/out/
+/Chat/dist/
+Chat/dist/
+Chat/public/*.zip
+Chat/public/*.mp4
+Chat/public/*.avi
+# Block large video files in model directories
+Chat/public/assets/**/*.mp4
+Chat/public/assets/**/*.avi
+Chat/public/assets/**/*.mov
+
+# Lira Specific
+/Chat/backend/ocr/
+/Chat/backend/python/models/
+/LiraVtuber Model/
+/Liraofficial model.zip
+/lira-iris/
+/dataset_lira.zip
+/Lira.bak*
+/lira/
+_archive/
+_assets/
+*.rartemp
+*.rar
+*.zip
+*.7z
+
+# Large Binaries
+*.dic
+*.exe
+*.dll
+*.bin
+system.dic
