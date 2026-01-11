@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*" 
+           Name="Lira Desktop" 
+           Language="1046" 
+           Version="0.1.0" 
+           Manufacturer="LiraOS"
+           UpgradeCode="12345678-1234-1234-1234-123456789012">
+    
+    <Package InstallerVersion="450" Compressed="yes" InstallScope="perMachine" />
+    
+    <MajorUpgrade DowngradeErrorMessage="Uma versão mais recente já está instalada." />
+    
+    <MediaTemplate EmbedCab="yes" />
+    
+    <!-- Customização Visual com imagens da Lira -->
+    <WixVariable Id="WixUIBannerBmp" Value="banner.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="dialog.bmp" />
+    
+    <!-- Diretórios -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="APPLICATIONFOLDER" Name="LiraOS">
+          <Directory Id="INSTALLFOLDER" Name="Lira Desktop" />
+        </Directory>
+      </Directory>
+      
+      <!-- Atalho Menu Iniciar -->
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="Lira Desktop"/>
+      </Directory>
+      
+      <!-- Atalho Desktop -->
+      <Directory Id="DesktopFolder" Name="Desktop"/>
+    </Directory>
+    
+    <!-- Componentes -->
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="MainExecutable" Guid="*">
+        <File Id="LiraDesktopExe" 
+              Source="$(var.CargoTargetBinDir)\lira-desktop.exe" 
+              KeyPath="yes"/>
+      </Component>
+    </DirectoryRef>
+    
+    <!-- Atalhos -->
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="ApplicationShortcut" Guid="*">
+        <Shortcut Id="ApplicationStartMenuShortcut"
+                  Name="Lira Desktop"
+                  Description="Sua IA Pessoal"
+                  Target="[INSTALLFOLDER]lira-desktop.exe"
+                  WorkingDirectory="INSTALLFOLDER"/>
+        <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall"/>
+        <RegistryValue Root="HKCU" 
+                       Key="Software\LiraOS\Lira Desktop" 
+                       Name="installed" 
+                       Type="integer" 
+                       Value="1" 
+                       KeyPath="yes"/>
+      </Component>
+    </DirectoryRef>
+    
+    <DirectoryRef Id="DesktopFolder">
+      <Component Id="DesktopShortcut" Guid="*">
+        <Shortcut Id="DesktopShortcut"
+                  Name="Lira Desktop"
+                  Description="Sua IA Pessoal"
+                  Target="[INSTALLFOLDER]lira-desktop.exe"
+                  WorkingDirectory="INSTALLFOLDER"/>
+        <RegistryValue Root="HKCU" 
+                       Key="Software\LiraOS\Lira Desktop" 
+                       Name="desktop" 
+                       Type="integer" 
+                       Value="1" 
+                       KeyPath="yes"/>
+      </Component>
+    </DirectoryRef>
+    
+    <!-- Features -->
+    <Feature Id="ProductFeature" Title="Lira Desktop" Level="1">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="ApplicationShortcut" />
+      <ComponentRef Id="DesktopShortcut" />
+    </Feature>
+    
+    <!-- UI -->
+    <UIRef Id="WixUI_Minimal"/>
+    
+  </Product>
+</Wix>

@@ -31,7 +31,7 @@ async function checkDailyRotation(userId, currentStats) {
         try {
             await prisma.gamification.update({
                 where: { userId },
-                data: { stats }
+                data: { statsStr: JSON.stringify(stats) }
             });
         } catch (e) {
             // Ignore if record doesn't exist yet (handled by saveState)
@@ -47,33 +47,53 @@ export const getState = async (userId) => {
       where: { userId }
     });
     
+    // Helper to safely parse JSON strings
+    const safeParse = (value, fallback = {}) => {
+      if (!value) return fallback;
+      if (typeof value === 'object') return value;
+      try {
+        return JSON.parse(value);
+      } catch {
+        return fallback;
+      }
+    };
+    
     if (isAdm) {
+        const adminStats = safeParse(row?.statsStr, {});
+        const adminThemes = safeParse(row?.unlockedThemesStr, []);
+        const adminPersonas = safeParse(row?.unlockedPersonasStr, []);
+        const adminAchievements = safeParse(row?.achievementsStr, []);
+        
         return {
           userId,
           xp: 9999999,
           coins: 9999999,
           level: 1000, 
-          stats: row?.stats || {}, 
-          unlockedThemes: row?.unlockedThemes || [], 
-          unlockedPersonas: row?.unlockedPersonas || [],
-          achievements: row?.achievements || [],
+          stats: adminStats, 
+          unlockedThemes: adminThemes, 
+          unlockedPersonas: adminPersonas,
+          achievements: adminAchievements,
+          activePersonaId: row?.activePersonaId || 'default',
           updatedAt: Date.now()
         };
     }
 
     if (!row) return null;
     
-    const stats = await checkDailyRotation(userId, row.stats);
+    // Parse all JSON string fields
+    const parsedStats = safeParse(row.statsStr, {});
+    const stats = await checkDailyRotation(userId, parsedStats);
 
     return {
-      ...row,
+      userId: row.userId,
       xp: row.xp || 0,
       coins: row.coins || 0,
       level: row.level || 1,
       stats: stats, 
-      unlockedThemes: row.unlockedThemes || [],
-      unlockedPersonas: row.unlockedPersonas || [],
-      achievements: row.achievements || [],
+      unlockedThemes: safeParse(row.unlockedThemesStr, []),
+      unlockedPersonas: safeParse(row.unlockedPersonasStr, []),
+      achievements: safeParse(row.achievementsStr, []),
+      activePersonaId: row.activePersonaId || 'default',
       updatedAt: toInt(row.updatedAt)
     };
   } catch (e) {
@@ -92,10 +112,10 @@ export const saveState = async (userId, data) => {
       xp: data.xp !== undefined ? data.xp : (existing?.xp || 0),
       coins: data.coins !== undefined ? data.coins : (existing?.coins || 0),
       level: data.level !== undefined ? data.level : (existing?.level || 1),
-      stats: data.stats || existing?.stats || {},
-      unlockedThemes: data.unlockedThemes || existing?.unlockedThemes || [],
-      unlockedPersonas: data.unlockedPersonas || existing?.unlockedPersonas || [],
-      achievements: data.achievements || existing?.achievements || [],
+      statsStr: JSON.stringify(data.stats || existing?.stats || {}),
+      unlockedThemesStr: JSON.stringify(data.unlockedThemes || existing?.unlockedThemes || []),
+      unlockedPersonasStr: JSON.stringify(data.unlockedPersonas || existing?.unlockedPersonas || []),
+      achievementsStr: JSON.stringify(data.achievements || existing?.achievements || []),
       activePersonaId: data.activePersonaId || existing?.activePersonaId || 'default',
       updatedAt: now
     };
@@ -109,8 +129,27 @@ export const saveState = async (userId, data) => {
       }
     });
     
+    // Helper to safely parse JSON strings for return value
+    const safeParse = (value, fallback = {}) => {
+      if (!value) return fallback;
+      if (typeof value === 'object') return value;
+      try {
+        return JSON.parse(value);
+      } catch {
+        return fallback;
+      }
+    };
+    
     return {
-      ...row,
+      userId: row.userId,
+      xp: row.xp,
+      coins: row.coins,
+      level: row.level,
+      stats: safeParse(row.statsStr, {}),
+      unlockedThemes: safeParse(row.unlockedThemesStr, []),
+      unlockedPersonas: safeParse(row.unlockedPersonasStr, []),
+      achievements: safeParse(row.achievementsStr, []),
+      activePersonaId: row.activePersonaId,
       updatedAt: toInt(row.updatedAt)
     };
   } catch (e) {

@@ -1,5 +1,5 @@
 import express from 'express';
-import { getState, saveState, getOrCreateDefault, award, getLeaderboard } from '../gamificationStore.js';
+import { getState, saveState, getOrCreateDefault, award, getLeaderboard, claimQuest } from '../gamificationStore.js';
 import { requireAuth } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();

@@ -1,0 +1,14 @@
+C:\Users\conta\Documents\Lira\Chat\src-tauri\target\release\deps\thiserror-caf4c2a9e9bd7d50.d: C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\lib.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\aserror.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\display.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\var.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\private.rs C:\Users\conta\Documents\Lira\Chat\src-tauri\target\release\build\thiserror-279f3ace2f42cd9b\out/private.rs
+
+C:\Users\conta\Documents\Lira\Chat\src-tauri\target\release\deps\libthiserror-caf4c2a9e9bd7d50.rlib: C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\lib.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\aserror.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\display.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\var.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\private.rs C:\Users\conta\Documents\Lira\Chat\src-tauri\target\release\build\thiserror-279f3ace2f42cd9b\out/private.rs
+
+C:\Users\conta\Documents\Lira\Chat\src-tauri\target\release\deps\libthiserror-caf4c2a9e9bd7d50.rmeta: C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\lib.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\aserror.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\display.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\var.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\private.rs C:\Users\conta\Documents\Lira\Chat\src-tauri\target\release\build\thiserror-279f3ace2f42cd9b\out/private.rs
+
+C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\lib.rs:
+C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\aserror.rs:
+C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\display.rs:
+C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\var.rs:
+C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\thiserror-2.0.17\src\private.rs:
+C:\Users\conta\Documents\Lira\Chat\src-tauri\target\release\build\thiserror-279f3ace2f42cd9b\out/private.rs:
+
+# env-dep:OUT_DIR=C:\\Users\\conta\\Documents\\Lira\\Chat\\src-tauri\\target\\release\\build\\thiserror-279f3ace2f42cd9b\\out

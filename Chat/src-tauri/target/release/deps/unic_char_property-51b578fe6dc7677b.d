@@ -1,0 +1,16 @@
+C:\Users\conta\Documents\Lira\Chat\src-tauri\target\release\deps\unic_char_property-51b578fe6dc7677b.d: C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\lib.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\pkg_info.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\property.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\range_types.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\macros.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\tables.rs
+
+C:\Users\conta\Documents\Lira\Chat\src-tauri\target\release\deps\libunic_char_property-51b578fe6dc7677b.rlib: C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\lib.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\pkg_info.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\property.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\range_types.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\macros.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\tables.rs
+
+C:\Users\conta\Documents\Lira\Chat\src-tauri\target\release\deps\libunic_char_property-51b578fe6dc7677b.rmeta: C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\lib.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\pkg_info.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\property.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\range_types.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\macros.rs C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\tables.rs
+
+C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\lib.rs:
+C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\pkg_info.rs:
+C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\property.rs:
+C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\range_types.rs:
+C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\macros.rs:
+C:\Users\conta\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\unic-char-property-0.9.0\src\tables.rs:
+
+# env-dep:CARGO_PKG_DESCRIPTION=UNIC — Unicode Character Tools — Character Property taxonomy, contracts and build macros
+# env-dep:CARGO_PKG_NAME=unic-char-property
+# env-dep:CARGO_PKG_VERSION=0.9.0

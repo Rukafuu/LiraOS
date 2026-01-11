@@ -27,6 +27,7 @@ interface SidebarProps {
     onOpenAdminPanel: () => void;
     onOpenTodoPanel: () => void;
     onOpenCalendar: () => void;
+    onOpenTraePanel: () => void;
     isOpen: boolean;
     onCloseMobile: () => void;
 }
@@ -50,6 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onOpenAdminPanel,
     onOpenTodoPanel,
     onOpenCalendar,
+    onOpenTraePanel,
     isOpen,
     onCloseMobile
 }) => {
@@ -226,6 +228,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                             <Heart size={16} className="text-pink-500 group-hover:scale-110 transition-transform" />
                                             <span className="text-sm">{t('sidebar.supporters')}</span>
                                         </button>
+
+                                        {/* TRAE MODE - ADMIN ONLY */}
+                                        {(currentUser?.id === 'user_1734661833589' || currentUser?.username?.toLowerCase().includes('admin')) && (
+                                            <button onClick={onOpenTraePanel} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group border border-purple-500/20 hover:border-purple-500/40">
+                                                <Command size={16} className="text-purple-400 group-hover:scale-110 transition-transform" />
+                                                <span className="text-sm font-medium">Trae Mode</span>
+                                                <span className="ml-auto text-[9px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded font-bold">BETA</span>
+                                            </button>
+                                        )}
                                     </motion.div>
                                 ) : (
                                     // COLLAPSED VIEW (Icons Only)

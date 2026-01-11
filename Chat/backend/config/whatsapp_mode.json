@@ -1,0 +1,19 @@
+{
+  "mode": "experimental",
+  "comment": "Set mode to 'official' or 'experimental'. Experimental uses Baileys.",
+  "official_config": {
+    "phone_number_id": "YOUR_PHONE_ID",
+    "access_token": "YOUR_ACCESS_TOKEN",
+    "webhook_verify_token": "YOUR_VERIFY_TOKEN"
+  },
+  "experimental_config": {
+    "session_path": "./data/whatsapp_sessions",
+    "owner_number": "5511981826659"
+  },
+  "payment_config": {
+    "pix_key": "lucas.frischeisen@gmail.com", 
+    "pix_name": "Lucas Frischeisen",
+    "monthly_price": "19,90",
+    "support_contact": "5511981826659"
+  }
+}

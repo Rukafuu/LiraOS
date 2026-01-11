@@ -1,0 +1,292 @@
+{
+  "users": {
+    "161645707923571@lid": {
+      "id": "161645707923571@lid",
+      "name": "Ville",
+      "xp": 10,
+      "level": 1,
+      "coins": 2,
+      "joinedAt": 1767967668599,
+      "registered": true,
+      "stats": {
+        "msg": 5,
+        "image": 1,
+        "sticker": 0,
+        "cmd": 2
+      }
+    },
+    "109981328240866@lid": {
+      "id": "109981328240866@lid",
+      "name": "Unknown",
+      "xp": 0,
+      "level": 1,
+      "coins": 0,
+      "joinedAt": 1767967694027,
+      "registered": false,
+      "stats": {
+        "msg": 1,
+        "image": 0,
+        "sticker": 0,
+        "cmd": 0
+      }
+    },
+    "40587575177434@lid": {
+      "id": "40587575177434@lid",
+      "name": "Unknown",
+      "xp": 0,
+      "level": 1,
+      "coins": 0,
+      "joinedAt": 1767967698626,
+      "registered": false,
+      "stats": {
+        "msg": 2,
+        "image": 0,
+        "sticker": 0,
+        "cmd": 0
+      }
+    },
+    "174079923470465@lid": {
+      "id": "174079923470465@lid",
+      "name": "Unknown",
+      "xp": 0,
+      "level": 1,
+      "coins": 0,
+      "joinedAt": 1767967745346,
+      "registered": false,
+      "stats": {
+        "msg": 13,
+        "image": 1,
+        "sticker": 0,
+        "cmd": 0
+      }
+    },
+    "131529497944276@lid": {
+      "id": "131529497944276@lid",
+      "name": "Unknown",
+      "xp": 0,
+      "level": 1,
+      "coins": 0,
+      "joinedAt": 1767967938975,
+      "registered": false,
+      "stats": {
+        "msg": 6,
+        "image": 0,
+        "sticker": 0,
+        "cmd": 0
+      }
+    },
+    "38620983517314@lid": {
+      "id": "38620983517314@lid",
+      "name": "Unknown",
+      "xp": 20,
+      "level": 1,
+      "coins": 4,
+      "joinedAt": 1767968028648,
+      "registered": false,
+      "stats": {
+        "msg": 19,
+        "image": 5,
+        "sticker": 0,
+        "cmd": 5
+      }
+    },
+    "57870406172719@lid": {
+      "id": "57870406172719@lid",
+      "name": "Unknown",
+      "xp": 0,
+      "level": 1,
+      "coins": 0,
+      "joinedAt": 1767968095405,
+      "registered": false,
+      "stats": {
+        "msg": 5,
+        "image": 0,
+        "sticker": 0,
+        "cmd": 0
+      }
+    },
+    "178503655895104@lid": {
+      "id": "178503655895104@lid",
+      "name": "sawada",
+      "xp": 0,
+      "level": 1,
+      "coins": 0,
+      "joinedAt": 1767971367067,
+      "registered": true,
+      "stats": {
+        "msg": 17,
+        "image": 2,
+        "sticker": 0,
+        "cmd": 3
+      }
+    },
+    "248335126536203@lid": {
+      "id": "248335126536203@lid",
+      "name": "nhacare",
+      "xp": 10,
+      "level": 1,
+      "coins": 2,
+      "joinedAt": 1767971432996,
+      "registered": true,
+      "stats": {
+        "msg": 6,
+        "image": 0,
+        "sticker": 0,
+        "cmd": 4
+      }
+    },
+    "206128516472842@lid": {
+      "id": "206128516472842@lid",
+      "name": "Unknown",
+      "xp": 0,
+      "level": 1,
+      "coins": 0,
+      "joinedAt": 1767973209851,
+      "registered": false,
+      "stats": {
+        "msg": 2,
+        "image": 0,
+        "sticker": 0,
+        "cmd": 0
+      }
+    },
+    "124266305601749@lid": {
+      "id": "124266305601749@lid",
+      "name": "Unknown",
+      "xp": 0,
+      "level": 1,
+      "coins": 0,
+      "joinedAt": 1767973256446,
+      "registered": false,
+      "stats": {
+        "msg": 5,
+        "image": 0,
+        "sticker": 0,
+        "cmd": 0
+      }
+    },
+    "163737625444388@lid": {
+      "id": "163737625444388@lid",
+      "name": "Unknown",
+      "xp": 0,
+      "level": 1,
+      "coins": 0,
+      "joinedAt": 1767973277377,
+      "registered": false,
+      "stats": {
+        "msg": 5,
+        "image": 0,
+        "sticker": 0,
+        "cmd": 0
+      }
+    },
+    "212231530750126@lid": {
+      "id": "212231530750126@lid",
+      "name": "Unknown",
+      "xp": 0,
+      "level": 1,
+      "coins": 0,
+      "joinedAt": 1767974313622,
+      "registered": false,
+      "stats": {
+        "msg": 5,
+        "image": 0,
+        "sticker": 0,
+        "cmd": 0
+      }
+    },
+    "65403896242298@lid": {
+      "id": "65403896242298@lid",
+      "name": "Unknown",
+      "xp": 0,
+      "level": 1,
+      "coins": 0,
+      "joinedAt": 1767975382997,
+      "registered": false,
+      "stats": {
+        "msg": 3,
+        "image": 0,
+        "sticker": 0,
+        "cmd": 0
+      }
+    },
+    "180994317508738@lid": {
+      "id": "180994317508738@lid",
+      "name": "Unknown",
+      "xp": 0,
+      "level": 1,
+      "coins": 0,
+      "joinedAt": 1767981766505,
+      "registered": false,
+      "stats": {
+        "msg": 1,
+        "image": 0,
+        "sticker": 0,
+        "cmd": 0
+      }
+    },
+    "213550203162654@lid": {
+      "id": "213550203162654@lid",
+      "name": "Unknown",
+      "xp": 0,
+      "level": 1,
+      "coins": 0,
+      "joinedAt": 1767990657148,
+      "registered": false
+    },
+    "162126643650814@lid": {
+      "id": "162126643650814@lid",
+      "name": "Unknown",
+      "xp": 0,
+      "level": 1,
+      "coins": 0,
+      "joinedAt": 1767990657284,
+      "registered": false
+    },
+    "199462676856946@lid": {
+      "id": "199462676856946@lid",
+      "name": "Unknown",
+      "xp": 0,
+      "level": 1,
+      "coins": 0,
+      "joinedAt": 1767990657411,
+      "registered": false
+    },
+    "553592739177-1592697085@g.us": {
+      "id": "553592739177-1592697085@g.us",
+      "name": "Unknown",
+      "xp": 0,
+      "level": 1,
+      "coins": 0,
+      "joinedAt": 1767990663102,
+      "registered": false
+    },
+    "55118070300694@lid": {
+      "id": "55118070300694@lid",
+      "name": "Unknown",
+      "xp": 0,
+      "level": 1,
+      "coins": 0,
+      "joinedAt": 1767990665757,
+      "registered": false
+    },
+    "136623127826625@lid": {
+      "id": "136623127826625@lid",
+      "name": "Unknown",
+      "xp": 0,
+      "level": 1,
+      "coins": 0,
+      "joinedAt": 1767990751104,
+      "registered": false
+    },
+    "271940266795030@lid": {
+      "id": "271940266795030@lid",
+      "name": "Unknown",
+      "xp": 0,
+      "level": 1,
+      "coins": 0,
+      "joinedAt": 1767991275629,
+      "registered": false
+    }
+  }
+}

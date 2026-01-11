@@ -1,0 +1,40 @@
+{
+  "default": {
+    "welcome_enabled": true,
+    "goodbye_enabled": false,
+    "lang": "en"
+  },
+  "groups": {
+    "123456@g.us": {
+      "welcome_enabled": false
+    }
+  },
+  "120363294800727676@g.us": {
+    "id": "120363294800727676@g.us",
+    "joinedAt": 1767913934501,
+    "expiration": 1768000334501,
+    "plan": "trial",
+    "welcomeParams": {
+      "enabled": true
+    }
+  },
+  "553592739177-1592697085@g.us": {
+    "id": "553592739177-1592697085@g.us",
+    "joinedAt": 1767915129778,
+    "expiration": 1768001529778,
+    "plan": "trial",
+    "welcomeParams": {
+      "enabled": true
+    },
+    "mode": "normal"
+  },
+  "120363403060633899@g.us": {
+    "id": "120363403060633899@g.us",
+    "joinedAt": 1767961298232,
+    "expiration": 1768047698232,
+    "plan": "trial",
+    "welcomeParams": {
+      "enabled": true
+    }
+  }
+}

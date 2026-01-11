@@ -31,6 +31,7 @@ import instagramRoutes from './routes/instagram.js';
 import imagesRoutes from './routes/images.js';
 import todosRoutes from './routes/todos.js';
 import googleAuthRoutes from './routes/authGoogle.js';
+import traeRoutes from './routes/trae.js';
 
 // Services & Utils
 import { discordService } from './services/discordService.js';
@@ -129,6 +130,7 @@ app.use('/api/todos', todosRoutes);
 app.use('/api/auth/google', googleAuthRoutes);
 import whatsappHook from './routes/whatsappHook.js';
 app.use('/api/webhook/whatsapp', whatsappHook);
+app.use('/api/trae', traeRoutes);
 
 // Generic fallback (must be last)
 app.use('/api', chatRoutes);

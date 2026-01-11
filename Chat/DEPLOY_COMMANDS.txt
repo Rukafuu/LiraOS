@@ -1,0 +1,22 @@
+# DEPLOY MANUAL - Comandos Simples
+# Execute linha por linha no PowerShell
+
+# 1. Verificar status
+git status
+
+# 2. Adicionar tudo
+git add .
+
+# 3. Commit
+git commit -m "fix: gamification serialization + trae mode implementation + deploy configs"
+
+# 4. Push para produção
+git push origin main
+
+# 5. Monitorar
+# Railway: https://railway.app/dashboard
+# Vercel: https://vercel.com/dashboard
+
+# Verificar logs
+# railway logs --follow
+# vercel logs --follow

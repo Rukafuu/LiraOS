@@ -50,6 +50,7 @@ import { DiscordModal } from './components/DiscordModal';
 import { MaintenanceScreen } from './components/MaintenanceScreen';
 import { PhotoBooth } from './components/PhotoBooth';
 import { AdminPanel } from './components/AdminPanel';
+import { TraePanel } from './components/TraePanel';
 import { WindowControls } from './components/WindowControls';
 import { API_BASE_URL, IS_DESKTOP } from './src/config';
 import { apiFetch } from './services/apiClient';
@@ -198,6 +199,7 @@ const LiraAppContent = () => {
   const [isTodoPanelOpen, setIsTodoPanelOpen] = useState(false);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isSupportersOpen, setIsSupportersOpen] = useState(false);
+  const [isTraePanelOpen, setIsTraePanelOpen] = useState(false);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
   const [streamingText, setStreamingText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -1252,6 +1254,7 @@ const [connectionError, setConnectionError] = useState('');
         onOpenAdminPanel={() => setIsAdminPanelOpen(true)}
         onOpenTodoPanel={() => setIsTodoPanelOpen(true)}
         onOpenCalendar={() => setIsCalendarOpen(true)}
+        onOpenTraePanel={() => setIsTraePanelOpen(true)}
         isOpen={isSidebarOpen}
         onCloseMobile={() => setIsSidebarOpen(false)}
       />
@@ -1545,6 +1548,10 @@ const [connectionError, setConnectionError] = useState('');
           isOpen={isSupportersOpen}
           onClose={() => setIsSupportersOpen(false)}
         />
+
+        {isTraePanelOpen && (
+          <TraePanel onClose={() => setIsTraePanelOpen(false)} />
+        )}
         
         {isJarvisDashboardOpen && (
             <div className="fixed inset-0 z-[100] bg-black">
