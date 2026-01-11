@@ -45,7 +45,7 @@ import { WelcomeModal } from './components/WelcomeModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ResetPassword } from './components/ResetPassword';
 import { VoiceCallOverlay } from './components/VoiceCallOverlay';
-import { IrisModal } from './components/IrisModal';
+// import { IrisModal } from './components/IrisModal';
 import { DiscordModal } from './components/DiscordModal';
 import { MaintenanceScreen } from './components/MaintenanceScreen';
 import { PhotoBooth } from './components/PhotoBooth';
@@ -1232,7 +1232,7 @@ const [connectionError, setConnectionError] = useState('');
       {/* Background Layer */}
       {showOnboarding && <OnboardingTour onComplete={handleOnboardingComplete} />}
       <LegalModal isOpen={isLegalModalOpen} onClose={() => setIsLegalModalOpen(false)} initialSection={legalSection} />
-      <IrisModal isOpen={isIrisOpen} onClose={() => setIsIrisOpen(false)} />
+      {/* <IrisModal isOpen={isIrisOpen} onClose={() => setIsIrisOpen(false)} /> */}
       <DiscordModal isOpen={isDiscordOpen} onClose={() => setIsDiscordOpen(false)} />
 
       <Sidebar
