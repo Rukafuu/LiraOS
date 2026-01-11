@@ -10,8 +10,8 @@ RUN apt-get update -y && \
 WORKDIR /app
 
 # Copiar apenas package files primeiro (cache layer)
-COPY backend/package*.json ./backend/
-COPY backend/prisma ./backend/prisma/
+COPY Chat/backend/package*.json ./backend/
+COPY Chat/backend/prisma ./backend/prisma/
 
 # Instalar dependências
 WORKDIR /app/backend
@@ -33,16 +33,20 @@ WORKDIR /app/backend
 COPY --from=builder /app/backend/node_modules ./node_modules
 COPY --from=builder /app/backend/prisma ./prisma
 
-# Copiar apenas código necessário
-COPY backend/*.js ./
-COPY backend/routes ./routes
-COPY backend/services ./services
-COPY backend/middlewares ./middlewares
-COPY backend/modules ./modules
-COPY backend/utils ./utils
-COPY backend/config ./config
-COPY backend/data ./data
-COPY backend/.env* ./
+# Copiar apenas código necessário do backend
+COPY Chat/backend/*.js ./
+COPY Chat/backend/routes ./routes
+COPY Chat/backend/services ./services
+COPY Chat/backend/middlewares ./middlewares
+COPY Chat/backend/modules ./modules
+
+# Copiar diretórios opcionais (se existirem)
+COPY Chat/backend/utils ./utils 2>/dev/null || true
+COPY Chat/backend/config ./config 2>/dev/null || true
+COPY Chat/backend/data ./data 2>/dev/null || true
+
+# Copiar .env se existir
+COPY Chat/backend/.env* ./ 2>/dev/null || true
 
 # Expor porta
 EXPOSE 4000
