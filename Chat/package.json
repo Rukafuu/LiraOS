@@ -11,8 +11,7 @@
     "server": "node backend/server.js"
   },
   "dependencies": {
-    "@google/genai": "^1.31.0",
-    "@google/generative-ai": "^0.24.1",
+
     "@radix-ui/react-scroll-area": "^1.0.5",
     "@tauri-apps/api": "^2.9.1",
     "@tauri-apps/plugin-http": "~2.0.0",
