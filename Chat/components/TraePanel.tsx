@@ -18,6 +18,7 @@ import {
     RotateCcw
 } from 'lucide-react';
 import { getAuthHeaders } from '../services/userService';
+import { traeService } from '../services/traeService';
 import { API_BASE_URL } from '../src/config';
 
 interface TraeTask {
@@ -68,16 +69,11 @@ export const TraePanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     }, [logs]);
 
     const loadTools = async () => {
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/trae/tools`, {
-                headers: getAuthHeaders()
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setAvailableTools(data);
-            }
-        } catch (e) {
-            addLog(`❌ Failed to load tools: ${e.message}`, 'error');
+        const res = await traeService.getTools();
+        if (res.success && res.result) {
+            setAvailableTools(res.result);
+        } else {
+            addLog(`❌ Failed to load tools: ${res.error}`, 'error');
         }
     };
 
@@ -108,8 +104,8 @@ export const TraePanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         setFileChanges([]);
         addLog(`Starting task: "${taskInput}"`, 'info');
 
-        // For demo, we'll execute some example operations
-        // In Phase 2, this will use AI to plan and execute
+        // For Phase 2, we will implement the AI Planner here.
+        // For now, we simulate a task that gets repo info as a proof of concept.
         await executeDemoTask(task);
     };
 
@@ -127,36 +123,20 @@ export const TraePanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         setCurrentTask({ ...task });
         addLog('Getting repository information...', 'info');
 
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/trae/execute`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...getAuthHeaders()
-                },
-                body: JSON.stringify({
-                    tool: 'getRepoInfo',
-                    args: []
-                })
-            });
-
-            const data = await res.json();
+        const res = await traeService.executeTool('getRepoInfo', []);
             
-            if (data.success) {
-                step1.status = 'success';
-                step1.result = data.result;
-                step1.endTime = Date.now();
-                addLog(`✅ Repository: ${data.result.branch} branch`, 'success');
-                addLog(`   ${data.result.files?.length || 0} files changed`, 'info');
-            } else {
-                step1.status = 'error';
-                step1.error = data.error;
-                addLog(`Failed: ${data.error}`, 'error');
-            }
-        } catch (e) {
+        if (res.success) {
+            step1.status = 'success';
+            step1.result = res.result;
+            step1.endTime = Date.now();
+            
+            // Format output for log
+            const branch = res.result?.branch || 'unknown';
+            addLog(`✅ Repository: ${branch} branch`, 'success');
+        } else {
             step1.status = 'error';
-            step1.error = e.message;
-            addLog(`Error: ${e.message}`, 'error');
+            step1.error = res.error;
+            addLog(`Failed: ${res.error}`, 'error');
         }
 
         setCurrentTask({ ...task });
@@ -171,26 +151,13 @@ export const TraePanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const executeTool = async (toolName: string, args: any[] = []) => {
         addLog(`Executing: ${toolName}(${args.join(', ')})`, 'info');
 
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/trae/execute`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...getAuthHeaders()
-                },
-                body: JSON.stringify({ tool: toolName, args })
-            });
-
-            const data = await res.json();
+        const res = await traeService.executeTool(toolName, args);
             
-            if (data.success) {
-                addLog(`✅ ${toolName} completed`, 'success');
-                addLog(JSON.stringify(data.result, null, 2), 'info');
-            } else {
-                addLog(`❌ ${toolName} failed: ${data.error}`, 'error');
-            }
-        } catch (e) {
-            addLog(`❌ Error: ${e.message}`, 'error');
+        if (res.success) {
+            addLog(`✅ ${toolName} completed`, 'success');
+            addLog(JSON.stringify(res.result, null, 2), 'info');
+        } else {
+            addLog(`❌ ${toolName} failed: ${res.error}`, 'error');
         }
     };
 
