@@ -19,7 +19,7 @@ interface SidebarProps {
     onOpenStore: () => void;
     onOpenShortcuts: () => void;
     onOpenLegal: () => void;
-    onOpenIris: () => void;
+    // onOpenIris: () => void; // Removed
     onOpenDiscord: () => void;
     onOpenGamer: () => void;
     onOpenDailyQuests: () => void;
@@ -43,7 +43,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onOpenStore,
     onOpenShortcuts,
     onOpenLegal,
-    onOpenIris,
+    // onOpenIris,
     onOpenDiscord,
     onOpenGamer,
     onOpenDailyQuests,
@@ -192,10 +192,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                             <span className="text-sm">{t('sidebar.dashboard')}</span>
                                         </button>
 
-                                        <button onClick={onOpenIris} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
-                                            <Video size={16} className="text-red-400 group-hover:scale-110 transition-transform" />
-                                            <span className="text-sm">{t('sidebar.iris')}</span>
-                                        </button>
+                                        {/* Iris Button Removed */}
 
                                         <button onClick={onOpenStore} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
                                             <ShoppingBag size={16} className="text-yellow-400 group-hover:scale-110 transition-transform" />
@@ -251,9 +248,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center hover:bg-blue-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenDashboard(); }}>
                                             <LayoutGrid size={16} className="text-blue-400" />
                                         </div>
-                                        <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center hover:bg-red-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenIris(); }}>
-                                            <Video size={16} className="text-red-400" />
-                                        </div>
+                                        {/* Iris Button Removed */}
                                         <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center hover:bg-yellow-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenStore(); }}>
                                             <ShoppingBag size={16} className="text-yellow-400" />
                                         </div>
