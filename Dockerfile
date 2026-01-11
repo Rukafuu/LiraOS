@@ -1,28 +1,55 @@
-# Use Node 22 (supports Prisma 7)
-FROM node:22-slim
+# Multi-stage build para reduzir tamanho final
+FROM node:20-slim AS builder
 
-# Install system dependencies required for Prisma (OpenSSL)
-RUN apt-get update -y && apt-get install -y openssl ca-certificates procps
+# Instalar dependências do sistema
+RUN apt-get update -y && \
+    apt-get install -y openssl ca-certificates && \
+    rm -rf /var/lib/apt/lists/*
 
-# Set working directory
+# Definir diretório de trabalho
 WORKDIR /app
 
-# Copy the entire repository
-COPY . .
+# Copiar apenas package files primeiro (cache layer)
+COPY backend/package*.json ./backend/
+COPY backend/prisma ./backend/prisma/
 
-# Change to backend directory
-WORKDIR /app/Chat/backend
+# Instalar dependências
+WORKDIR /app/backend
+RUN npm ci --only=production && \
+    npx prisma generate && \
+    npm cache clean --force
 
-# Install dependencies (Prisma 7 requires Node 20.19+ or 22+)
-RUN npm install
+# Stage final - imagem mínima
+FROM node:20-slim
 
-# Generate Prisma Client
-RUN npx prisma generate
+# Instalar apenas runtime dependencies
+RUN apt-get update -y && \
+    apt-get install -y openssl ca-certificates procps && \
+    rm -rf /var/lib/apt/lists/*
 
-# Expose port (railway usually sets PORT env var)
-ENV PORT=4000
+WORKDIR /app/backend
+
+# Copiar node_modules do builder
+COPY --from=builder /app/backend/node_modules ./node_modules
+COPY --from=builder /app/backend/prisma ./prisma
+
+# Copiar apenas código necessário
+COPY backend/*.js ./
+COPY backend/routes ./routes
+COPY backend/services ./services
+COPY backend/middlewares ./middlewares
+COPY backend/modules ./modules
+COPY backend/utils ./utils
+COPY backend/config ./config
+COPY backend/data ./data
+COPY backend/.env* ./
+
+# Expor porta
 EXPOSE 4000
 
-# Start command
-# Start command with DB push
-CMD npx prisma db push --accept-data-loss && npm start
+# Variável de ambiente
+ENV NODE_ENV=production
+ENV PORT=4000
+
+# Comando de start
+CMD ["node", "server.js"]
