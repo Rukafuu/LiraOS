@@ -110,10 +110,43 @@ export const SupportersModal: React.FC<SupportersModalProps> = ({ isOpen, onClos
                               </div>
                           </div>
                       ))}
-                  </div>
-               </div>
+                   </div>
+                </div>
 
-            </div>
+                {/* Call to Action - Become a Sponsor */}
+                <div className="mt-8 p-6 rounded-2xl bg-gradient-to-br from-yellow-500/10 via-purple-500/10 to-transparent border border-white/10 text-center">
+                   <div className="flex justify-center mb-4">
+                      <div className="p-3 bg-yellow-400/20 text-yellow-400 rounded-full animate-pulse">
+                         <Star size={32} fill="currentColor" />
+                      </div>
+                   </div>
+                   <h3 className="text-xl font-bold text-white mb-2">Support the Future of LiraOS</h3>
+                   <p className="text-sm text-gray-400 mb-6 max-w-md mx-auto">
+                      Help us keep the servers running and Lira evolving. Sponsors get exclusive personas, themes, and "The Singularity" badge.
+                   </p>
+                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <a 
+                        href="https://github.com/sponsors/Rukafuu" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 px-6 py-3 bg-white text-black font-bold rounded-xl hover:bg-gray-200 transition-all transform hover:scale-105"
+                      >
+                         <Star size={18} />
+                         GitHub Sponsors
+                      </a>
+                      <a 
+                        href="https://patreon.com/Rukafuu" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 px-6 py-3 bg-[#FF424D] text-white font-bold rounded-xl hover:bg-[#e33b44] transition-all transform hover:scale-105"
+                      >
+                         <Heart size={18} fill="currentColor" />
+                         Patreon
+                      </a>
+                   </div>
+                </div>
+
+             </div>
           </motion.div>
         </div>
       )}
