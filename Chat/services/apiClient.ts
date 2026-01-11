@@ -1,4 +1,3 @@
-import { fetch as tauriFetch } from '@tauri-apps/plugin-http';
 import { IS_DESKTOP } from '../src/config';
 
 /**
@@ -9,6 +8,9 @@ import { IS_DESKTOP } from '../src/config';
 export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   if (IS_DESKTOP) {
     try {
+      // Dynamic import to prevent crash on Web (where Tauri plugin is missing internals)
+      const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
+      
       // Tauri fetch signature is compatible with standard fetch
       const response = await tauriFetch(input as string, init);
       return response;
