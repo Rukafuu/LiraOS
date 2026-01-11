@@ -39,6 +39,7 @@ interface TraeStep {
     error?: string;
     startTime?: number;
     endTime?: number;
+    description?: string;
 }
 
 interface FileChange {
@@ -104,48 +105,76 @@ export const TraePanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         setFileChanges([]);
         addLog(`Starting task: "${taskInput}"`, 'info');
 
-        // For Phase 2, we will implement the AI Planner here.
-        // For now, we simulate a task that gets repo info as a proof of concept.
-        await executeDemoTask(task);
+        await executeAIPlan(task);
     };
 
-    const executeDemoTask = async (task: TraeTask) => {
-        // Example: Get project info
-        const step1: TraeStep = {
-            id: 'step_1',
-            tool: 'getRepoInfo',
-            args: [],
-            status: 'running',
-            startTime: Date.now()
-        };
-
-        task.steps.push(step1);
-        setCurrentTask({ ...task });
-        addLog('Getting repository information...', 'info');
-
-        const res = await traeService.executeTool('getRepoInfo', []);
-            
-        if (res.success) {
-            step1.status = 'success';
-            step1.result = res.result;
-            step1.endTime = Date.now();
-            
-            // Format output for log
-            const branch = res.result?.branch || 'unknown';
-            addLog(`✅ Repository: ${branch} branch`, 'success');
-        } else {
-            step1.status = 'error';
-            step1.error = res.error;
-            addLog(`Failed: ${res.error}`, 'error');
-        }
-
-        setCurrentTask({ ...task });
+    const executeAIPlan = async (taskData: TraeTask) => {
+        addLog('🤖 AI is planning your task...', 'info');
         
-        // Complete task
-        task.status = step1.status === 'success' ? 'success' : 'error';
-        task.completedAt = Date.now();
-        setTaskHistory(prev => [task, ...prev]);
+        // 1. Get Plan from Backend Gemini
+        const planRes = await traeService.planTask(taskData.description);
+        
+        if (!planRes.success || !planRes.result) {
+             addLog(`❌ Planning failed: ${planRes.error || 'No plan returned'}`, 'error');
+             setCurrentTask(null);
+             return;
+        }
+        
+        const plan = planRes.result; // Array of steps
+        addLog(`📋 Plan generated with ${plan.length} steps`, 'success');
+        
+        // Update task with steps
+        const steps: TraeStep[] = plan.map((step: any, index: number) => ({
+            id: `step_${index}`,
+            tool: step.tool,
+            args: step.args,
+            status: 'pending',
+            description: step.description 
+        }));
+        
+        taskData.steps = steps;
+        setCurrentTask({ ...taskData });
+        
+        // 2. Execute Steps
+        for (const step of steps) {
+            step.status = 'running';
+            step.startTime = Date.now();
+            setCurrentTask({ ...taskData });
+            
+            addLog(`Running: ${step.tool} - ${step.description || ''}`, 'info');
+            
+            // Execute tool
+            const res = await traeService.executeTool(step.tool, step.args);
+            
+            step.endTime = Date.now();
+            
+            if (res.success) {
+                step.status = 'success';
+                step.result = res.result;
+                addLog(`✅ ${step.tool} success`, 'success');
+            } else {
+                step.status = 'error';
+                step.error = res.error;
+                addLog(`❌ ${step.tool} failed: ${res.error}`, 'error');
+                
+                // Stop on error
+                taskData.status = 'error';
+                taskData.completedAt = Date.now();
+                setTaskHistory(prev => [taskData, ...prev]);
+                setCurrentTask(null);
+                return;
+            }
+            
+            setCurrentTask({ ...taskData });
+            // Small visual delay
+            await new Promise(r => setTimeout(r, 800));
+        }
+        
+        taskData.status = 'success';
+        taskData.completedAt = Date.now();
+        setTaskHistory(prev => [taskData, ...prev]);
         setCurrentTask(null);
+        addLog('✨ Task completed successfully!', 'success');
     };
 
     const executeTool = async (toolName: string, args: any[] = []) => {

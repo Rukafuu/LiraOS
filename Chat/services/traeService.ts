@@ -127,6 +127,31 @@ export const traeService = {
   },
 
   /**
+   * Plan a task using AI
+   */
+  planTask: async (task: string): Promise<TraeResponse<{ tool: string, args: any[], description: string }[]>> => {
+    try {
+      const res = await apiFetch(`${BASE_URL}/plan`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders()
+        },
+        body: JSON.stringify({ task })
+      });
+      const data = await res.json();
+      // Backend returns { success: true, plan: [...] }
+      // We map 'plan' to 'result' to match TraeResponse interface if needed, or just return data
+      if (data.success && data.plan) {
+          return { success: true, result: data.plan };
+      }
+      return data;
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  },
+
+  /**
    * Check API health and feature status
    */
   healthCheck: async (): Promise<TraeResponse> => {
