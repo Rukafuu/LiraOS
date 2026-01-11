@@ -7,6 +7,8 @@
 // TODO: Move video generation logic to backend (/api/vision/generate-video)
 
 import {GenerateVideoParams} from '../components/iris/types';
+import { API_BASE_URL } from '../src/config';
+import { getAuthHeaders } from './userService';
 
 
 
