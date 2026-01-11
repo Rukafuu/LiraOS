@@ -1,50 +1,66 @@
-# Multi-stage build para reduzir tamanho final
-FROM node:20-slim AS builder
-
-# Instalar dependências do sistema
-RUN apt-get update -y && \
-    apt-get install -y openssl ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
-
-# Definir diretório de trabalho
+# ==========================================
+# Stage 1: Build Frontend (React + Vite)
+# ==========================================
+FROM node:20-slim AS frontend-builder
 WORKDIR /app
 
-# Copiar apenas package files primeiro (cache layer)
-COPY Chat/backend/package*.json ./backend/
-COPY Chat/backend/prisma ./backend/prisma/
+# Copiar dependências do frontend
+COPY Chat/package*.json ./
 
-# Instalar dependências
-WORKDIR /app/backend
-RUN npm ci --only=production && \
-    npx prisma generate && \
-    npm cache clean --force
+# Instalar dependências (usando install para garantir compatibilidade)
+RUN npm install
 
-# Stage final - imagem mínima
-FROM node:20-slim
+# Copiar código fonte do frontend
+COPY Chat/ .
 
-# Instalar apenas runtime dependencies
+# Buildar o frontend (gera pasta 'dist')
+# Isso é CRUCIAL para que as correções do frontend apareçam em produção
+RUN npm run build
+
+# ==========================================
+# Stage 2: Build Backend (Node.js + Prisma)
+# ==========================================
+FROM node:20-slim AS backend-builder
+WORKDIR /app
+
+# Instalar deps de sistema necessárias para Prisma
+RUN apt-get update -y && apt-get install -y openssl ca-certificates
+
+# Copiar dependências do backend
+COPY Chat/backend/package*.json ./
+COPY Chat/backend/prisma ./prisma/
+
+# Instalar deps do backend
+RUN npm install --omit=dev && npx prisma generate
+
+# ==========================================
+# Stage 3: Runner (Final Image)
+# ==========================================
+FROM node:20-slim AS runner
+
+# Deps de runtime
 RUN apt-get update -y && \
     apt-get install -y openssl ca-certificates procps && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app/backend
 
-# Copiar node_modules do builder
-COPY --from=builder /app/backend/node_modules ./node_modules
-COPY --from=builder /app/backend/prisma ./prisma
+# Copiar módulos do backend
+COPY --from=backend-builder /app/node_modules ./node_modules
+COPY --from=backend-builder /app/prisma ./prisma
 
-# Copiar TODO o código do backend de uma vez
+# Copiar código fonte do backend
 COPY Chat/backend .
-
-# Tornar start.sh executável
 RUN chmod +x start.sh
 
-# Expor porta
-EXPOSE 4000
+# Copiar o build do frontend para onde o server.js espera (/app/dist)
+# O workdir é /app/backend, então ../dist resolve para /app/dist
+COPY --from=frontend-builder /app/dist ../dist
 
-# Variável de ambiente
+# Configuração de Ambiente
 ENV NODE_ENV=production
 ENV PORT=4000
+EXPOSE 4000
 
-# Comando de start usando o script
+# Iniciar com script de migração robusto
 CMD ["./start.sh"]
