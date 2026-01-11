@@ -2,6 +2,7 @@ import express from 'express';
 import { requireAuth } from '../middlewares/authMiddleware.js';
 import { isAdmin } from '../authStore.js';
 import { tools, getAllTools, getToolCategories } from '../services/traeMode/index.js';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const router = express.Router();
 
@@ -234,6 +235,107 @@ router.get('/health', (req, res) => {
             analysis: true
         }
     });
+});
+
+/**
+ * Plan a task using Gemini
+ */
+router.post('/plan', async (req, res) => {
+    try {
+        const { task } = req.body;
+        if (!task) return res.status(400).json({ error: 'Task description is required' });
+
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+             return res.status(500).json({ error: 'GEMINI_API_KEY not configured on server' });
+        }
+
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" });
+
+        // Tool definitions for the AI to understand capabilities
+        const toolDefinitions = `
+File System:
+- readFile(path): Read file content
+- writeFile(path, content): Write file content (creates if missing)
+- listDirectory(path): List files in directory
+- exists(path): Check if path exists
+- deleteFile(path): Delete file
+- copyFile(source, dest): Copy file
+- moveFile(source, dest): Move/Rename file
+- getFileInfo(path): Get file stats
+
+Execution:
+- runCommand(cmd, cwd?): Run shell command (safely whitelisted)
+- runNpm(args): Run npm commands (install, run, etc)
+- runTests(path?): Run project tests
+- lintCode(path?): Run linter
+- typeCheck(): Run TypeScript compiler
+- buildProject(): Run build script
+
+Git:
+- gitStatus(): Get changed files
+- gitDiff(path?): Get file diffs
+- gitAdd(files): Stage files
+- gitCommit(message): Commit staged changes
+- gitBranch(name?, create?): Get/Create/Switch branch
+- getRepoInfo(): Get current branch/repo info
+- gitLog(limit?): Get commit history
+
+Analysis:
+- searchCode(query, path?, options?): Search text in files
+- findFiles(pattern, path?): Find files by glob pattern
+- getFileOutline(path): Get symbols/classes in file
+- analyzeError(error): Parse error output
+- getProjectStructure(path?, depth?): Get tree view
+`;
+
+        const prompt = `
+        You are Trae, an autonomous senior software engineer agent.
+        Your goal is to create a precise, step-by-step execution plan to accomplish the user's task.
+        
+        USER TASK: "${task}"
+        
+        AVAILABLE TOOLS:
+        ${toolDefinitions}
+        
+        INSTRUCTIONS:
+        1. Break down the user task into logical steps.
+        2. Select the most appropriate tool for each step.
+        3. If you need to edit a file, always READ it first to know the context, unless you are creating it from scratch.
+        4. When writing code, ensure it is complete and correct.
+        5. Use 'runCommand' only when specific dedicated tools are not available.
+        
+        RESPONSE FORMAT:
+        Return a generic JSON object (no markdown code blocks) with this exact structure:
+        {
+            "plan": [
+                {
+                    "tool": "toolName",
+                    "args": ["arg1", "arg2"],
+                    "description": "Brief explanation of what this step does"
+                }
+            ]
+        }
+        `;
+
+        const result = await model.generateContent({
+             contents: [{ role: "user", parts: [{ text: prompt }] }],
+             generationConfig: { responseMimeType: "application/json" }
+        });
+        
+        const responseText = result.response.text();
+        
+        // Clean markdown if present (defensive)
+        const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const planData = JSON.parse(cleanJson);
+        
+        res.json({ success: true, plan: planData.plan });
+
+    } catch (e) {
+        console.error('[TRAE] Planning error:', e);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 export default router;
