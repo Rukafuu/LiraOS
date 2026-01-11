@@ -3,6 +3,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import { requireAuth } from '../middlewares/authMiddleware.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { globalContext } from '../utils/globalContext.js';
 import { agentBrain } from '../services/agentBrain.js';
 
@@ -197,10 +198,104 @@ router.post('/analyze', async (req, res) => {
         throw new Error('Could not analyze image via any available method');
     }
 
+});
+
+// Video Generation Endpoint
+router.post('/generate-video', async (req, res) => {
+  try {
+    const { params } = req.body;
+    const apiKey = process.env.GEMINI_API_KEY;
+    
+    if (!apiKey) {
+      return res.status(503).json({ error: 'Video Gen AI unavailable (Missing API Key)' });
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+    console.log('[VISION] Starting video gen with params:', params.prompt);
+
+    // Construct Payload (Mirrored from original frontend logic)
+    const config = {
+      numberOfVideos: 1,
+      resolution: params.resolution,
+    };
+
+    if (params.mode !== 'extend_video') { // Using string literal as enum is not avail here
+      config.aspectRatio = params.aspectRatio;
+    }
+
+    const payload = {
+      model: params.model || 'imagen-3.0-generate-001',
+      config: config,
+    };
+
+    if (params.prompt) payload.prompt = params.prompt;
+
+    // Handle Frame/Image Inputs
+    if (params.mode === 'frames_to_video') {
+       if (params.startFrame) {
+         payload.image = { imageBytes: params.startFrame.base64, mimeType: params.startFrame.file?.type || 'image/jpeg' };
+       }
+       const finalEnd = params.isLooping ? params.startFrame : params.endFrame;
+       if (finalEnd) {
+         payload.config.lastFrame = { imageBytes: finalEnd.base64, mimeType: finalEnd.file?.type || 'image/jpeg' };
+       }
+    } else if (params.mode === 'references_to_video') {
+       const refs = [];
+       if (params.referenceImages) {
+         params.referenceImages.forEach(img => {
+           refs.push({ image: { imageBytes: img.base64, mimeType: img.file?.type || 'image/jpeg' }, referenceType: 'asset' });
+         });
+       }
+       if (params.styleImage) {
+          refs.push({ image: { imageBytes: params.styleImage.base64, mimeType: params.styleImage.file?.type || 'image/jpeg' }, referenceType: 'style' });
+       }
+       if (refs.length > 0) payload.config.referenceImages = refs;
+    }
+
+    // Call Google GenAI
+    let operation = await ai.models.generateVideos(payload);
+    console.log('[VISION] Video Op Started:', operation.name);
+
+    // Poll for completion (Long Polling - max 60s for Railway)
+    const startTime = Date.now();
+    while (!operation.done) {
+       if (Date.now() - startTime > 110000) { // Safety break before 2 min
+          throw new Error('Video generation timed out (2m limit).');
+       }
+       await new Promise(r => setTimeout(r, 5000));
+       process.stdout.write('.');
+       operation = await ai.operations.getVideosOperation({ operation: operation });
+    }
+
+    if (operation.response && operation.response.generatedVideos?.length > 0) {
+       const videoUri = operation.response.generatedVideos[0].video.uri;
+       console.log('\n[VISION] Video Ready:', videoUri);
+       
+       // Proxy the video file to bypass CORS/Auth on frontend
+       // We fetch it here with the key and send blob to frontend? 
+       // Or return URI? But frontend can't fetch URI without key usually.
+       // Let's return the URI and the proxy URL logic handles it?
+       // The old frontend code fetched `${url}&key=${apiKey}`.
+       // We can do that here and pipe content?
+       // For simplicity, let's fetch blob and return base64 or stream.
+       // Base64 is safer for now.
+       
+       const videoRes = await fetch(`${decodeURIComponent(videoUri)}&key=${apiKey}`);
+       const arrayBuffer = await videoRes.arrayBuffer();
+       const base64Video = Buffer.from(arrayBuffer).toString('base64');
+       
+       res.json({ success: true, videoBase64: base64Video, uri: videoUri });
+
+    } else {
+       throw new Error('No video generated in response');
+    }
+
   } catch (error) {
-    console.error('Vision Error:', error);
+    console.error('[VISION VIDEO ERROR]', error);
     res.status(500).json({ error: error.message });
   }
 });
+
+router.post('/analyze', async (req, res) => {
 
 export default router;
