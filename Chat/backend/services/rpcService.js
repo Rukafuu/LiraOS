@@ -40,28 +40,29 @@ class RPCService {
     async updateActivity() {
         if (!this.isConnected) return;
 
-        // Get Lira Stats if available (or mock)
-        // We can get gamification stats from store? But store needs userId. 
-        // For local single user desktop app, we can assume typical usage.
-        // Or just generic "LiraOS" state.
-        
         try {
             await this.client.setActivity({
-                details: 'Pair Programming',
-                state: 'Building the Future 🚀',
+                details: '💻 Pair Programming with Lira',
+                state: '🚀 Building the Future',
                 startTimestamp: this.startTime,
-                largeImageKey: 'lira1', // User needs to upload this asset in Discord Dev Portal
-                largeImageText: 'LiraOS Assistant',
-                smallImageKey: 'vscode_icon',
-                smallImageText: 'Editing Code',
+                largeImageKey: 'lira_logo', // Upload this in Discord Dev Portal
+                largeImageText: 'LiraOS - AI Assistant',
+                smallImageKey: 'coding',
+                smallImageText: 'Active',
                 instance: false,
                 buttons: [
-                    { label: "Visitar LiraOS", url: "http://localhost:5173" },
-                    { label: "GitHub", url: "https://github.com/Antigravity" }
+                    { label: "🌐 Visit LiraOS", url: "https://liraos-production.up.railway.app" },
+                    { label: "⭐ GitHub", url: "https://github.com/Rukafuu/LiraOS" }
                 ]
             });
+            console.log('[RPC] ✅ Activity updated successfully');
         } catch (error) {
-            console.error('[RPC] Failed to update activity:', error);
+            console.error('[RPC] ❌ Failed to update activity:', error.message);
+            // Disconnect if update fails repeatedly
+            if (error.message.includes('RPC_CONNECTION_TIMEOUT')) {
+                this.isConnected = false;
+                console.log('[RPC] Connection lost, will retry on next update');
+            }
         }
     }
     

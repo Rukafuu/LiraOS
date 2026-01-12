@@ -253,11 +253,14 @@ server.listen(PORT, '0.0.0.0', async () => {
     await discordService.start().catch(err => console.error('Discord Bot require attention:', err.message));
   }
 
-  // Start Local RPC
-  if (process.env.DISCORD_CLIENT_ID || process.env.DISCORD_APPLICATION_ID) {
+  // Start Local RPC (Only works on local desktop, not on Railway)
+  if ((process.env.DISCORD_CLIENT_ID || process.env.DISCORD_APPLICATION_ID) && process.env.NODE_ENV !== 'production') {
+    console.log('[STARTUP] Starting Discord Rich Presence (Local Only)...');
     import('./services/rpcService.js').then(({ rpcService }) => {
       rpcService.start();
     }).catch(err => console.error('Failed to load RPC:', err));
+  } else if (process.env.NODE_ENV === 'production') {
+    console.log('[STARTUP] Discord RPC skipped (not available on remote server)');
   }
 
   // Start Twitch Integration
