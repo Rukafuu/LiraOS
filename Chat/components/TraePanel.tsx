@@ -21,6 +21,7 @@ import { getAuthHeaders } from '../services/userService';
 import { traeService } from '../services/traeService';
 import { API_BASE_URL } from '../src/config';
 import { GitHubConfig } from './GitHubConfig';
+import { LAPTerminal } from './LAPTerminal';
 
 interface TraeTask {
     id: string;
@@ -57,7 +58,7 @@ export const TraePanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const [fileChanges, setFileChanges] = useState<FileChange[]>([]);
     const [availableTools, setAvailableTools] = useState<any>(null);
     const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
-    const [activeTab, setActiveTab] = useState<'logs' | 'changes' | 'tools' | 'github'>('logs');
+    const [activeTab, setActiveTab] = useState<'logs' | 'changes' | 'tools' | 'github' | 'terminal'>('logs');
     const logsEndRef = useRef<HTMLDivElement>(null);
 
     // Load available tools on mount
@@ -384,7 +385,8 @@ export const TraePanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                             { id: 'logs', label: 'Logs', icon: Terminal },
                             { id: 'changes', label: 'Changes', icon: FileCode },
                             { id: 'tools', label: 'Tools', icon: Code },
-                            { id: 'github', label: 'GitHub', icon: GitBranch }
+                            { id: 'github', label: 'GitHub', icon: GitBranch },
+                            { id: 'terminal', label: 'Terminal', icon: Terminal }
                         ].map((tab) => (
                             <button
                                 key={tab.id}
@@ -466,6 +468,12 @@ export const TraePanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                         {activeTab === 'github' && (
                             <div className="h-full overflow-y-auto p-4">
                                 <GitHubConfig onConnected={() => addLog('✅ GitHub repository connected', 'success')} />
+                            </div>
+                        )}
+
+                        {activeTab === 'terminal' && (
+                            <div className="h-full p-4">
+                                <LAPTerminal mode="local" />
                             </div>
                         )}
                     </div>
