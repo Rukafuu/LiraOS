@@ -153,6 +153,16 @@ export const TraePanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 step.status = 'success';
                 step.result = res.result;
                 addLog(`✅ ${step.tool} success`, 'success');
+                
+                // Display result if it's a read operation
+                if (step.tool === 'readFile' && typeof res.result === 'object' && res.result.content) {
+                    const preview = res.result.content.substring(0, 500);
+                    addLog(`📄 Content preview:\n${preview}${res.result.content.length > 500 ? '...' : ''}`, 'info');
+                } else if (res.result && typeof res.result === 'object') {
+                    addLog(`📊 Result: ${JSON.stringify(res.result, null, 2).substring(0, 300)}`, 'info');
+                } else if (res.result) {
+                    addLog(`📊 Result: ${String(res.result).substring(0, 300)}`, 'info');
+                }
             } else {
                 step.status = 'error';
                 step.error = res.error;
