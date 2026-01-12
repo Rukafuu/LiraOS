@@ -14,6 +14,34 @@ export const GitHubConfig: React.FC<GitHubConfigProps> = ({ onConnected }) => {
     const [repo, setRepo] = useState('LiraOS');
     const [status, setStatus] = useState<'idle' | 'connecting' | 'success' | 'error'>('idle');
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Load saved credentials on mount
+    React.useEffect(() => {
+        const loadCredentials = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/trae/github/credentials`, {
+                    headers: getAuthHeaders()
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.owner) setOwner(data.owner);
+                    if (data.repo) setRepo(data.repo);
+                    if (data.hasToken) {
+                        setStatus('success');
+                        setToken('***'); // Don't show actual token
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to load GitHub credentials:', err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        
+        loadCredentials();
+    }, []);
 
     const handleConnect = async () => {
         if (!token || !owner || !repo) {

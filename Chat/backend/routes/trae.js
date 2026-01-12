@@ -347,6 +347,7 @@ Analysis:
 router.post('/github/connect', async (req, res) => {
     try {
         const { token, owner, repo } = req.body;
+        const userId = req.userId; // From requireAuth middleware
         
         if (!token || !owner || !repo) {
             return res.status(400).json({ 
@@ -354,8 +355,44 @@ router.post('/github/connect', async (req, res) => {
             });
         }
 
+        // Test connection first
         const result = await githubService.initialize(token, owner, repo);
+        
+        if (result.success) {
+            // Save credentials to database (encrypted in production)
+            const { updateUser } = await import('../authStore.js');
+            await updateUser(userId, {
+                githubToken: token, // TODO: Encrypt this in production
+                githubOwner: owner,
+                githubRepo: repo
+            });
+            
+            console.log(`[GITHUB] ✅ Credentials saved for user ${userId}`);
+        }
+        
         res.json(result);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Get saved GitHub credentials
+router.get('/github/credentials', async (req, res) => {
+    try {
+        const userId = req.userId;
+        const { getUserById } = await import('../authStore.js');
+        const user = await getUserById(userId);
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        res.json({
+            success: true,
+            hasToken: !!user.githubToken,
+            owner: user.githubOwner || '',
+            repo: user.githubRepo || ''
+        });
     } catch (e) {
         res.status(500).json({ error: e.message });
     }

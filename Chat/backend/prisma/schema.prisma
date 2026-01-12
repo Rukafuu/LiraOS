@@ -23,6 +23,9 @@ model User {
   plan          String?   @default("free")
   discordId     String?   @unique
   googleRefreshToken String? @map("google_refresh_token")
+  githubToken   String?   @map("github_token")
+  githubOwner   String?   @map("github_owner")
+  githubRepo    String?   @map("github_repo")
 
   @@map("users")
 }
