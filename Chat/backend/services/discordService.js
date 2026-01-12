@@ -370,6 +370,31 @@ class DiscordService {
                 return;
             }
         }
+
+        // 🤖 AGENT MODE - L.A.P Integration
+        if (lowerContent.startsWith('.agent ')) {
+            const task = message.content.slice(7).trim(); // Remove ".agent "
+            if (!task) {
+                await message.reply('❌ Use: `.agent <tarefa>`\nExemplo: `.agent criar arquivo teste.txt`');
+                return;
+            }
+
+            await message.reply('🤖 **Modo Agente Ativado**\nPlanejando e executando sua tarefa...');
+
+            try {
+                const { AgentIntegration } = await import('./agentIntegration.js');
+                const result = await AgentIntegration.executeTask(task, message.author.id);
+                
+                const chunks = AgentIntegration.formatForChat(result, 1900); // Discord limit with margin
+                for (const chunk of chunks) {
+                    await message.reply(chunk);
+                }
+            } catch (error) {
+                console.error('[DISCORD] Agent error:', error);
+                await message.reply(`❌ Erro no modo agente: ${error.message}`);
+            }
+            return;
+        }
         
         // Voice Control Commands
         if (isMentioned || isDM) {
@@ -720,6 +745,11 @@ class DiscordService {
                 { 
                     name: '🎨 **Geração de Imagens**', 
                     value: 'Peça: *"Gere uma imagem de..."*\n*"Crie uma arte de..."*\n*"Desenhe..."*\n\n**Qualidade varia por tier:**\n• Free/Observer: Pollinations (Flux)\n• Vega: Prodia (SDXL)\n• Sirius+: Hugging Face (FLUX.1)',
+                    inline: false
+                },
+                { 
+                    name: '🤖 **Modo Agente (L.A.P)**', 
+                    value: '`.agent <tarefa>` - Executar tarefas autônomas\\n*Exemplos:*\\n• `.agent criar arquivo teste.txt`\\n• `.agent ler o arquivo app.tsx`\\n• `.agent buscar por "TODO" no código`\\n\\n**O agente planeja e executa automaticamente!**',
                     inline: false
                 },
                 { 
