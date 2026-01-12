@@ -3,6 +3,7 @@ import { requireAuth } from '../middlewares/authMiddleware.js';
 import { isAdmin } from '../authStore.js';
 import { tools, getAllTools, getToolCategories } from '../services/traeMode/index.js';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import githubService from '../services/githubService.js';
 
 const router = express.Router();
 
@@ -341,7 +342,6 @@ Analysis:
 /**
  * GitHub Integration Routes
  */
-import githubService from '../services/githubService.js';
 
 // Initialize GitHub connection
 router.post('/github/connect', async (req, res) => {
