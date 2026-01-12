@@ -338,4 +338,108 @@ Analysis:
     }
 });
 
+/**
+ * GitHub Integration Routes
+ */
+import githubService from '../services/githubService.js';
+
+// Initialize GitHub connection
+router.post('/github/connect', async (req, res) => {
+    try {
+        const { token, owner, repo } = req.body;
+        
+        if (!token || !owner || !repo) {
+            return res.status(400).json({ 
+                error: 'token, owner, and repo are required' 
+            });
+        }
+
+        const result = await githubService.initialize(token, owner, repo);
+        res.json(result);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// List files in GitHub repo
+router.get('/github/files', async (req, res) => {
+    try {
+        const { path = '' } = req.query;
+        const result = await githubService.listFiles(path);
+        res.json(result);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Read file from GitHub
+router.get('/github/file', async (req, res) => {
+    try {
+        const { path } = req.query;
+        if (!path) {
+            return res.status(400).json({ error: 'path is required' });
+        }
+        
+        const result = await githubService.readFile(path);
+        res.json(result);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Write file to GitHub
+router.post('/github/file', async (req, res) => {
+    try {
+        const { path, content, message, sha } = req.body;
+        
+        if (!path || !content || !message) {
+            return res.status(400).json({ 
+                error: 'path, content, and message are required' 
+            });
+        }
+        
+        const result = await githubService.writeFile(path, content, message, sha);
+        res.json(result);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Get repository tree
+router.get('/github/tree', async (req, res) => {
+    try {
+        const { branch = 'main' } = req.query;
+        const result = await githubService.getTree(branch);
+        res.json(result);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Search code in GitHub repo
+router.get('/github/search', async (req, res) => {
+    try {
+        const { q } = req.query;
+        if (!q) {
+            return res.status(400).json({ error: 'query (q) is required' });
+        }
+        
+        const result = await githubService.searchCode(q);
+        res.json(result);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// Get recent commits
+router.get('/github/commits', async (req, res) => {
+    try {
+        const { limit = 10 } = req.query;
+        const result = await githubService.getCommits(parseInt(limit));
+        res.json(result);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 export default router;

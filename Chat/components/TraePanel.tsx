@@ -20,6 +20,7 @@ import {
 import { getAuthHeaders } from '../services/userService';
 import { traeService } from '../services/traeService';
 import { API_BASE_URL } from '../src/config';
+import { GitHubConfig } from './GitHubConfig';
 
 interface TraeTask {
     id: string;
@@ -56,7 +57,7 @@ export const TraePanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const [fileChanges, setFileChanges] = useState<FileChange[]>([]);
     const [availableTools, setAvailableTools] = useState<any>(null);
     const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
-    const [activeTab, setActiveTab] = useState<'logs' | 'changes' | 'tools'>('logs');
+    const [activeTab, setActiveTab] = useState<'logs' | 'changes' | 'tools' | 'github'>('logs');
     const logsEndRef = useRef<HTMLDivElement>(null);
 
     // Load available tools on mount
@@ -215,12 +216,33 @@ export const TraePanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                         <p className="text-xs text-gray-400">Advanced Admin-Only Autonomous System</p>
                     </div>
                 </div>
-                <button
-                    onClick={onClose}
-                    className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white"
-                >
-                    <XCircle className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => {
+                            const width = 1400;
+                            const height = 900;
+                            const left = (screen.width - width) / 2;
+                            const top = (screen.height - height) / 2;
+                            window.open(
+                                '/lap.html',
+                                'LAP_Window',
+                                `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
+                            );
+                        }}
+                        className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white"
+                        title="Open in New Window"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                    </button>
+                    <button
+                        onClick={onClose}
+                        className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white"
+                    >
+                        <XCircle className="w-5 h-5" />
+                    </button>
+                </div>
             </div>
 
             <div className="flex-1 flex overflow-hidden">
@@ -347,7 +369,8 @@ export const TraePanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                         {[
                             { id: 'logs', label: 'Logs', icon: Terminal },
                             { id: 'changes', label: 'Changes', icon: FileCode },
-                            { id: 'tools', label: 'Tools', icon: Code }
+                            { id: 'tools', label: 'Tools', icon: Code },
+                            { id: 'github', label: 'GitHub', icon: GitBranch }
                         ].map((tab) => (
                             <button
                                 key={tab.id}
@@ -423,6 +446,12 @@ export const TraePanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                         <p className="text-sm">Loading tools...</p>
                                     </div>
                                 )}
+                            </div>
+                        )}
+
+                        {activeTab === 'github' && (
+                            <div className="h-full overflow-y-auto p-4">
+                                <GitHubConfig onConnected={() => addLog('✅ GitHub repository connected', 'success')} />
                             </div>
                         )}
                     </div>
