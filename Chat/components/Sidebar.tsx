@@ -144,6 +144,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             <span className="text-[10px] text-purple-400 font-mono">v2.0.0-beta</span>
                         </div>
                     </div>
+                    {/* Lira Core (System Status) moved to top */}
+                    <div className="px-1">
+                        <SystemStatus />
+                    </div>
 
                     <button
                         onClick={onNewChat}
@@ -230,8 +234,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         {(currentUser?.id === 'user_1734661833589' || currentUser?.username?.toLowerCase().includes('admin')) && (
                                             <button onClick={onOpenTraePanel} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group border border-purple-500/20 hover:border-purple-500/40">
                                                 <Command size={16} className="text-purple-400 group-hover:scale-110 transition-transform" />
-                                                <span className="text-sm font-medium">Trae Mode</span>
-                                                <span className="ml-auto text-[9px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded font-bold">BETA</span>
+                                                <span className="text-sm font-medium">L.A.P (Admin)</span>
+                                                <span className="ml-auto text-[9px] bg-red-500/20 text-red-300 px-1.5 py-0.5 rounded font-bold">CORE</span>
                                             </button>
                                         )}
                                     </motion.div>
@@ -328,8 +332,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     transition={{ duration: 0.2 }}
                                     className="space-y-2"
                                 >
-                                    {/* JARVIS SYSTEM STATUS */}
-                                    <SystemStatus />
+                                    {/* JARVIS SYSTEM STATUS Removed - Moved to Header */}
 
                                     {/* Profile Card */}
                                     {currentUser && (
