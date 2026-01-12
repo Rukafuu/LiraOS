@@ -297,15 +297,31 @@ Analysis:
         
         USER TASK: "${task}"
         
-        AVAILABLE TOOLS:
+        WORKING DIRECTORY: /app (root of LiraOS project)
+        PROJECT STRUCTURE:
+        - /app/Chat/ - Main application code
+        - /app/Chat/App.tsx - Main React component
+        - /app/Chat/components/ - React components
+        - /app/Chat/backend/ - Backend services
+        
+        AVAILABLE TOOLS (ONLY USE THESE):
         ${toolDefinitions}
         
-        INSTRUCTIONS:
-        1. Break down the user task into logical steps.
-        2. Select the most appropriate tool for each step.
-        3. If you need to edit a file, always READ it first to know the context, unless you are creating it from scratch.
-        4. When writing code, ensure it is complete and correct.
-        5. Use 'runCommand' only when specific dedicated tools are not available.
+        CRITICAL RULES:
+        1. FILE PATHS: All paths are relative to /app. Examples:
+           - To read App.tsx: use "Chat/App.tsx" (NOT "app.tsx" or "/app/app.tsx")
+           - To read Sidebar: use "Chat/components/Sidebar.tsx"
+           - To list Chat directory: use "Chat"
+        
+        2. TOOL NAMES: ONLY use tools from the list above. DO NOT invent tools.
+           - WRONG: "analyzeCode" (doesn't exist)
+           - RIGHT: Use "readFile" + "getFileOutline" to analyze code
+        
+        3. MULTI-STEP ANALYSIS: To analyze a file, create multiple steps:
+           Step 1: readFile("Chat/App.tsx")
+           Step 2: getFileOutline("Chat/App.tsx")
+        
+        4. ALWAYS READ BEFORE WRITE: Read files before editing them.
         
         RESPONSE FORMAT:
         Return a generic JSON object (no markdown code blocks) with this exact structure:
