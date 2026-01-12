@@ -152,16 +152,20 @@ export const TraePanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             if (res.success) {
                 step.status = 'success';
                 step.result = res.result;
-                addLog(`✅ ${step.tool} success`, 'success');
+                addLog(`✅ ${step.tool} completed`, 'success');
                 
-                // Display result if it's a read operation
+                // Display full result like AI assistant does
                 if (step.tool === 'readFile' && typeof res.result === 'object' && res.result.content) {
-                    const preview = res.result.content.substring(0, 500);
-                    addLog(`📄 Content preview:\n${preview}${res.result.content.length > 500 ? '...' : ''}`, 'info');
+                    addLog(`\n📄 File Content:\n${'='.repeat(50)}\n${res.result.content}\n${'='.repeat(50)}`, 'info');
+                } else if (step.tool === 'listDirectory' && Array.isArray(res.result)) {
+                    const fileList = res.result.map(f => `  ${f.type === 'dir' ? '📁' : '📄'} ${f.name}`).join('\n');
+                    addLog(`\n📂 Directory Contents:\n${fileList}`, 'info');
+                } else if (step.tool === 'searchCode' && res.result.matches) {
+                    addLog(`\n🔍 Found ${res.result.matches.length} matches:\n${JSON.stringify(res.result.matches, null, 2)}`, 'info');
                 } else if (res.result && typeof res.result === 'object') {
-                    addLog(`📊 Result: ${JSON.stringify(res.result, null, 2).substring(0, 300)}`, 'info');
+                    addLog(`\n📊 Result:\n${JSON.stringify(res.result, null, 2)}`, 'info');
                 } else if (res.result) {
-                    addLog(`📊 Result: ${String(res.result).substring(0, 300)}`, 'info');
+                    addLog(`\n📊 Result: ${String(res.result)}`, 'info');
                 }
             } else {
                 step.status = 'error';
