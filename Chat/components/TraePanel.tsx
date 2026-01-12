@@ -211,8 +211,8 @@ export const TraePanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                         <Terminal className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                        <h2 className="text-xl font-bold text-white">Lira Engineer Mode</h2>
-                        <p className="text-xs text-gray-400">Autonomous Software Engineering Agent</p>
+                        <h2 className="text-xl font-bold text-white">L.A.P: Lira Agent Program</h2>
+                        <p className="text-xs text-gray-400">Advanced Admin-Only Autonomous System</p>
                     </div>
                 </div>
                 <button

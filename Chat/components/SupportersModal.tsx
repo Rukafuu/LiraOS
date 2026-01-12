@@ -135,7 +135,7 @@ export const SupportersModal: React.FC<SupportersModalProps> = ({ isOpen, onClos
                          GitHub Sponsors
                       </a>
                       <a 
-                        href="https://patreon.com/Rukafuu" 
+                        href="https://www.patreon.com/cw/amarinthlira?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink" 
                         target="_blank" 
                         rel="noopener noreferrer"
                         className="flex items-center justify-center gap-2 px-6 py-3 bg-[#FF424D] text-white font-bold rounded-xl hover:bg-[#e33b44] transition-all transform hover:scale-105"

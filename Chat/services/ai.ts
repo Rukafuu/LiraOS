@@ -510,11 +510,56 @@ Diretrizes de Resposta:
     }
 
     // --- WEB MODE (STANDARD FETCH) ---
+    // --- WEB MODE (STANDARD FETCH WITH STREAMING) ---
     if (!IS_DESKTOP) {
-      yield "\n\n*[Web Chat Unavailable - Desktop Mode Required]*";
+      console.log('🌐 Web Mode: Using standard fetch stream');
+      const response = await fetch(`${API_BASE_URL}/api/chat/stream`, {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          body: requestBody,
+          signal
+      });
+
+      if (!response.ok) {
+          throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+          throw new Error('Response body is not readable');
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep partial line in buffer
+
+          for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed || trimmed === 'data: [DONE]') continue;
+              
+              if (trimmed.startsWith('data: ')) {
+                  try {
+                      const data = JSON.parse(trimmed.slice(6));
+                      if (data.content) yield data.content;
+                       if (data.error) yield `\n\n*[Error: ${data.error}]*`;
+                  } catch (e) {
+                      console.warn('Failed to parse stream chunk:', trimmed);
+                  }
+              }
+          }
+      }
       return;
     }
-
   } catch (error: any) {
     console.error('Stream error details:', error);
     yield `\n\n*[Ocorreu um erro na comunicação: ${error?.message || 'Erro desconhecido'}]*`;

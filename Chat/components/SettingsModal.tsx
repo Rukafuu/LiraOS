@@ -822,7 +822,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                               </div>
                                <p className="text-xs text-gray-400 mb-4 h-8">{t('settings.help.patreon_desc')}</p>
                               <a 
-                                href="https://patreon.com/amarinthlira?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink" 
+                                href="https://www.patreon.com/cw/amarinthlira?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink" 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="block w-full py-2 bg-[#FF424D] text-white text-xs font-bold rounded-lg hover:bg-[#E63946] transition-colors text-center"
