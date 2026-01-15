@@ -126,6 +126,9 @@ export async function updateUser(userId, updates) {
     if (updates.preferences !== undefined) data.preferences = updates.preferences;
     if (updates.plan !== undefined) data.plan = updates.plan;
     if (updates.discordId !== undefined) data.discordId = updates.discordId;
+    if (updates.githubToken !== undefined) data.githubToken = updates.githubToken;
+    if (updates.githubOwner !== undefined) data.githubOwner = updates.githubOwner;
+    if (updates.githubRepo !== undefined) data.githubRepo = updates.githubRepo;
 
     if (Object.keys(data).length === 0) return getUserById(userId);
 
