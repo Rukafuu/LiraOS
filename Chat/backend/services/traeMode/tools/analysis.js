@@ -54,24 +54,63 @@ export async function searchCode(query, searchPath = '.', options = {}) {
 }
 
 /**
- * Find files by name pattern
+ * Find files by name pattern (Native Node.js implementation)
  */
 export async function findFiles(pattern, searchPath = '.') {
-    const command = `find ${searchPath} -name "${pattern}" -type f`;
-    const result = await runCommand(command, WORKSPACE_ROOT);
+    const fs = await import('fs/promises');
+    const path = await import('path');
     
-    if (!result.success) {
-        return { success: false, error: result.error };
+    // Normalize pattern for simple wildcard matching
+    // Converts "*.js" to Regex /.*\.js$/
+    const regexPattern = new RegExp(
+        '^' + pattern
+            .replace(/\./g, '\\.')
+            .replace(/\*/g, '.*') 
+        + '$'
+    );
+    
+    const results = [];
+    const maxFiles = 100; // Safety limit
+    
+    async function searchRecursively(currentPath, depth = 0) {
+        if (results.length >= maxFiles) return;
+        if (depth > 10) return; // Prevent infinite loops
+        
+        try {
+            const items = await fs.readdir(path.join(WORKSPACE_ROOT, currentPath), { withFileTypes: true });
+            
+            for (const item of items) {
+                const relativePath = path.join(currentPath, item.name);
+                
+                // Skip ignored directories
+                if (item.isDirectory()) {
+                    if (['node_modules', '.git', 'dist', 'build', 'coverage'].includes(item.name)) continue;
+                    await searchRecursively(relativePath, depth + 1);
+                } else {
+                    // Check if file matches pattern
+                    // Supports exact match ("discord.js") or wildcards ("*.js")
+                    if (item.name === pattern || regexPattern.test(item.name)) {
+                        results.push(relativePath);
+                    }
+                }
+            }
+        } catch (error) {
+            // Ignore access errors
+        }
     }
-
-    const files = result.stdout.split('\n').filter(Boolean);
     
-    return {
-        success: true,
-        pattern,
-        files,
-        count: files.length
-    };
+    try {
+        await searchRecursively(searchPath);
+        
+        return {
+            success: true,
+            pattern,
+            files: results,
+            count: results.length
+        };
+    } catch (error) {
+        return { success: false, error: error.message };
+    }
 }
 
 /**
