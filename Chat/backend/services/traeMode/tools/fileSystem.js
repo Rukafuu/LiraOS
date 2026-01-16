@@ -73,6 +73,41 @@ export async function writeFile(filePath, content) {
 }
 
 /**
+ * Replace text in file (surgical edit)
+ */
+export async function replaceInFile(filePath, oldText, newText) {
+    try {
+        const fullPath = validatePath(filePath);
+        const content = await fs.readFile(fullPath, 'utf-8');
+        
+        // Check if text exists
+        if (!content.includes(oldText)) {
+            return {
+                success: false,
+                path: filePath,
+                error: 'Original text not found in file'
+            };
+        }
+        
+        const newContent = content.split(oldText).join(newText);
+        
+        await fs.writeFile(fullPath, newContent, 'utf-8');
+        
+        return {
+            success: true,
+            path: filePath,
+            changes: content.split(oldText).length - 1
+        };
+    } catch (error) {
+        return {
+            success: false,
+            path: filePath,
+            error: error.message
+        };
+    }
+}
+
+/**
  * List directory contents
  */
 export async function listDirectory(dirPath) {

@@ -259,6 +259,7 @@ router.post('/plan', async (req, res) => {
 File System:
 - readFile(path): Read file content
 - writeFile(path, content): Write file content (creates if missing)
+- replaceInFile(path, old, new): Replace text within a file (surgical edit)
 - listDirectory(path): List files in directory
 - exists(path): Check if path exists
 - deleteFile(path): Delete file
@@ -294,7 +295,8 @@ Analysis:
         // Get detailed project structure for context
         let projectStructure = '';
         try {
-            const structureResult = await tools.getProjectStructure('.', 3);
+            // Scan deeper (depth 5) to see files inside backend/services/
+            const structureResult = await tools.getProjectStructure('.', 5);
             
             if (structureResult.success) {
                 // Convert tree to clean text format
@@ -339,12 +341,12 @@ ${projectStructure}
            - To read Sidebar: use "Chat/components/Sidebar.tsx"
            - To list Chat directory: use "Chat"
         
-        2. UNKNOWN PATHS: If you are not sure where a file is (e.g. asked to verify 'discord.js'), ALWAYS search broadly using wildcards.
-           Example:
-           Step 1: findFiles("*discord*")  <-- USE WILDCARDS (*)
+        2. UNKNOWN PATHS: If you are not sure where a file is (e.g. asked to verify 'discord.js'), ALWAYS search broadly.
+           Strategy:
+           Step 1: findFiles("*discord*")  <-- Use broad keyword, REMOVE EXTENSION to find variations like discordService.js
            Step 2: readFile(path_found_in_step_1)
         
-        3. IF SEARCH FAILS: If findFiles returns 0 results, DO NOT proceed to readFile. Stop and report that the file was not found.
+        3. IF SEARCH FAILS: If findFiles returns 0 results, DO NOT proceed to readFile. Stop and report failure.
         
         3. TOOL NAMES: ONLY use tools from the list above. DO NOT invent tools.
            - WRONG: "analyzeCode" (doesn't exist)

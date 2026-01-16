@@ -12,6 +12,7 @@ export const tools = {
     // File System Tools
     readFile: fileSystem.readFile,
     writeFile: fileSystem.writeFile,
+    replaceInFile: fileSystem.replaceInFile,
     listDirectory: fileSystem.listDirectory,
     exists: fileSystem.exists,
     deleteFile: fileSystem.deleteFile,
