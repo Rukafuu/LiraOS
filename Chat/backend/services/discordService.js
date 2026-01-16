@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Partials, ChannelType, Events, EmbedBuilder } from 'discord.js';
+import { Client, GatewayIntentBits, Partials, ChannelType, Events, EmbedBuilder, ApplicationCommandOptionType } from 'discord.js';
 import { joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, getVoiceConnection, VoiceConnectionStatus } from '@discordjs/voice';
 import * as googleTTS from 'google-tts-api';
 import dotenv from 'dotenv';
@@ -124,7 +124,7 @@ class DiscordService {
                     options: [{
                         name: 'email',
                         description: 'Seu email cadastrado no LiraOS',
-                        type: 3, // STRING
+                        type: ApplicationCommandOptionType.String,
                         required: true
                     }]
                 },
@@ -134,7 +134,7 @@ class DiscordService {
                     options: [{
                         name: 'codigo',
                         description: 'Código de 6 dígitos recebido por email',
-                        type: 3, // STRING
+                        type: ApplicationCommandOptionType.String,
                         required: true
                     }]
                 },
@@ -166,13 +166,13 @@ class DiscordService {
                             {
                                 name: 'usuario',
                                 description: 'Usuário Discord',
-                                type: 6, // USER
+                                type: ApplicationCommandOptionType.User,
                                 required: true
                             },
                             {
                                 name: 'tipo',
                                 description: 'XP ou Moedas',
-                                type: 3, // STRING
+                                type: ApplicationCommandOptionType.String,
                                 required: true,
                                 choices: [
                                     { name: 'XP', value: 'xp' },
@@ -182,7 +182,7 @@ class DiscordService {
                             {
                                 name: 'quantidade',
                                 description: 'Quantidade a dar',
-                                type: 4, // INTEGER
+                                type: ApplicationCommandOptionType.Integer,
                                 required: true
                             }
                         ]
@@ -190,8 +190,8 @@ class DiscordService {
                 );
             }
 
-            // await this.client.application.commands.set(commands);
-            console.log('[DISCORD] ⚠️ Slash commands registration skipped to prevent Entry Point error.');
+            await this.client.application.commands.set(commands);
+            console.log(`[DISCORD] ✅ Registered ${commands.length} slash commands successfully!`);
         } catch (error) {
             console.error('[DISCORD] ❌ Failed to register slash commands:', error);
         }
