@@ -131,6 +131,9 @@ class DiscordService {
         // Map<discordId, { email, code, expiresAt }>
         this.pendingLinks = new Map();
 
+        // Map<channelId, { role: 'user'|'model', content: string, timestamp: number }[]>
+        this.contextCache = new Map();
+
         this.client.on(Events.ClientReady, async () => {
             console.log(`[DISCORD] 🤖 Bot logged in as ${this.client.user.tag}`);
             this.client.user.setActivity('conversas e ajudando no código 💻');
@@ -535,6 +538,8 @@ class DiscordService {
 
             // Get User Context
             let userContext = "";
+            
+            // 1. DISCORD PRESENCE CONTEXT
             if (message.guild && message.member && message.member.presence) {
                 const activities = message.member.presence.activities;
                 if (activities.length > 0) {
@@ -544,13 +549,29 @@ class DiscordService {
                          return null;
                      }).filter(Boolean);
                      if (descriptions.length > 0) {
-                        userContext = `\n---\nINFORMAÇÃO EXTRA (LEIA ISSO):\n${descriptions.join('\n')}\n---`;
+                        userContext += `\n---\nINFORMAÇÃO EXTRA (LEIA ISSO):\n${descriptions.join('\n')}\n---`;
                      }
                 }
             }
 
+            // 2. CONVERSATION HISTORY CONTEXT (Short-term Memory)
+            const channelId = message.channel.id;
+            const history = this.contextCache.get(channelId) || [];
+            if (history.length > 0) {
+                const historyStr = history.map(h => `${h.role === 'user' ? 'User' : 'Lira'}: ${h.content}`).join('\n');
+                userContext = `\n---\nHISTÓRICO RECENTE DE CONVERSA:\n${historyStr}\n---\n${userContext}`;
+            }
+
             // Generate Response
             const responseText = await this.generateResponse(userMessage, memoryUserId, userContext, imageParts, isOwner);
+
+            // Update Context Cache immediately
+            if (responseText && !responseText.startsWith('Erro')) {
+                history.push({ role: 'user', content: userMessage, timestamp: Date.now() });
+                history.push({ role: 'model', content: responseText, timestamp: Date.now() });
+                if (history.length > 20) history.splice(0, history.length - 20); // Keep last 20
+                this.contextCache.set(channelId, history);
+            }
 
             // Send Response
             if (responseText) {

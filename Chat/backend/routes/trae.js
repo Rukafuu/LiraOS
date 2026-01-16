@@ -4,6 +4,8 @@ import { isAdmin } from '../authStore.js';
 import { tools, getAllTools, getToolCategories } from '../services/traeMode/index.js';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import githubService from '../services/githubService.js';
+import { credentialStore } from '../services/credentialStore.js';
+import { Octokit } from "@octokit/rest";
 
 const router = express.Router();
 
@@ -82,6 +84,50 @@ router.post('/execute', async (req, res) => {
             error: e.message,
             stack: process.env.NODE_ENV === 'development' ? e.stack : undefined
         });
+    }
+});
+
+router.post('/github/connect', requireAuth, async (req, res) => {
+    const { token, owner, repo } = req.body;
+    
+    if (!token) {
+        return res.status(400).json({ error: "Token is required" });
+    }
+
+    try {
+        // Validation: Try to fetch repo details or user details to verify token acts correctly
+        const octokit = new Octokit({ auth: token });
+        const user = await octokit.rest.users.getAuthenticated();
+        
+        console.log(`[GITHUB] Token validated for user: ${user.data.login}`);
+        
+        // Save to JSON Store (Bypassing DB issues)
+        credentialStore.set(req.userId, {
+             githubToken: token,
+             githubOwner: owner || user.data.login,
+             githubRepo: repo
+        });
+
+        // Also try to update DB for consistency if columns exist (Optional/Best Effort)
+        try {
+            await updateUser(req.userId, {
+                githubToken: token,
+                githubOwner: owner || user.data.login,
+                githubRepo: repo
+            });
+        } catch (dbErr) {
+            console.warn("[GITHUB] DB Update failed (ignoring, used JSON store):", dbErr.message);
+        }
+
+        res.json({ 
+            success: true, 
+            message: "GitHub connected successfully",
+            username: user.data.login 
+        });
+
+    } catch (e) {
+        console.error('[GITHUB] Connection failed:', e.message);
+        res.status(401).json({ error: "Invalid GitHub Token or Network Error" });
     }
 });
 
