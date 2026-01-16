@@ -9,7 +9,7 @@ import nodemailer from 'nodemailer';
 import { processMessageForMemory } from '../intelligentMemory.js';
 import { GoogleGenAI } from '@google/genai';
 import { pcController } from './pcControllerService.js';
-import { getUserByDiscordId, getUserByEmail, updateUser } from '../authStore.js';
+import { getUserByDiscordId, getUserByEmail, updateUser } from '../user_store.js';
 import { getOrCreateDefault, award } from '../gamificationStore.js';
 import { GenesisProtocol } from './genesisProtocol.js';
 import { AdminCommands } from './adminCommands.js';

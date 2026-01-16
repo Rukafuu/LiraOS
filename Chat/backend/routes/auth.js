@@ -2,7 +2,7 @@ import express from 'express';
 import crypto from 'node:crypto';
 import dotenv from 'dotenv';
 
-import { createUser, getUserByEmail, getUserById, updateUser, verifyPassword, updateLoginStats, issueRefreshToken, verifyRefreshToken, revokeRefreshToken, createRecoverCode, consumeRecoverCode } from '../authStore.js';
+import { createUser, getUserByEmail, getUserById, updateUser, verifyPassword, updateLoginStats, issueRefreshToken, verifyRefreshToken, revokeRefreshToken, createRecoverCode, consumeRecoverCode } from '../user_store.js';
 import { signToken, verifyToken } from '../middlewares/authMiddleware.js';
 
 dotenv.config();

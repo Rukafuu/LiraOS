@@ -1,6 +1,6 @@
 import express from 'express';
 import { requireAuth } from '../middlewares/authMiddleware.js';
-import { isAdmin } from '../authStore.js';
+import { isAdmin } from '../user_store.js';
 import { tools, getAllTools, getToolCategories } from '../services/traeMode/index.js';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import githubService from '../services/githubService.js';

@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import axios from 'axios';
 import { discordService } from '../services/discordService.js';
 
-import { isAdmin, getUserById, updateUser, getUserByDiscordId } from '../authStore.js';
+import { isAdmin, getUserById, updateUser, getUserByDiscordId } from '../user_store.js';
 import { requireAuth } from '../middlewares/authMiddleware.js';
 
 dotenv.config();

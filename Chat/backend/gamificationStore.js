@@ -1,5 +1,5 @@
 import prisma from './prismaClient.js';
-import { isAdmin } from './authStore.js';
+import { isAdmin } from './user_store.js';
 
 // Helper for BigInt fields
 const toInt = (n) => Number(n); 

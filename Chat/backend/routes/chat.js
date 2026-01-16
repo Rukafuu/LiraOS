@@ -9,7 +9,7 @@ import { processMessageForMemory } from '../intelligentMemory.js';
 import { requireAuth } from '../middlewares/authMiddleware.js';
 import { GoogleGenAI } from '@google/genai';
 import { award, getState } from '../gamificationStore.js';
-import { isAdmin, getUserById } from '../authStore.js';
+import { isAdmin, getUserById } from '../user_store.js';
 import { checkModeration, handleInfraction, getUserStatus } from '../utils/moderation.js';
 import * as projectTools from '../projectTools.js';
 import { todoService } from '../services/todoService.js';

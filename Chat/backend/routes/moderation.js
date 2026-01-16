@@ -2,7 +2,7 @@
 import express from 'express';
 import { requireAuth } from '../middlewares/authMiddleware.js';
 import { createAppeal, getAppeals, getUserStatus, getModerationLogs, resolveAppeal } from '../utils/moderation.js';
-import { isAdmin } from '../authStore.js';
+import { isAdmin } from '../user_store.js';
 
 const router = express.Router();
 

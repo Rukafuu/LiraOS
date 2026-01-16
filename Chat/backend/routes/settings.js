@@ -1,6 +1,6 @@
 import express from 'express';
 import { requireAuth } from '../middlewares/authMiddleware.js';
-import { getUserById, updateUser } from '../authStore.js';
+import { getUserById, updateUser } from '../user_store.js';
 import dotenv from 'dotenv';
 dotenv.config();
 

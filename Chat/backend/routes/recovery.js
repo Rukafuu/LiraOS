@@ -2,7 +2,7 @@ import express from 'express';
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import { Resend } from 'resend';
-import { getUserByEmail, createRecoverCode, consumeRecoverCode, setPassword } from '../authStore.js';
+import { getUserByEmail, createRecoverCode, consumeRecoverCode, setPassword } from '../user_store.js';
 import { requireAuth } from '../middlewares/authMiddleware.js';
 
 dotenv.config();

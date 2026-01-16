@@ -1,7 +1,7 @@
 import express from 'express';
 import { google } from 'googleapis';
 import { getAuthUrl, getToken, saveGoogleToken, oauth2Client } from '../services/googleAuthService.js';
-import { getUserById } from '../authStore.js';
+import { getUserById } from '../user_store.js';
 import { verifyToken, requireAuth } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
