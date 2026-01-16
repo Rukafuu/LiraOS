@@ -306,42 +306,102 @@ export const TraePanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                 <span className="text-sm font-bold text-white">{currentTask.description}</span>
                             </div>
                             <div className="space-y-2">
-                                {currentTask.steps.map((step) => (
-                                    <div key={step.id} className="bg-white/5 rounded-lg p-3">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                {step.status === 'running' && <Loader2 className="w-4 h-4 animate-spin text-blue-400" />}
-                                                {step.status === 'success' && <CheckCircle className="w-4 h-4 text-green-400" />}
-                                                {step.status === 'error' && <XCircle className="w-4 h-4 text-red-400" />}
-                                                <span className="text-sm text-gray-300">{step.tool}</span>
-                                            </div>
-                                            <button
-                                                onClick={() => toggleStep(step.id)}
-                                                className="p-1 hover:bg-white/10 rounded transition-colors"
-                                            >
-                                                {expandedSteps.has(step.id) ? (
-                                                    <ChevronDown className="w-4 h-4 text-gray-400" />
-                                                ) : (
-                                                    <ChevronRight className="w-4 h-4 text-gray-400" />
-                                                )}
-                                            </button>
-                                        </div>
-                                        <AnimatePresence>
-                                            {expandedSteps.has(step.id) && (
-                                                <motion.div
-                                                    initial={{ height: 0, opacity: 0 }}
-                                                    animate={{ height: 'auto', opacity: 1 }}
-                                                    exit={{ height: 0, opacity: 0 }}
-                                                    className="mt-2 text-xs text-gray-400 font-mono overflow-hidden"
-                                                >
-                                                    <pre className="bg-black/30 p-2 rounded overflow-x-auto">
-                                                        {JSON.stringify(step.result || step.error, null, 2)}
-                                                    </pre>
-                                                </motion.div>
+                                {currentTask.steps.map((step, index) => {
+                                    const isLast = index === currentTask.steps.length - 1;
+                                    const isActive = step.status === 'running';
+
+                                    return (
+                                        <motion.div 
+                                            key={step.id} 
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            className="relative pl-6 pb-6"
+                                        >
+                                            {/* Timeline Line */}
+                                            {!isLast && (
+                                                <div 
+                                                    className={`absolute left-[7px] top-6 bottom-0 w-[2px] ${
+                                                        step.status === 'success' ? 'bg-green-500/20' : 'bg-gray-700'
+                                                    }`} 
+                                                />
                                             )}
-                                        </AnimatePresence>
-                                    </div>
-                                ))}
+
+                                            {/* Timeline Dot */}
+                                            <div 
+                                                className={`absolute left-0 top-1 w-4 h-4 rounded-full border-2 flex items-center justify-center bg-gray-900 z-10 ${
+                                                    step.status === 'running' ? 'border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.5)]' :
+                                                    step.status === 'success' ? 'border-green-500 bg-green-500/20' :
+                                                    step.status === 'error' ? 'border-red-500' :
+                                                    'border-gray-600'
+                                                }`}
+                                            >
+                                                {step.status === 'success' && <div className="w-1.5 h-1.5 bg-green-500 rounded-full" />}
+                                                {step.status === 'running' && <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse" />}
+                                                {step.status === 'error' && <div className="w-1.5 h-1.5 bg-red-500 rounded-full" />}
+                                            </div>
+
+                                            {/* Card Content */}
+                                            <div 
+                                                onClick={() => toggleStep(step.id)}
+                                                className={`group rounded-xl p-4 border transition-all cursor-pointer ${
+                                                    isActive 
+                                                        ? 'bg-purple-900/10 border-purple-500/40 shadow-lg' 
+                                                        : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/20'
+                                                }`}
+                                            >
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className={`text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                                                            isActive ? 'bg-purple-500/20 text-purple-300' : 'bg-white/10 text-gray-400'
+                                                        }`}>
+                                                            {step.tool}
+                                                        </span>
+                                                        <span className="text-sm font-medium text-gray-200">
+                                                            {step.description || `Executing ${step.tool}...`}
+                                                        </span>
+                                                    </div>
+                                                    {expandedSteps.has(step.id) ? (
+                                                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                                                    ) : (
+                                                        <ChevronRight className="w-4 h-4 text-gray-500" />
+                                                    )}
+                                                </div>
+
+                                                <AnimatePresence>
+                                                    {expandedSteps.has(step.id) && (
+                                                        <motion.div
+                                                            initial={{ height: 0, opacity: 0 }}
+                                                            animate={{ height: 'auto', opacity: 1 }}
+                                                            exit={{ height: 0, opacity: 0 }}
+                                                            className="overflow-hidden"
+                                                        >
+                                                            <div className="mt-3 pt-3 border-t border-white/10 text-xs text-gray-400 font-mono">
+                                                                <div className="mb-2 opacity-50">Input Args:</div>
+                                                                <pre className="bg-black/40 p-3 rounded-lg overflow-x-auto text-blue-300 mb-3">
+                                                                    {JSON.stringify(step.args, null, 2)}
+                                                                </pre>
+                                                                
+                                                                {(step.result || step.error) && (
+                                                                    <>
+                                                                        <div className="mb-2 opacity-50 flex items-center justify-between">
+                                                                            <span>Output Result:</span>
+                                                                            {step.status === 'success' && <span className="text-green-400">Success ({step.endTime && step.startTime ? ((step.endTime - step.startTime) / 1000).toFixed(2) + 's' : ''})</span>}
+                                                                        </div>
+                                                                        <pre className={`p-3 rounded-lg overflow-x-auto ${
+                                                                            step.status === 'error' ? 'bg-red-900/20 text-red-300 border border-red-500/30' : 'bg-black/40 text-green-300'
+                                                                        }`}>
+                                                                            {typeof step.result === 'string' ? step.result : JSON.stringify(step.result || step.error, null, 2)}
+                                                                        </pre>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
@@ -406,19 +466,30 @@ export const TraePanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     {/* Tab Content */}
                     <div className="flex-1 overflow-hidden">
                         {activeTab === 'logs' && (
-                            <div className="h-full overflow-y-auto p-4 font-mono text-xs">
-                                {logs.map((log, i) => (
-                                    <div key={i} className="text-gray-300 mb-1 hover:bg-white/5 px-2 py-1 rounded">
-                                        {log}
-                                    </div>
-                                ))}
+                            <div className="h-full overflow-y-auto p-4 bg-black/80 font-mono text-xs select-text">
+                                {logs.map((log, i) => {
+                                    // Determine styling based on content
+                                    const isError = log.includes('❌');
+                                    const isSuccess = log.includes('✅');
+                                    const isWarning = log.includes('⚠️');
+                                    const isSystem = log.includes('[TIMESTAMP]'); // Hypothetical
+                                    
+                                    return (
+                                        <div 
+                                            key={i} 
+                                            className={`mb-1 px-2 py-1 rounded border-l-2 transition-colors break-words whitespace-pre-wrap ${
+                                                isError ? 'bg-red-950/30 text-red-300 border-red-500' :
+                                                isSuccess ? 'bg-green-950/30 text-green-300 border-green-500' :
+                                                isWarning ? 'bg-yellow-950/30 text-yellow-300 border-yellow-500' :
+                                                'border-transparent hover:bg-white/5 text-gray-400'
+                                            }`}
+                                        >
+                                            <span className="opacity-50 mr-2">{log.substring(0, log.indexOf(']') + 1)}</span>
+                                            <span className={isSuccess ? 'font-bold' : ''}>{log.substring(log.indexOf(']') + 1)}</span>
+                                        </div>
+                                    );
+                                })}
                                 <div ref={logsEndRef} />
-                                {logs.length === 0 && (
-                                    <div className="text-center text-gray-600 py-8">
-                                        <Terminal className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                                        <p>Logs will appear here</p>
-                                    </div>
-                                )}
                             </div>
                         )}
 

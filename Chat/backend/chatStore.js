@@ -17,7 +17,7 @@ export async function getSessions(userId) {
       personaId: row.personaId,
       createdAt: toInt(row.createdAt),
       updatedAt: toInt(row.updatedAt),
-      messages: row.messages || [] // Prisma handles Json
+      messages: row.messagesStr ? JSON.parse(row.messagesStr) : []
     }));
   } catch (e) {
     console.error('getSessions error:', e);
@@ -32,27 +32,24 @@ export async function upsertSession(session) {
   const now = Date.now();
   
   try {
-    // Using upsert
-    // Note: userId is required in create, but might be optional in session object?
-    // Assuming session object has all fields.
-    // createdAt defaulting to now if missing.
-    
+    const messagesStr = JSON.stringify(messages || []);
+
     await prisma.session.upsert({
       where: { id },
       update: {
         title,
         personaId,
         updatedAt: updatedAt || now,
-        messages: messages || []
+        messagesStr
       },
       create: {
         id,
-        userId: userId || 'unknown', // Should fallback or fail? User usually exists.
+        userId: userId || 'unknown',
         title: title || 'New Chat',
         personaId,
         createdAt: createdAt || now,
         updatedAt: updatedAt || now,
-        messages: messages || []
+        messagesStr
       }
     });
 
@@ -113,7 +110,7 @@ export async function getSessionById(id) {
       personaId: row.personaId,
       createdAt: toInt(row.createdAt),
       updatedAt: toInt(row.updatedAt),
-      messages: row.messages || []
+      messages: row.messagesStr ? JSON.parse(row.messagesStr) : []
     };
   } catch (e) {
     console.error('getSessionById error:', e);
