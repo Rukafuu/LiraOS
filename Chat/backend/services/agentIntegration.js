@@ -61,6 +61,7 @@ export class AgentIntegration {
                         step: i + 1,
                         tool: step.tool,
                         description: step.description,
+                        toolArgs: step.args,
                         success: execResponse.data.success,
                         result: execResponse.data.result,
                         error: execResponse.data.error
@@ -76,6 +77,7 @@ export class AgentIntegration {
                         step: i + 1,
                         tool: step.tool,
                         description: step.description,
+                        toolArgs: step.args,
                         success: false,
                         error: stepError.message
                     });
@@ -83,33 +85,66 @@ export class AgentIntegration {
                 }
             }
 
-            // 3. Format response
-            const successCount = results.filter(r => r.success).length;
-            const totalSteps = results.length;
-
-            let message = `✅ **Tarefa Concluída!**\n\n`;
-            message += `📋 Executei ${successCount}/${totalSteps} passos:\n\n`;
-
+            // 3. Format response (Lakeview Style - Concise & Human Readable)
+            let message = `**Tarefa Concluída!**\n`;
+            
             for (const result of results) {
                 const icon = result.success ? '✅' : '❌';
-                message += `${icon} **${result.step}.** ${result.description || result.tool}\n`;
+                let friendlyText = '';
                 
-                // Add result preview for successful steps
-                if (result.success && result.result) {
-                    if (result.tool === 'readFile' && result.result.content) {
-                        const preview = result.result.content.substring(0, 200);
-                        message += `\`\`\`\n${preview}${result.result.content.length > 200 ? '...' : ''}\n\`\`\`\n`;
-                    } else if (typeof result.result === 'string') {
-                        message += `📊 ${result.result.substring(0, 100)}\n`;
-                    }
+                // Tool-specific friendly messages
+                switch(result.tool) {
+                    case 'readFile':
+                        friendlyText = `📖 Li o arquivo \`${result.toolArgs?.[0] || '?'}\``;
+                        if (result.success && result.result?.content) {
+                            const lineCount = result.result.content.split('\n').length;
+                            friendlyText += ` (${lineCount} linhas)`;
+                        }
+                        break;
+                    case 'writeFile':
+                        friendlyText = `💾 Salvei/Criei arquivo \`${result.toolArgs?.[0]}\``;
+                        break;
+                    case 'replaceInFile':
+                        friendlyText = `📝 Editei o arquivo \`${result.toolArgs?.[0]}\``;
+                        break;
+                    case 'findFiles':
+                        friendlyText = `🔍 Busquei arquivos com padrão \`${result.toolArgs?.[0]}\``;
+                        if (result.success) friendlyText += ` (Encontrados: ${result.result?.count || 0})`;
+                        break;
+                    case 'runCommand':
+                        friendlyText = `💻 Executei: \`${result.toolArgs?.[0]}\``;
+                        break;
+                    case 'think':
+                        friendlyText = `🧠 *Pensando...*`;
+                         if (result.toolArgs?.[0]) {
+                            // Show thought but truncated
+                            const thought = result.toolArgs[0];
+                            const preview = thought.length > 100 ? thought.substring(0, 100) + '...' : thought;
+                             friendlyText += `\n> _"${preview}"_`;
+                        }
+                        break;
+                    default:
+                        friendlyText = `🔧 ${result.description || result.tool}`;
                 }
-                
-                if (!result.success && result.error) {
-                    message += `⚠️ Erro: ${result.error}\n`;
-                }
-                message += '\n';
-            }
 
+                message += `${icon} **${friendlyText}**\n`;
+                
+                // Show errors clearly
+                if (!result.success && result.error) {
+                    message += `   ⚠️ Erro: ${result.error}\n`;
+                }
+            }
+            
+            // Add final status summary
+            const successCount = results.filter(r => r.success).length;
+            const totalSteps = results.length;
+            
+            if (successCount === totalSteps) {
+                message += `\n✨ **Todas as etapas foram concluídas com sucesso!**`;
+            } else {
+                message += `\n⚠️ **Tarefa finalizada com alertas** (${successCount}/${totalSteps} passos OK).`;
+            }
+            
             return {
                 success: successCount === totalSteps,
                 message,
