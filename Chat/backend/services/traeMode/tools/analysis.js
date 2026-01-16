@@ -12,45 +12,102 @@ const WORKSPACE_ROOT = path.resolve(process.cwd(), '..');
 /**
  * Search for text in files (grep)
  */
+/**
+ * Search for text in files (Native Node.js implementation)
+ */
 export async function searchCode(query, searchPath = '.', options = {}) {
+    const fs = await import('fs/promises');
+    const path = await import('path');
     const {
         caseSensitive = false,
         regex = false,
-        filePattern = '*',
-        excludePatterns = ['node_modules', '.git', 'dist', 'build']
+        filePattern = '*', // Default to check all files if * passed
+        excludePatterns = ['node_modules', '.git', 'dist', 'build', '.next', 'coverage']
     } = options;
 
-    const excludeArgs = excludePatterns.map(p => `--exclude-dir=${p}`).join(' ');
-    const caseFlag = caseSensitive ? '' : '-i';
-    const regexFlag = regex ? '-E' : '-F';
+    const results = [];
+    const MAX_MATCHES = 200; // Limit total results preventing overflows
+    let matchCount = 0;
+
+    // Helper: Escape regex special chars if not using regex mode
+    const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     
-    const command = `grep -rn ${caseFlag} ${regexFlag} ${excludeArgs} "${query}" ${searchPath}`;
-    
-    const result = await runCommand(command, WORKSPACE_ROOT);
-    
-    if (!result.success && result.exitCode !== 1) {
-        // Exit code 1 means no matches found, which is not an error
-        return { success: false, error: result.error };
+    // Create search regex
+    const flags = caseSensitive ? 'g' : 'gi';
+    const searchRegex = new RegExp(regex ? query : escapeRegExp(query), flags);
+
+    // Create file filter regex from pattern (simple glob to regex)
+    const fileFilterRegex = filePattern === '*' 
+        ? null 
+        : new RegExp('^' + filePattern.replace(/\./g, '\\.').replace(/\*/g, '.*') + '$');
+
+    async function searchRecursively(currentPath, depth = 0) {
+        if (matchCount >= MAX_MATCHES) return;
+        if (depth > 12) return;
+
+        try {
+            const absolutePath = path.join(WORKSPACE_ROOT, currentPath);
+            const items = await fs.readdir(absolutePath, { withFileTypes: true });
+
+            for (const item of items) {
+                if (matchCount >= MAX_MATCHES) break;
+
+                const relativePath = path.join(currentPath, item.name);
+                
+                // Excludes
+                if (excludePatterns.some(p => item.name === p || relativePath.includes(p))) continue;
+
+                if (item.isDirectory()) {
+                    await searchRecursively(relativePath, depth + 1);
+                } else if (item.isFile()) {
+                    // Check file pattern
+                    if (fileFilterRegex && !fileFilterRegex.test(item.name)) continue;
+                    
+                    // Skip binary/large files roughly by extension or check
+                    const ext = path.extname(item.name).toLowerCase();
+                    if (['.png', '.jpg', '.jpeg', '.gif', '.ico', '.pdf', '.exe', '.dll', '.bin', '.db', '.sqlite'].includes(ext)) continue;
+
+                    try {
+                        const content = await fs.readFile(path.join(absolutePath, item.name), 'utf-8');
+                        const lines = content.split('\n');
+
+                        lines.forEach((line, index) => {
+                            if (matchCount >= MAX_MATCHES) return;
+                            
+                            // Reset lastIndex for stateful regex with 'g' flag
+                            searchRegex.lastIndex = 0;
+                            
+                            if (searchRegex.test(line)) {
+                                results.push({
+                                    file: relativePath.replace(/\\/g, '/'), // Normalized for output
+                                    line: index + 1,
+                                    content: line.trim().substring(0, 200) // Truncate very long lines
+                                });
+                                matchCount++;
+                            }
+                        });
+                    } catch (readErr) {
+                        // Ignore read errors
+                    }
+                }
+            }
+        } catch (err) {
+            // Ignore directory access errors
+        }
     }
 
-    const matches = result.stdout
-        .split('\n')
-        .filter(Boolean)
-        .map(line => {
-            const [filePath, lineNumber, ...contentParts] = line.split(':');
-            return {
-                file: filePath,
-                line: parseInt(lineNumber, 10),
-                content: contentParts.join(':').trim()
-            };
-        });
-
-    return {
-        success: true,
-        query,
-        matches,
-        count: matches.length
-    };
+    try {
+        await searchRecursively(searchPath);
+        return {
+            success: true,
+            query,
+            matches: results,
+            count: results.length,
+            limitReached: matchCount >= MAX_MATCHES
+        };
+    } catch (e) {
+        return { success: false, error: e.message };
+    }
 }
 
 /**

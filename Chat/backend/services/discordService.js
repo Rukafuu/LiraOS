@@ -60,7 +60,16 @@ const geminiClient = GEMINI_API_KEY ? new GoogleGenAI({ apiKey: GEMINI_API_KEY }
 
 // Plans config
 // Plans config
-const ALLOWED_PLANS = ['free', 'vega', 'sirius', 'antares', 'pro', 'supernova', 'singularity']; 
+let ALLOWED_PLANS = ['free', 'vega', 'sirius', 'antares', 'pro', 'supernova', 'singularity'];
+
+try {
+    if (fs.existsSync(CONFIG_PATH)) {
+        const localConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf-8'));
+        if (localConfig.allowedPlans) ALLOWED_PLANS = localConfig.allowedPlans;
+        // Re-apply other configs here if needed, but they are handled above partially. 
+        // Ideally we should consolidate config loading.
+    }
+} catch (e) { } 
 
 class DiscordService {
     constructor() {
@@ -71,7 +80,8 @@ class DiscordService {
                 GatewayIntentBits.MessageContent,
                 GatewayIntentBits.DirectMessages,
                 GatewayIntentBits.GuildVoiceStates,
-                GatewayIntentBits.GuildPresences
+                GatewayIntentBits.GuildPresences,
+                GatewayIntentBits.GuildMembers
             ],
             partials: [Partials.Channel]
         });
