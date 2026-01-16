@@ -291,6 +291,31 @@ Analysis:
 - getProjectStructure(path?, depth?): Get tree view
 `;
 
+        // Get detailed project structure for context
+        let projectStructure = '';
+        try {
+            const structureResult = await tools.getProjectStructure('.', 3);
+            
+            if (structureResult.success) {
+                // Convert tree to clean text format
+                const formatTree = (node, depth = 0) => {
+                    if (depth > 2) return '';
+                    const indent = '  '.repeat(depth);
+                    let output = `${indent}- ${node.name}${node.type === 'directory' ? '/' : ''}\n`;
+                    if (node.children) {
+                        for (const child of node.children) {
+                            output += formatTree(child, depth + 1);
+                        }
+                    }
+                    return output;
+                };
+                projectStructure = formatTree(structureResult.structure);
+            }
+        } catch (e) {
+            console.warn('[TRAE] Failed to get project structure for prompt:', e);
+            projectStructure = 'Failed to load structure';
+        }
+
         const prompt = `
         You are Trae, an autonomous senior software engineer agent.
         Your goal is to create a precise, step-by-step execution plan to accomplish the user's task.
@@ -298,10 +323,11 @@ Analysis:
         USER TASK: "${task}"
         
         WORKING DIRECTORY: /app (root of LiraOS project)
-        PROJECT STRUCTURE:
+        PROJECT STRUCTURE (Current State):
+${projectStructure}
+        
+        KEY PATHS:
         - /app/Chat/ - Main application code
-        - /app/Chat/App.tsx - Main React component
-        - /app/Chat/components/ - React components
         - /app/Chat/backend/ - Backend services
         
         AVAILABLE TOOLS (ONLY USE THESE):
