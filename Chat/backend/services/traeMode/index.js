@@ -2,6 +2,7 @@ import * as fileSystem from './tools/fileSystem.js';
 import * as execution from './tools/execution.js';
 import * as git from './tools/git.js';
 import * as analysis from './tools/analysis.js';
+import * as utility from './tools/utility.js';
 
 /**
  * Trae Mode Tools Index
@@ -49,7 +50,10 @@ export const tools = {
     findFiles: analysis.findFiles,
     getFileOutline: analysis.getFileOutline,
     analyzeError: analysis.analyzeError,
-    getProjectStructure: analysis.getProjectStructure
+    getProjectStructure: analysis.getProjectStructure,
+
+    // Utility
+    think: utility.think
 };
 
 /**
@@ -111,6 +115,9 @@ export function getToolCategories() {
             'getFileOutline',
             'analyzeError',
             'getProjectStructure'
+        ],
+        utility: [
+            'think'
         ]
     };
 }

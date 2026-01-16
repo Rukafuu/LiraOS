@@ -290,6 +290,9 @@ Analysis:
 - getFileOutline(path): Get symbols/classes in file
 - analyzeError(error): Parse error output
 - getProjectStructure(path?, depth?): Get tree view
+
+Utility:
+- think(thought): Log a thought or reasoning step (no side effects)
 `;
 
         // Get detailed project structure for context
