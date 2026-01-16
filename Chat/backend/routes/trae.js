@@ -313,10 +313,12 @@ Analysis:
            - To read Sidebar: use "Chat/components/Sidebar.tsx"
            - To list Chat directory: use "Chat"
         
-        2. UNKNOWN PATHS: If you are not sure where a file is (e.g. asked to verify 'discord.js'), ALWAYS use 'findFiles' as the first step.
+        2. UNKNOWN PATHS: If you are not sure where a file is (e.g. asked to verify 'discord.js'), ALWAYS search broadly using wildcards.
            Example:
-           Step 1: findFiles("discord.js")
+           Step 1: findFiles("*discord*")  <-- USE WILDCARDS (*)
            Step 2: readFile(path_found_in_step_1)
+        
+        3. IF SEARCH FAILS: If findFiles returns 0 results, DO NOT proceed to readFile. Stop and report that the file was not found.
         
         3. TOOL NAMES: ONLY use tools from the list above. DO NOT invent tools.
            - WRONG: "analyzeCode" (doesn't exist)
