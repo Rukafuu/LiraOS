@@ -25,8 +25,10 @@ class FirestoreService {
             if (process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
                 try {
                     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
+                    console.log('[FIRESTORE] Init with JSON var. Project ID:', serviceAccount.project_id);
                     admin.initializeApp({
-                        credential: admin.credential.cert(serviceAccount)
+                        credential: admin.credential.cert(serviceAccount),
+                        projectId: serviceAccount.project_id // Explicitly set Project ID
                     });
                 } catch (e) {
                     console.error('[FIRESTORE] Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON:', e.message);
@@ -34,6 +36,7 @@ class FirestoreService {
             }
             // 2. Try GOOGLE_APPLICATION_CREDENTIALS env var (Standard GCP)
             else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+                 console.log('[FIRESTORE] Init with GOOGLE_APPLICATION_CREDENTIALS');
                 admin.initializeApp({
                     credential: admin.credential.applicationDefault()
                 });
@@ -45,10 +48,18 @@ class FirestoreService {
 
                 if (fs.existsSync(keyPath)) {
                     const serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8'));
-                    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+                    console.log('[FIRESTORE] Init with local file (Root). Project ID:', serviceAccount.project_id);
+                    admin.initializeApp({ 
+                        credential: admin.credential.cert(serviceAccount),
+                        projectId: serviceAccount.project_id
+                    });
                 } else if (fs.existsSync(keyPathData)) {
                     const serviceAccount = JSON.parse(fs.readFileSync(keyPathData, 'utf8'));
-                    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+                    console.log('[FIRESTORE] Init with local file (Data). Project ID:', serviceAccount.project_id);
+                    admin.initializeApp({ 
+                        credential: admin.credential.cert(serviceAccount),
+                        projectId: serviceAccount.project_id
+                    });
                 } else {
                     // 4. Fallback: Assumption of ADC (Application Default Credentials) usually for Cloud Run
                      console.warn('[FIRESTORE] No key found. Trying Application Default Credentials...');
