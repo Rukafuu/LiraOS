@@ -71,6 +71,45 @@ try {
     }
 } catch (e) { } 
 
+// --- Gemini Tools Definition (MCP Style) ---
+const LIRA_TOOLS = [
+    {
+        name: "execute_system_command",
+        description: "Execute system commands on the user's PC (open apps, websites, files, search).",
+        parameters: {
+            type: "OBJECT",
+            properties: {
+                command: { type: "STRING", description: "Action: 'open', 'search', 'list'" },
+                target: { type: "STRING", description: "Target: 'chrome', 'youtube', 'C:/Docs', 'funny cats'" }
+            },
+            required: ["command", "target"]
+        }
+    },
+    {
+        name: "generate_image",
+        description: "Generate an image based on a text prompt.",
+        parameters: {
+            type: "OBJECT",
+            properties: {
+                prompt: { type: "STRING", description: "Visual description of the image to generate." }
+            },
+            required: ["prompt"]
+        }
+    },
+    {
+        name: "game_control",
+        description: "Control games (Osu!). Use start_bot to make Lira play.",
+        parameters: {
+            type: "OBJECT",
+            properties: {
+                action: { type: "STRING", description: "'start_bot' or 'stop_bot'" },
+                game: { type: "STRING", description: "'osu'" }
+            },
+            required: ["action", "game"]
+        }
+    }
+]; 
+
 class DiscordService {
     constructor() {
         this.client = new Client({
@@ -878,44 +917,6 @@ class DiscordService {
     async generateResponse(text, userId, userContext = "", imageParts = [], isOwner = false) {
         if (!geminiClient) return "Sem conexão com Gemini. (Verifique GEMINI_API_KEY)";
 
-        const tools = [
-            {
-                name: "execute_system_command",
-                description: "Execute system commands on the user's PC (open apps, websites, files, search).",
-                parameters: {
-                    type: "OBJECT",
-                    properties: {
-                        command: { type: "STRING", description: "Action: 'open', 'search', 'list'" },
-                        target: { type: "STRING", description: "Target: 'chrome', 'youtube', 'C:/Docs', 'funny cats'" }
-                    },
-                    required: ["command", "target"]
-                }
-            },
-            {
-                name: "generate_image",
-                description: "Generate an image based on a text prompt.",
-                parameters: {
-                    type: "OBJECT",
-                    properties: {
-                        prompt: { type: "STRING", description: "Visual description of the image to generate." }
-                    },
-                    required: ["prompt"]
-                }
-            },
-            {
-                name: "game_control",
-                description: "Control games (Osu!). Use start_bot to make Lira play.",
-                parameters: {
-                    type: "OBJECT",
-                    properties: {
-                        action: { type: "STRING", description: "'start_bot' or 'stop_bot'" },
-                        game: { type: "STRING", description: "'osu'" }
-                    },
-                    required: ["action", "game"]
-                }
-            }
-        ];
-
         try {
             const promptWithContext = userContext ? `${text}\n${userContext}` : text;
             if (userContext) console.log(`[DISCORD] 🎮 Prompt Context Added`);
@@ -952,7 +953,7 @@ class DiscordService {
             const result = await geminiClient.models.generateContent({
                 model: 'gemini-2.0-flash',
                 contents: [{ role: 'user', parts: parts }],
-                tools: [{ functionDeclarations: tools }],
+                tools: [{ functionDeclarations: LIRA_TOOLS }],
                 config: {
                     systemInstruction: systemPrompt
                 }
