@@ -313,15 +313,20 @@ Analysis:
            - To read Sidebar: use "Chat/components/Sidebar.tsx"
            - To list Chat directory: use "Chat"
         
-        2. TOOL NAMES: ONLY use tools from the list above. DO NOT invent tools.
+        2. UNKNOWN PATHS: If you are not sure where a file is (e.g. asked to verify 'discord.js'), ALWAYS use 'findFiles' as the first step.
+           Example:
+           Step 1: findFiles("discord.js")
+           Step 2: readFile(path_found_in_step_1)
+        
+        3. TOOL NAMES: ONLY use tools from the list above. DO NOT invent tools.
            - WRONG: "analyzeCode" (doesn't exist)
            - RIGHT: Use "readFile" + "getFileOutline" to analyze code
         
-        3. MULTI-STEP ANALYSIS: To analyze a file, create multiple steps:
+        4. MULTI-STEP ANALYSIS: To analyze a file, create multiple steps:
            Step 1: readFile("Chat/App.tsx")
            Step 2: getFileOutline("Chat/App.tsx")
         
-        4. ALWAYS READ BEFORE WRITE: Read files before editing them.
+        5. ALWAYS READ BEFORE WRITE: Read files before editing them.
         
         RESPONSE FORMAT:
         Return a generic JSON object (no markdown code blocks) with this exact structure:
