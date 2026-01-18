@@ -4,14 +4,15 @@ const WebSocket = require('ws');
 const fs = require('fs');
 const rpaService = require('./rpaService');
 const visionService = require('./visionService');
+const config = require('./config');
 
 
 let mainWindow;
 let tray;
 let ws;
 
-// Backend WebSocket URL
-const BACKEND_URL = process.env.BACKEND_URL || 'ws://127.0.0.1:4001/companion';
+// Backend WebSocket URL (configurável via config.js)
+const BACKEND_URL = `${config.BACKEND_WS_URL}/companion`;
 
 function createWindow() {
     const { width, height } = screen.getPrimaryDisplay().workAreaSize;
@@ -29,7 +30,11 @@ function createWindow() {
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
-            enableRemoteModule: true
+            enableRemoteModule: true,
+            additionalArguments: [
+                `--backend-url=${config.BACKEND_HTTP_URL}`,
+                `--backend-ws-url=${config.BACKEND_WS_URL}`
+            ]
         }
     });
 
@@ -37,6 +42,16 @@ function createWindow() {
     mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
     mainWindow.loadFile('index.html');
+
+    // Expose config to renderer
+    mainWindow.webContents.on('did-finish-load', () => {
+        mainWindow.webContents.executeJavaScript(`
+            window.BACKEND_HTTP_URL = '${config.BACKEND_HTTP_URL}';
+            window.BACKEND_WS_URL = '${config.BACKEND_WS_URL}';
+            console.log('[CONFIG] Backend HTTP:', window.BACKEND_HTTP_URL);
+            console.log('[CONFIG] Backend WS:', window.BACKEND_WS_URL);
+        `);
+    });
 
     // DevTools for debugging
     mainWindow.webContents.openDevTools({ mode: 'detach' });
@@ -72,7 +87,7 @@ function createTray() {
         { 
             label: 'Open Chat', 
             click: () => {
-                require('electron').shell.openExternal('http://localhost:4000');
+                require('electron').shell.openExternal(config.BACKEND_HTTP_URL);
             }
         },
         { type: 'separator' },

@@ -423,7 +423,9 @@
             // 🎙️ TTS INTEGRATION
             try {
                 console.log('[TTS] Requesting voice for:', text);
-                const response = await fetch('http://127.0.0.1:4000/api/voice/tts', {
+                // Use dynamic backend URL
+                const backendUrl = window.BACKEND_HTTP_URL || 'http://127.0.0.1:4000';
+                const response = await fetch(`${backendUrl}/api/voice/tts`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -586,7 +588,9 @@
                     // Build smart prompt based on gaming context
                     const prompt = buildVisionPrompt();
                     
-                    const response = await fetch('http://127.0.0.1:4000/api/vision/tick', {
+                    // Use dynamic backend URL
+                    const backendUrl = window.BACKEND_HTTP_URL || 'http://127.0.0.1:4000';
+                    const response = await fetch(`${backendUrl}/api/vision/tick`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ 
