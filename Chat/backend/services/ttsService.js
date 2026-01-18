@@ -146,5 +146,5 @@ export async function generateSpeechGoogle(text, lang = 'pt-BR') {
 }
 
 // Mocked/Legacy stubs
-export async function generateSpeechEdgeTTS() { throw new Error("EdgeTTS removed."); }
+// EdgeTTS agora está implementado corretamente acima.
 export async function generateSpeechAWSPolly() { throw new Error("Polly removed."); }
