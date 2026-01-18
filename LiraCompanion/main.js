@@ -5,6 +5,7 @@ const fs = require('fs');
 const rpaService = require('./rpaService');
 const visionService = require('./visionService');
 const config = require('./config');
+const gameDetection = require('./gameDetection');
 
 
 let mainWindow;
@@ -115,6 +116,29 @@ function connectToBackend() {
     ws.on('open', () => {
         console.log('✅ Connected to Lira Backend!');
         mainWindow.webContents.send('backend-status', 'connected');
+        
+        // 🎮 Iniciar detecção automática de jogos
+        console.log('[COMPANION] Starting automatic game detection...');
+        gameDetection.start(
+            // Quando jogo é detectado
+            (gameId, gameName) => {
+                console.log(`[COMPANION] 🎮 Requesting profile for: ${gameName}`);
+                
+                // Solicitar perfil do backend
+                ws.send(JSON.stringify({
+                    type: 'request-game-profile',
+                    gameId: gameId,
+                    gameName: gameName
+                }));
+            },
+            // Quando jogo é fechado
+            (gameId) => {
+                console.log(`[COMPANION] 🛑 Game closed: ${gameId}`);
+                mainWindow.webContents.send('backend-message', {
+                    type: 'game-closed'
+                });
+            }
+        );
     });
 
     ws.on('message', (data) => {
