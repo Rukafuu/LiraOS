@@ -1,6 +1,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import { generateSpeechMinimax, generateSpeechElevenLabs, generateSpeechGoogle } from '../services/ttsService.js';
+import { generateSpeechMinimax, generateSpeechElevenLabs, generateSpeechGoogle, generateSpeechHuggingFace } from '../services/ttsService.js';
 
 dotenv.config();
 const router = express.Router();
@@ -59,11 +59,24 @@ router.post('/tts', async (req, res) => {
             res.send(audioBuffer);
             return;
         } catch (e) {
-            console.warn('[TTS] ⚠️ Minimax failed, trying Google...', e.message);
         }
     }
 
-    // Priority 3: Google (Free Fallback - Always Works)
+    // Priority 3: HuggingFace (Anime/Free Alternative)
+    if (process.env.HF_API_KEY) {
+        try {
+            console.log(`[TTS] 🌸 Attempting HuggingFace (Anime Style)...`);
+            const audioBuffer = await generateSpeechHuggingFace(textToSpeak);
+            console.log(`[TTS] ✅ HuggingFace Success!`);
+            res.setHeader('Content-Type', 'audio/mpeg');
+            res.send(audioBuffer);
+            return;
+        } catch (e) {
+            console.warn('[TTS] ⚠️ HuggingFace failed, trying Google...', e.message);
+        }
+    }
+
+    // Priority 4: Google (Free Fallback - Always Works)
     try {
         console.log(`[TTS] 🌐 Using Google Fallback (Free)...`);
         const audioBuffer = await generateSpeechGoogle(textToSpeak, 'pt-BR');
