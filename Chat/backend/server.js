@@ -92,6 +92,8 @@ app.use('/api/auth/google-calendar', googleAuthRoutes);
 app.use('/api/chat', chatRoutes);
 // Mount specific routes BEFORE the generic /api fallback
 app.use('/api/vision', visionRoutes);
+import visionTickRoutes from './routes/visionTick.js';
+app.use('/api/vision', visionTickRoutes);
 app.use('/api/voice', voiceRoutes);
 app.use('/api/gamer', gamerRoutes);
 app.use('/api/gamification', gamificationRoutes);
@@ -246,6 +248,12 @@ server.listen(PORT, '0.0.0.0', async () => {
   import('./services/pcControllerService.js').then(service => {
     service.pcController.start();
   }).catch(err => console.error('Failed to load PC Controller Service:', err));
+
+  // Start Gaming Service (Gaming Copilot)
+  import('./services/gamingService.js').then(({ gamingService }) => {
+    console.log('[STARTUP] Starting Gaming Service...');
+    gamingService.start();
+  }).catch(err => console.error('Failed to load Gaming Service:', err));
 
   // Discord Bot
   if (process.env.DISCORD_TOKEN) {
