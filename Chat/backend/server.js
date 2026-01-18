@@ -267,7 +267,7 @@ global.broadcastToCompanions = broadcastToCompanions;
 
 // Start Server & Services
 server.listen(PORT, '0.0.0.0', async () => {
-  console.log(`[SYSTEM] LiraOS Backend v1.1 Starter (Deploy Timestamp: ${new Date().toISOString()})`);
+  console.log(`[SYSTEM] LiraOS Backend v1.1.1 (Voice URL Fix - router.huggingface.co) (Deploy Timestamp: ${new Date().toISOString()})`);
   console.log(`[SYSTEM] Server running on port ${PORT}`);
   console.log(`[SYSTEM] Environment: ${process.env.NODE_ENV}`);
   console.log(`[SYSTEM] Frontend URL: ${FRONTEND_URL}`);

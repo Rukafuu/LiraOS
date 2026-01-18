@@ -43,7 +43,8 @@
             position: relative;
             cursor: move;
             -webkit-app-region: drag;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            /* Hack: 1% opacity to capture mouse events on Windows */
+            background: rgba(0, 0, 0, 0.01); 
             border-radius: 20px;
         }
 
