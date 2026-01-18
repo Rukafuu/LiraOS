@@ -215,6 +215,10 @@ class GamingService {
      * Detecta jogo ativo
      */
     async detectActiveGame() {
+        // No Railway/Linux, não podemos detectar jogos via processos locais com tasklist.
+        // A detecção é feita pelo Companion (client-side) que envia eventos.
+        if (process.platform !== 'win32') return;
+
         try {
             // Windows: usar tasklist para obter processos
             const { stdout } = await execAsync('tasklist /FO CSV /NH');

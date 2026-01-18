@@ -8,6 +8,10 @@ const config = require('./config');
 const gameDetection = require('./gameDetection');
 
 
+
+// 🛠️ FIX: Desabilitar aceleração de hardware corrige fundo preto (transparência) no Windows
+app.disableHardwareAcceleration();
+
 let mainWindow;
 let tray;
 let ws;
@@ -25,6 +29,8 @@ function createWindow() {
         y: height - 420,
         frame: false,
         transparent: true,
+        backgroundColor: '#00000000', // HEX transparente para Windows
+        hasShadow: false, // Pode causar bordas brancas se true
         alwaysOnTop: true,
         skipTaskbar: false,
         resizable: true,

@@ -32,9 +32,12 @@ router.post('/tts', async (req, res) => {
             console.log(`[TTS] ✨ Attempting ElevenLabs (Premium)...`);
             const elevenVoiceId = voiceId?.startsWith('eleven-') 
                 ? voiceId.replace('eleven-', '') 
-                : 'hzmQH8l82zshXXrObQE2'; // Default Lira voice
+                : '21m00Tcm4TlvDq8ikWAM'; // Default: Rachel (Plano Free Compatible)
+            
+            // Backup ID anterior (Lira Clone): hzmQH8l82zshXXrObQE2 (Requer Plano Pago)
+            
             const audioBuffer = await generateSpeechElevenLabs(textToSpeak, elevenVoiceId);
-            console.log(`[TTS] ✅ ElevenLabs Success!`);
+            console.log(`[TTS] ✅ ElevenLabs Success! (Voice: ${elevenVoiceId})`);
             res.setHeader('Content-Type', 'audio/mpeg');
             res.send(audioBuffer);
             return;
