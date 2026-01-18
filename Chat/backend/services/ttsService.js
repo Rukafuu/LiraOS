@@ -101,27 +101,54 @@ export async function generateSpeechElevenLabs(text, voiceId = 'hzmQH8l82zshXXrO
 // ------------------------------------------------------------------
 // EDGE TTS (Microsoft Francisca Neural - Free High Quality)
 // ------------------------------------------------------------------
-import { MsEdgeTTS, OUTPUT_FORMAT } from "edge-tts";
+import { spawn } from 'child_process';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export async function generateSpeechEdgeTTS(text) {
-    console.log(`[TTS] EdgeTTS Request: pt-BR-FranciscaNeural`);
-    try {
-        const tts = new MsEdgeTTS();
-        await tts.setMetadata("pt-BR-FranciscaNeural", OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+    console.log(`[TTS] EdgeTTS Request (Python): pt-BR-FranciscaNeural`);
+    
+    return new Promise((resolve, reject) => {
+        const outputFilename = `temp_edge_${Date.now()}_${Math.random().toString(36).substring(7)}.mp3`;
+        const outputPath = path.join(__dirname, '..', 'temp', outputFilename); // Salva na pasta temp do backend/temp
         
-        const filePath = await tts.toFile(`./temp_${Date.now()}.mp3`, text);
+        // Garante que a pasta temp existe
+        const tempDir = path.join(__dirname, '..', 'temp');
+        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+
+        const pythonScript = path.join(__dirname, '..', 'python', 'edge_tts_connector.py');
         
-        // Ler o arquivo gerado e retornar buffer
-        const fs = await import('fs');
-        const buffer = fs.readFileSync(filePath);
+        // Tenta 'python3' (Linux/Railway) ou 'python' (Windows)
+        const pythonCommand = process.platform === 'win32' ? 'python' : 'python3';
         
-        // Limpar arquivo temporário
-        fs.unlinkSync(filePath);
-        
-        return buffer;
-    } catch (e) {
-        throw new Error(`EdgeTTS Failed: ${e.message}`);
-    }
+        const processPy = spawn(pythonCommand, [pythonScript, text, outputPath]);
+
+        processPy.stderr.on('data', (data) => {
+            console.error(`[EdgeTTS Python Error]: ${data}`);
+        });
+
+        processPy.on('close', (code) => {
+            if (code !== 0) {
+                reject(new Error(`EdgeTTS Python process exited with code ${code}`));
+                return;
+            }
+
+            try {
+                if (fs.existsSync(outputPath)) {
+                    const buffer = fs.readFileSync(outputPath);
+                    fs.unlinkSync(outputPath); // Limpa arquivo
+                    resolve(buffer);
+                } else {
+                    reject(new Error("EdgeTTS Output file not found."));
+                }
+            } catch (err) {
+                reject(err);
+            }
+        });
+    });
 }
 
 // ------------------------------------------------------------------
