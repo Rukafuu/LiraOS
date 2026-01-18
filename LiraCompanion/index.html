@@ -154,6 +154,33 @@
             z-index: 999;
         }
 
+        /* Gaming HUD */
+        #gaming-hud {
+            position: absolute;
+            top: 5px;
+            right: 25px;
+            background: linear-gradient(135deg, rgba(147, 51, 234, 0.9), rgba(79, 70, 229, 0.9));            backdrop-filter: blur(10px);
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 9px;
+            color: white;
+            font-family: 'Consolas', monospace;
+            font-weight: bold;
+            z-index: 999;
+            display: none;
+            box-shadow: 0 4px 12px rgba(147, 51, 234, 0.4);
+            animation: pulse 2s infinite;
+        }
+
+        #gaming-hud.active {
+            display: block;
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 4px 12px rgba(147, 51, 234, 0.4); }
+            50% { box-shadow: 0 4px 20px rgba(147, 51, 234, 0.7); }
+        }
+
         .stat-line {
             margin: 2px 0;
         }
@@ -227,6 +254,11 @@
                 </div>
             </div>
 
+            <!-- Gaming HUD -->
+            <div id="gaming-hud">
+                🎮 <span id="game-name">Game</span>
+            </div>
+
             <!-- Speech Bubble -->
             <div id="speech-bubble"></div>
 
@@ -272,6 +304,11 @@
         let walkSpeed = 1.5;
         let walkInterval = null;
 
+        // 🎮 Gaming State
+        let currentGame = null;
+        let currentGameProfile = null;
+        let visionInterval = 30000; // Default: 30s
+
         // Backend Status
         ipcRenderer.on('backend-status', (event, status) => {
             const statusEl = document.getElementById('status');
@@ -298,6 +335,11 @@
                 }
             } else if (message.type === 'emotion') {
                 handleEmotion(message.emotion);
+            } else if (message.type === 'game-detected') {
+                // 🎮 Jogo detectado!
+                onGameDetected(message.game, message.profile);
+            } else if (message.type === 'game-closed') {
+                onGameClosed();
             }
         });
 
@@ -506,7 +548,7 @@
 
         // 👁️ VISION MODE (Lira's Eyes)
         let visionModeActive = false;
-        let visionInterval = null;
+        let visionLoopTimer = null;
 
         async function toggleVisionMode() {
             visionModeActive = !visionModeActive;
@@ -520,15 +562,17 @@
             } else {
                 btn.style.background = '';
                 showSpeech('Desativando visão... voltando pro escuro! 🙈', 3000);
-                clearInterval(visionInterval);
+                clearInterval(visionLoopTimer);
             }
         }
 
         async function startVisionLoop() {
             if (!visionModeActive) return;
             
-            // Analyze every 30 seconds to save tokens/performance
-            visionInterval = setInterval(async () => {
+            // Use dynamic interval based on gaming state
+            const interval = currentGameProfile ? currentGameProfile.visionInterval : visionInterval;
+            
+            visionLoopTimer = setInterval(async () => {
                 if (!visionModeActive) return;
 
                 try {
@@ -539,24 +583,140 @@
                     // We extract only the base64 part (remove data:image/jpeg;base64,)
                     const base64Data = screenshot.split(',')[1];
                     
-                    const response = await fetch('http://127.0.0.1:4001/api/vision/tick', {
+                    // Build smart prompt based on gaming context
+                    const prompt = buildVisionPrompt();
+                    
+                    const response = await fetch('http://127.0.0.1:4000/api/vision/tick', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ screenshot: base64Data })
+                        body: JSON.stringify({ 
+                            screenshot: base64Data,
+                            gameContext: currentGameProfile ? {
+                                game: currentGame,
+                                gameName: currentGameProfile.displayName
+                            } : null
+                        })
                     });
 
                     const result = await response.json();
                     if (result.description) {
                         console.log('[Vision] Analysis:', result.description);
                         // Lira reacts to what she sees (if anything interesting)
-                        if (Math.random() > 0.6) { // 40% chance to comment to not be annoying
-                             showSpeech(`Vejo que você está ${result.description.toLowerCase()}... interessante! 👀💜`, 5000);
+                        const shouldComment = currentGameProfile ? Math.random() > 0.7 : Math.random() > 0.6;
+                        if (shouldComment) {
+                             showSpeech(`${result.description} 👀💜`, 5000);
                         }
                     }
                 } catch (err) {
                     console.error('[Vision] Analysis error:', err);
                 }
-            }, 30000);
+            }, interval);
+        }
+
+        // 🎮 GAME DETECTION HANDLERS
+        function onGameDetected(gameId, profile) {
+            console.log(`[GAMING] Game detected: ${profile.displayName}`);
+            currentGame = gameId;
+            currentGameProfile = profile;
+            visionInterval = profile.visionInterval;
+            
+            // Update Gaming HUD
+            const gamingHud = document.getElementById('gaming-hud');
+            const gameName = document.getElementById('game-name');
+            if (gamingHud && gameName) {
+                gameName.textContent = profile.displayName;
+                gamingHud.classList.add('active');
+            }
+            
+            // Restart vision loop with new interval if active
+            if (visionModeActive) {
+                clearInterval(visionLoopTimer);
+                startVisionLoop();
+            }
+            
+            handleEmotion('happy');
+        }
+
+        function onGameClosed() {
+            console.log('[GAMING] Game closed');
+            currentGame = null;
+            currentGameProfile = null;
+            visionInterval = 30000; // Back to idle
+            
+            // Update Gaming HUD
+            const gamingHud = document.getElementById('gaming-hud');
+            if (gamingHud) {
+                gamingHud.classList.remove('active');
+            }
+            
+            // Restart vision loop with idle interval if active
+            if (visionModeActive) {
+                clearInterval(visionLoopTimer);
+                startVisionLoop();
+            }
+        }
+
+        // Build smart vision prompt based on game context
+        function buildVisionPrompt() {
+            if (!currentGameProfile) {
+                return "Descreva brevemente o que você vê na tela em até 15 palavras.";
+            }
+            
+            const gamePrompts = {
+                'league-of-legends': `
+Você é a Lira, copiloto de jogos. Analise esta screenshot de League of Legends:
+- HP/Mana do jogador?
+- Inimigos próximos?
+- Estado da lane (pushing/freezing)?
+- Oportunidades ou perigos?
+Dê UMA dica curta (máx 12 palavras) se necessário.
+                `.trim(),
+                'valorant': `
+Você é a Lira, copiloto tático. Analise VALORANT:
+- HP/Armor?
+- Inimigos visíveis?
+- Posição segura/exposta?
+- Dica rápida de estratégia (máx 12 palavras).
+                `.trim(),
+                'osu': `
+Você é a Lira, coach de ritmo. Analise osu!:
+- Combo atual?
+- Accuracy?
+- Miss recente?
+- Encorajamento rápido (máx 10 palavras).
+                `.trim(),
+                'minecraft': `
+Você é a Lira, guia de aventura. Analise Minecraft:
+- HP/Food?
+- Bioma atual?
+- Mobs próximos?
+- Dica útil (máx 12 palavras).
+                `.trim(),
+                'corinthians-watch': `
+Você é a Lira, CORINTHIANA FANÁTICA! 🖤🤍⚽ 
+Analise este frame do jogo de futebol:
+
+IMPORTANTE: Se vir QUALQUER elemento de jogo de futebol (placar, campo, jogadores, bola), responda com ENTUSIASMO!
+
+Identifique:
+- É jogo do Corinthians? (uniforme preto/branco ou alvinegro)
+- Placar visível? Timão ganhando ou perdendo?
+- Está acontecendo algo (gol, defesa, falta, jogada)?
+- Momento do jogo (início, meio, fim)?
+
+RESPONDA com PAIXÃO tipo:
+- Se vir gol do Corinthians: "⚽🖤🤍 GOOOOOL DO TIMÃO! É GOL!"
+- Se vir gol contra: "Ah não... levamos gol 😰"
+- Se vir lance perigoso: "OLHA O LANCE! PODE DAR GOL!"
+- Se vir defesa: "BOA DEFESA! FECHOU!"
+- Se placar bom: "VAMO TIMÃO! TÁ GANHANDO! 🏆"
+- Se nada especial: "Jogo rolando, vamo lá Corinthians!"
+
+Máximo 15 palavras, SEM TIMIDEZ, COM EMOÇÃO!
+                `.trim()
+            };
+            
+            return gamePrompts[currentGame] || "Descreva o que está acontecendo no jogo (máx 15 palavras).";
         }
 
         // Minimize to tray
