@@ -184,7 +184,7 @@ wss.on('connection', (ws, request) => {
   }));
   
   // Handle messages from companion
-  ws.on('message', (data) => {
+  ws.on('message', async (data) => {
     try {
       const message = JSON.parse(data.toString());
       console.log('[COMPANION] Message:', message);
@@ -192,6 +192,38 @@ wss.on('connection', (ws, request) => {
       // Handle different message types
       if (message.type === 'ping') {
         ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+      }
+      else if (message.type === 'request-game-profile') {
+        // 🎮 Companion detectou um jogo e quer o perfil
+        console.log(`[COMPANION] 🎮 Requesting profile for: ${message.gameId}`);
+        
+        // Carregar gaming service e pegar perfil
+        const { gamingService } = await import('./services/gamingService.js');
+        const profile = gamingService.gameProfiles[message.gameId];
+        
+        if (profile) {
+          // Enviar perfil completo para o companion
+          ws.send(JSON.stringify({
+            type: 'game-detected',
+            game: message.gameId,
+            profile: profile,
+            visionInterval: profile.visionInterval
+          }));
+          
+          // Enviar saudação
+          const greetings = [
+            `Detectei ${profile.displayName}! Vamos jogar? 🎮`,
+            `Opa! ${profile.displayName} aberto! Bora dominar! 💪`,
+            `${profile.displayName}? Eu vou ser sua copiloto! Let's go! 🚀`
+          ];
+          const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+          
+          ws.send(JSON.stringify({
+            type: 'proactive',
+            content: greeting,
+            emotion: 'happy'
+          }));
+        }
       }
     } catch (e) {
       console.error('[COMPANION] Failed to parse message:', e);
