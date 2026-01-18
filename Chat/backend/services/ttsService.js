@@ -99,38 +99,29 @@ export async function generateSpeechElevenLabs(text, voiceId = 'hzmQH8l82zshXXrO
 }
 
 // ------------------------------------------------------------------
-// HUGGING FACE TTS (Anime-Link Free Alternative)
+// EDGE TTS (Microsoft Francisca Neural - Free High Quality)
 // ------------------------------------------------------------------
-export async function generateSpeechHuggingFace(text) {
-    const apiKey = (process.env.HF_API_KEY || '').trim();
-    if (!apiKey) throw new Error("HuggingFace API Key is missing.");
+import { MsEdgeTTS, OUTPUT_FORMAT } from "edge-tts";
 
-    // Modelo MMS-TTS Português (Facebook/VITS) - Voz feminina natural em PT-BR
-    const model = 'facebook/mms-tts-por'; 
-    
-    console.log(`[TTS] HuggingFace Request: ${model} (PT-BR)`);
-
-    // UPDATE: URL alterada de api-inference para router.huggingface.co
-    const response = await fetch(`https://router.huggingface.co/models/${model}`, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ inputs: text })
-    });
-
-    if (!response.ok) {
-        // Se o modelo estiver carregando (503), lançar erro específico
-        if (response.status === 503) {
-            throw new Error(`HuggingFace Model Loading (Cold Boot). Try again in 20s.`);
-        }
-        const err = await response.text();
-        throw new Error(`HuggingFace API ${response.status}: ${err}`);
+export async function generateSpeechEdgeTTS(text) {
+    console.log(`[TTS] EdgeTTS Request: pt-BR-FranciscaNeural`);
+    try {
+        const tts = new MsEdgeTTS();
+        await tts.setMetadata("pt-BR-FranciscaNeural", OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+        
+        const filePath = await tts.toFile(`./temp_${Date.now()}.mp3`, text);
+        
+        // Ler o arquivo gerado e retornar buffer
+        const fs = await import('fs');
+        const buffer = fs.readFileSync(filePath);
+        
+        // Limpar arquivo temporário
+        fs.unlinkSync(filePath);
+        
+        return buffer;
+    } catch (e) {
+        throw new Error(`EdgeTTS Failed: ${e.message}`);
     }
-
-    const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
 }
 
 // ------------------------------------------------------------------

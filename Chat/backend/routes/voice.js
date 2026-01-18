@@ -1,6 +1,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import { generateSpeechMinimax, generateSpeechElevenLabs, generateSpeechGoogle, generateSpeechHuggingFace } from '../services/ttsService.js';
+import { generateSpeechMinimax, generateSpeechElevenLabs, generateSpeechGoogle, generateSpeechEdgeTTS } from '../services/ttsService.js';
 
 dotenv.config();
 const router = express.Router();
@@ -62,21 +62,17 @@ router.post('/tts', async (req, res) => {
         }
     }
 
-    // Priority 3: HuggingFace (Disativado: Modelo PT-BR removido da API Free)
-    /*
-    if (process.env.HF_API_KEY) {
-        try {
-            console.log(`[TTS] 🌸 Attempting HuggingFace (Anime Style)...`);
-            const audioBuffer = await generateSpeechHuggingFace(textToSpeak);
-            console.log(`[TTS] ✅ HuggingFace Success!`);
-            res.setHeader('Content-Type', 'audio/mpeg');
-            res.send(audioBuffer);
-            return;
-        } catch (e) {
-            console.warn('[TTS] ⚠️ HuggingFace failed, trying Google...', e.message);
-        }
+    // Priority 3: Edge TTS (Microsoft Neural - Free & High Quality)
+    try {
+        console.log(`[TTS] 🦜 Attempting EdgeTTS (Francisca Neural)...`);
+        const audioBuffer = await generateSpeechEdgeTTS(textToSpeak);
+        console.log(`[TTS] ✅ EdgeTTS Success!`);
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.send(audioBuffer);
+        return;
+    } catch (e) {
+        console.warn('[TTS] ⚠️ EdgeTTS failed, trying Google...', e.message);
     }
-    */
 
     // Priority 4: Google (Free Fallback - Always Works)
     try {
