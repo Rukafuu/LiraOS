@@ -62,7 +62,8 @@ router.post('/tts', async (req, res) => {
         }
     }
 
-    // Priority 3: HuggingFace (Anime/Free Alternative)
+    // Priority 3: HuggingFace (Disativado: Modelo PT-BR removido da API Free)
+    /*
     if (process.env.HF_API_KEY) {
         try {
             console.log(`[TTS] 🌸 Attempting HuggingFace (Anime Style)...`);
@@ -75,6 +76,7 @@ router.post('/tts', async (req, res) => {
             console.warn('[TTS] ⚠️ HuggingFace failed, trying Google...', e.message);
         }
     }
+    */
 
     // Priority 4: Google (Free Fallback - Always Works)
     try {
