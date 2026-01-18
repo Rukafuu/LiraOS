@@ -62,8 +62,7 @@ router.post('/tts', async (req, res) => {
         }
     }
 
-    // Priority 3: Edge TTS (Temporariamente desativado para Debug)
-    /*
+    // Priority 3: Edge TTS (Microsoft Neural - Free & High Quality)
     try {
         console.log(`[TTS] 🦜 Attempting EdgeTTS (Francisca Neural)...`);
         const audioBuffer = await generateSpeechEdgeTTS(textToSpeak);
@@ -74,9 +73,8 @@ router.post('/tts', async (req, res) => {
     } catch (e) {
         console.warn('[TTS] ⚠️ EdgeTTS failed, trying Google...', e.message);
     }
-    */
 
-    // Priority 4: Google (AGORA ATIVO - Panic Mode)
+    // Priority 4: Google (Free Fallback - Always Works)
     try {
         console.log(`[TTS] 🌐 Using Google Fallback (Free)...`);
         const audioBuffer = await generateSpeechGoogle(textToSpeak, 'pt-BR');
