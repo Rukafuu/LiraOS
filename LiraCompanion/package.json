@@ -1,6 +1,6 @@
 {
   "name": "lira-companion",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Lira Desktop Companion - Your AI friend on desktop",
   "main": "main.js",
   "scripts": {

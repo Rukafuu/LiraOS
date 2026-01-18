@@ -105,13 +105,13 @@ export async function generateSpeechHuggingFace(text) {
     const apiKey = (process.env.HF_API_KEY || '').trim();
     if (!apiKey) throw new Error("HuggingFace API Key is missing.");
 
-    // Modelo MeloTTS (Inglês com sotaque suave/anime)
-    // Alternativa: 'facebook/mms-tts-eng' ou spaces específicos
-    const model = 'myshell-ai/MeloTTS-English'; 
+    // Modelo MMS-TTS Português (Facebook/VITS) - Voz feminina natural em PT-BR
+    const model = 'facebook/mms-tts-por'; 
     
-    console.log(`[TTS] HuggingFace Request: ${model}`);
+    console.log(`[TTS] HuggingFace Request: ${model} (PT-BR)`);
 
-    const response = await fetch(`https://api-inference.huggingface.co/models/${model}`, {
+    // UPDATE: URL alterada de api-inference para router.huggingface.co
+    const response = await fetch(`https://router.huggingface.co/models/${model}`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${apiKey}`,
