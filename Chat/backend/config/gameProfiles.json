@@ -1,0 +1,189 @@
+{
+  "league-of-legends": {
+    "displayName": "League of Legends",
+    "processNames": [
+      "League of Legends.exe",
+      "LeagueClient.exe",
+      "LeagueClientUx.exe"
+    ],
+    "windowTitles": [
+      "League of Legends"
+    ],
+    "visionInterval": 5000,
+    "commentaryStyle": "strategic",
+    "events": [
+      "kill",
+      "death",
+      "dragon",
+      "baron",
+      "tower",
+      "inhibitor"
+    ],
+    "clipDuration": 15,
+    "priority": "high",
+    "tips": {
+      "lowHp": "Cuidado! HP baixo, recua!",
+      "kill": "Boaaa! +1! 🔥",
+      "death": "Eita, acontece! Vamos recuperar!",
+      "win": "VITÓRIA! GG WP! 🏆",
+      "lose": "Próxima a gente pega! 💪"
+    }
+  },
+  "valorant": {
+    "displayName": "VALORANT",
+    "processNames": [
+      "VALORANT.exe",
+      "VALORANT-Win64-Shipping.exe"
+    ],
+    "windowTitles": [
+      "VALORANT"
+    ],
+    "visionInterval": 3000,
+    "commentaryStyle": "tactical",
+    "events": [
+      "ace",
+      "clutch",
+      "plant",
+      "defuse",
+      "kill",
+      "death"
+    ],
+    "clipDuration": 20,
+    "priority": "high",
+    "tips": {
+      "ace": "ACE! VOCÊ É UM DEMÔNIO! 👹🔥",
+      "clutch": "CLUTCH MODE ATIVADO! 💪",
+      "kill": "Eliminou! Continua!",
+      "death": "Morre não! Mas tá tranquilo.",
+      "win": "VITÓRIA! Dominação total! 🏆",
+      "lose": "GG, próxima round!"
+    }
+  },
+  "osu": {
+    "displayName": "osu!",
+    "processNames": [
+      "osu!.exe"
+    ],
+    "windowTitles": [
+      "osu!"
+    ],
+    "visionInterval": 2000,
+    "commentaryStyle": "energetic",
+    "events": [
+      "fc",
+      "combo-break",
+      "new-top-play"
+    ],
+    "clipDuration": 10,
+    "priority": "medium",
+    "tips": {
+      "fc": "FULL COMBO! VOCÊ É INSANO! ⭐✨",
+      "comboBreak": "Ish, quebrou! Mas continua!",
+      "newTopPlay": "NOVO TOP PLAY! PARABÉNS! 🎉"
+    }
+  },
+  "minecraft": {
+    "displayName": "Minecraft",
+    "processNames": [
+      "javaw.exe",
+      "Minecraft.exe"
+    ],
+    "windowTitles": [
+      "Minecraft"
+    ],
+    "visionInterval": 10000,
+    "commentaryStyle": "chill",
+    "events": [
+      "death",
+      "achievement",
+      "dragon",
+      "wither"
+    ],
+    "clipDuration": 15,
+    "priority": "low",
+    "tips": {
+      "death": "Ah não! Respawna e volta ao fight!",
+      "achievement": "Achievement desbloqueado! Nice! 🏆",
+      "dragon": "ENDER DRAGON DERROTADO! LENDÁRIO! 🐉"
+    }
+  },
+  "cs2": {
+    "displayName": "Counter-Strike 2",
+    "processNames": [
+      "cs2.exe"
+    ],
+    "windowTitles": [
+      "Counter-Strike 2"
+    ],
+    "visionInterval": 3000,
+    "commentaryStyle": "tactical",
+    "events": [
+      "ace",
+      "clutch",
+      "bomb-plant",
+      "bomb-defuse"
+    ],
+    "clipDuration": 20,
+    "priority": "medium",
+    "tips": {
+      "ace": "ACE! VOCÊ É O MELHOR! 🔥",
+      "clutch": "CLUTCH INSANO! 1vX!",
+      "win": "VITÓRIA! GG! 🏆"
+    }
+  },
+  "corinthians-watch": {
+    "displayName": "⚽ Assistindo Corinthians",
+    "processNames": [
+      "chrome.exe",
+      "firefox.exe",
+      "msedge.exe",
+      "opera.exe",
+      "vlc.exe",
+      "PotPlayerMini64.exe",
+      "mpc-hc64.exe"
+    ],
+    "windowTitles": [
+      "Corinthians",
+      "Timão",
+      "SCCP",
+      "Premiere",
+      "Globo",
+      "ESPN",
+      "Star+",
+      "YouTube"
+    ],
+    "visionInterval": 8000,
+    "commentaryStyle": "passionate",
+    "events": [
+      "gol-corinthians",
+      "gol-adversario",
+      "defesa",
+      "chance-perdida",
+      "falta",
+      "cartao-amarelo",
+      "cartao-vermelho",
+      "escanteio",
+      "impedimento",
+      "inicio-jogo",
+      "fim-jogo"
+    ],
+    "clipDuration": 30,
+    "priority": "MÁXIMA",
+    "tips": {
+      "golCorinthians": "⚽🖤🤍 GOOOOOOOOOOL DO TIMÃO! VAI CORINTHIANS! 🎉🎊",
+      "golAdversario": "Ah não... levamos gol. Mas calma, vamos virar! 💪",
+      "defesa": "CÁSSIO! DEFENDEU! QUE MONSTRO! 🧤✨",
+      "chancePerdida": "Eita, passou perto! Quase! ⚡",
+      "falta": "Falta! Juiz marcou. Vamo lá...",
+      "cartaoAmarelo": "Amarelou! Cuidado agora...",
+      "cartaoVermelho": "EXPULSO! Eita, complicou! 🟥",
+      "escanteio": "Escanteio! Bola na área, pode dar gol!",
+      "impedimento": "Impedimento! Ish, árbitro cortou...",
+      "inicioJogo": "COMEÇOU O JOGO! VAMO TIMÃO! 🖤🤍⚽",
+      "fimJogo": "ACABOU! Que jogo! VAI CORINTHIANS! 🏆",
+      "vitoria": "🏆🖤🤍 VITÓRIA DO TIMÃO! É CAMPEÃO! VAI CORINTHIANS! 🎉🎊🎆",
+      "empate": "Empatou... mas tá valendo! Ponto é ponto! 💪",
+      "derrota": "Perdemos hoje... mas o Corinthians nunca desiste! Próximo jogo! 🖤🤍"
+    }
+  }
+}
