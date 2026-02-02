@@ -62,6 +62,27 @@ router.post('/control', async (req, res) => {
     }
 });
 
+router.post('/alert', async (req, res) => {
+    try {
+        const { type, message, stats } = req.body;
+        console.log(`[SYSTEM ALERT] ${type}: ${message}`, stats || '');
+
+        // Broadcast to Companion (Frontend)
+        if (global.broadcastToCompanions) {
+            global.broadcastToCompanions({
+                type: 'proactive',
+                content: `⚠️ Alert: ${message}`,
+                emotion: 'concerned'
+            });
+        }
+
+        res.json({ success: true, message: 'Alert received' });
+    } catch (error) {
+        console.error('[SYSTEM ALERT ERROR]', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 router.get('/stats', async (req, res) => {
     res.json({ status: 'online', uptime: process.uptime() });
 });

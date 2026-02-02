@@ -24,7 +24,10 @@ const LIRA_CLOUD_URL = 'https://liraos-production.up.railway.app';
 
 const CONNECT_ENDPOINT = `${LIRA_CLOUD_URL}/api/system/connect`;
 const TICK_ENDPOINT = `${LIRA_CLOUD_URL}/api/vision/tick`;
+const ALERT_ENDPOINT = `${LIRA_CLOUD_URL}/api/system/alert`;
 const VISION_INTERVAL_MS = 10000; // 10 seconds
+
+let lastAlertTime = 0;
 
 console.log('🔗 Connecting to Lira Cloud...');
 console.log(`📡 URL: ${LIRA_CLOUD_URL}`);
@@ -196,7 +199,30 @@ async function startTelemetryLoop() {
             // Proactive Alert: High Usage
             if (stats.memUsed > 90) {
                  console.warn('⚠️ High Memory Usage Alert!');
-                 // TODO: trigger proactive alert to Lira Brain
+
+                 const now = Date.now();
+                 // Limit alert to once every 5 minutes
+                 if (now - lastAlertTime > 300000) {
+                    try {
+                        const res = await fetch(ALERT_ENDPOINT, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                type: 'high_memory',
+                                message: `High Memory Usage Detected: ${stats.memUsed}%`,
+                                stats
+                            })
+                        });
+                        if (res.ok) {
+                            console.log('✅ Proactive alert sent to Lira Brain');
+                            lastAlertTime = now;
+                        } else {
+                            console.warn('⚠️ Failed to send alert:', res.status);
+                        }
+                    } catch (alertError) {
+                        console.error('❌ Alert Fetch Error:', alertError.message);
+                    }
+                 }
             }
         } catch (e) {
             // console.warn('Telemetry Error:', e.message);
