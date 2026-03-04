@@ -78,7 +78,7 @@ model RecoverCode {
 }
 
 model Gamification {
-  user                User    @relation(fields: [userId], references: [id])
+  user                User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId              String  @id
   xp                  Int?    @default(0)
   coins               Int?    @default(100)
