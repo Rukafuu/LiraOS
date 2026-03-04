@@ -4,52 +4,53 @@ datasource db {
 }
 
 generator client {
-  provider        = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 model User {
-  id            String    @id
-  email         String    @unique
-  username      String
-  passwordHash  String    @map("password_hash")
-  passwordSalt  String?   @map("password_salt")
-  avatar        String?
-  createdAt     BigInt    @map("created_at")
-  lastLogin     BigInt?   @default(0) @map("last_login")
-  loginCount    Int?      @default(0) @map("login_count")
-  preferencesStr String? @map("preferences")
-  warnings      Int?      @default(0)
-  isBanned      Int?      @default(0) @map("is_banned")
-  plan          String?   @default("free")
-  discordId     String?   @unique
-  googleRefreshToken String? @map("google_refresh_token")
-  githubToken   String?   @map("github_token")
-  githubOwner   String?   @map("github_owner")
-  githubRepo    String?   @map("github_repo")
+  id                 String        @id
+  email              String        @unique
+  username           String
+  gamification       Gamification?
+  passwordHash       String        @map("password_hash")
+  passwordSalt       String?       @map("password_salt")
+  avatar             String?
+  createdAt          BigInt        @map("created_at")
+  lastLogin          BigInt?       @default(0) @map("last_login")
+  loginCount         Int?          @default(0) @map("login_count")
+  preferencesStr     String?       @map("preferences")
+  warnings           Int?          @default(0)
+  isBanned           Int?          @default(0) @map("is_banned")
+  plan               String?       @default("free")
+  discordId          String?       @unique
+  googleRefreshToken String?       @map("google_refresh_token")
+  githubToken        String?       @map("github_token")
+  githubOwner        String?       @map("github_owner")
+  githubRepo         String?       @map("github_repo")
 
   @@map("users")
 }
 
 model Session {
-  id        String @id
-  userId    String
-  title     String
-  personaId String?
-  createdAt BigInt
-  updatedAt BigInt
-  messagesStr String @map("messages")
+  id          String  @id
+  userId      String
+  title       String
+  personaId   String?
+  createdAt   BigInt
+  updatedAt   BigInt
+  messagesStr String  @map("messages")
 
   @@map("sessions")
 }
 
 model Memory {
-  id         String @id
+  id         String  @id
   userId     String?
   content    String
   category   String
   priority   String
   createdAt  BigInt
-  tagsStr    String @map("tags")
+  tagsStr    String  @map("tags")
   importance Int?    @default(1)
   embedding  String?
 
@@ -77,29 +78,30 @@ model RecoverCode {
 }
 
 model Gamification {
-  userId           String  @id
-  xp               Int?    @default(0)
-  coins            Int?    @default(100)
-  level            Int?    @default(1)
+  user                User    @relation(fields: [userId], references: [id])
+  userId              String  @id
+  xp                  Int?    @default(0)
+  coins               Int?    @default(100)
+  level               Int?    @default(1)
   statsStr            String? @map("stats")
   unlockedThemesStr   String? @map("unlocked_themes")
   unlockedPersonasStr String? @map("unlocked_personas")
   achievementsStr     String? @map("achievements")
-  activePersonaId  String?
-  updatedAt        BigInt?
+  activePersonaId     String?
+  updatedAt           BigInt?
 
   @@map("gamification")
 }
 
 model Feedback {
-  id        String  @id
-  userId    String?
-  feedback  String?
-  type      String?
-  rating    Int?
+  id         String  @id
+  userId     String?
+  feedback   String?
+  type       String?
+  rating     Int?
   contextStr String? @map("context")
-  status    String? @default("new")
-  createdAt BigInt?
+  status     String? @default("new")
+  createdAt  BigInt?
 
   @@map("feedback")
 }
@@ -178,15 +180,15 @@ model IrisVideo {
 }
 
 model ImageJob {
-  id        String   @id
+  id        String  @id
   userId    String?
   prompt    String
   status    String
-  result    String?  // Base64 or URL
+  result    String? // Base64 or URL
   createdAt BigInt
   provider  String?
   error     String?
-  progress  Int?     @default(0)
+  progress  Int?    @default(0)
 
   @@map("image_jobs")
 }
