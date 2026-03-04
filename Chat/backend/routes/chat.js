@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import { getSessions, upsertSession, deleteSession, deleteSessionsByUser, updateSessionTitle, getSessionById } from '../chatStore.js';
 import { getMemories } from '../memoryStore.js';
 import { processMessageForMemory } from '../intelligentMemory.js';
-import { requireAuth } from '../middlewares/authMiddleware.js';
+import { requireAuth, verifyToken } from '../middlewares/authMiddleware.js';
 import { GoogleGenAI } from '@google/genai';
 import { award, getState } from '../gamificationStore.js';
 import { isAdmin, getUserById } from '../user_store.js';
@@ -40,6 +40,36 @@ try {
 }
 
 const router = express.Router();
+
+// --- SSE /live MUST be before requireAuth (EventSource can't send headers) ---
+router.get('/live', (req, res) => {
+    // Manual auth via query param
+    const token = req.query.token;
+    if (token) {
+        const payload = verifyToken(token);
+        if (payload) {
+            req.user = payload;
+            req.userId = payload.sub;
+        }
+    }
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const onMessage = (msg) => {
+        res.write(`data: ${JSON.stringify({ type: 'proactive', content: msg })}\n\n`);
+    };
+
+    agentBrain.on('proactive_message', onMessage);
+    const heart = setInterval(() => res.write(': heartbeat\n\n'), 15000);
+
+    req.on('close', () => {
+        agentBrain.off('proactive_message', onMessage);
+        clearInterval(heart);
+    });
+});
 
 router.use(requireAuth);
 
@@ -188,30 +218,8 @@ router.post('/generate-title', async (req, res) => {
 });
 
 
-/**
- * SSE Endpoint for Proactive Messages (Frontend Listen)
- */
-router.get('/live', (req, res) => {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders();
+// (SSE /live moved before requireAuth — see top of file)
 
-    const onMessage = (msg) => {
-        res.write(`data: ${JSON.stringify({ type: 'proactive', content: msg })}\n\n`);
-    };
-
-    // Subscribe to Brain
-    agentBrain.on('proactive_message', onMessage);
-
-    // Heartbeat
-    const heart = setInterval(() => res.write(': heartbeat\n\n'), 15000);
-
-    req.on('close', () => {
-        agentBrain.off('proactive_message', onMessage);
-        clearInterval(heart);
-    });
-});
 
 // --- Chat Streaming ---
 
@@ -558,20 +566,45 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
 
         console.log('[ADMIN] Sending payload to Gemini...');
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s Timeout
-
         let response, data, candidate, part, functionCall;
 
+        // Helper: Gemini fetch with retry for 429
+        const geminiWithRetry = async (url, body, maxRetries = 2) => {
+          for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            try {
+              const res = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+                signal: controller.signal
+              });
+              clearTimeout(timeoutId);
+
+              if (res.status === 429 && attempt < maxRetries) {
+                const wait = (attempt + 1) * 3000; // 3s, 6s
+                console.warn(`[ADMIN] 429 Rate Limited. Retrying in ${wait}ms (attempt ${attempt + 1}/${maxRetries})...`);
+                await new Promise(r => setTimeout(r, wait));
+                continue;
+              }
+              return res;
+            } catch (e) {
+              clearTimeout(timeoutId);
+              if (attempt < maxRetries && e.name !== 'AbortError') {
+                await new Promise(r => setTimeout(r, 2000));
+                continue;
+              }
+              throw e;
+            }
+          }
+        };
+
         try {
-          // Reverting to Flash 2.0 Exp as Computer Use model requires specific payload structure causing 400
-          response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-            signal: controller.signal
-          });
-          clearTimeout(timeoutId);
+          response = await geminiWithRetry(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+            payload
+          );
 
           console.log(`[ADMIN] Gemini Response Status: ${response.status}`);
 
@@ -593,7 +626,6 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
           const textPart = parts.find(p => p.text)?.text;
 
         } catch (fetchError) {
-          clearTimeout(timeoutId);
           throw fetchError;
         }
 
@@ -895,19 +927,18 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
 
           console.log('[ADMIN] Sending follow-up request with tool output...');
 
-          // Follow up request (Non-streaming for safety)
-          const finalRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+          // Follow up request with retry (Non-streaming for safety)
+          const finalRes = await geminiWithRetry(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+            {
               contents: [
                 ...contents,
                 { role: 'model', parts: [{ functionCall }] },
                 { role: 'function', parts: [{ functionResponse: { name: functionCall.name, response: functionResult } }] }
               ],
               system_instruction: { parts: [{ text: adminSystemPrompt }] }
-            })
-          });
+            }
+          );
 
           console.log(`[ADMIN] Follow-up status: ${finalRes.status}`);
 

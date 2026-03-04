@@ -553,7 +553,7 @@ const [connectionError, setConnectionError] = useState('');
     // 🧠 Connect to LIVE BRAIN (Proactive Messages)
     if (!isLoggedIn) return;
 
-    const eventSource = new EventSource(`${API_BASE_URL}/api/chat/live`);
+    const eventSource = new EventSource(`${API_BASE_URL}/api/chat/live?token=${encodeURIComponent(JSON.parse(localStorage.getItem('lira_session') || '{}').token || '')}`);
 
     eventSource.onmessage = (event) => {
         try {
