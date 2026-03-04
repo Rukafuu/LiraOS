@@ -170,6 +170,14 @@ export const isAuthenticated = (): boolean => {
 
 export const handleOAuthCallback = async (): Promise<boolean> => {
   const params = new URLSearchParams(window.location.search);
+  
+  // Check for OAuth errors first
+  const error = params.get('error');
+  if (error) {
+    console.error('[OAuth] Backend returned error:', error);
+    return false;
+  }
+
   const oauth = params.get('oauth');
   const token = params.get('token');
   const refreshToken = params.get('refreshToken');
@@ -181,7 +189,7 @@ export const handleOAuthCallback = async (): Promise<boolean> => {
       const session: AuthSession = {
           userId: uid,
           token: token,
-          refreshToken: refreshToken || undefined,
+          refreshToken: refreshToken || '',
           expiresAt: Date.now() + (7 * 24 * 3600 * 1000)
       };
       

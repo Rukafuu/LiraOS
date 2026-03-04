@@ -357,39 +357,18 @@ const [connectionError, setConnectionError] = useState('');
   useEffect(() => {
     const currentUser = getCurrentUser();
     const authenticated = isAuthenticated();
-    // OAuth callback handling
+
+    // OAuth error handling (e.g. ?error=account_creation_failed)
     try {
       const usp = new URLSearchParams(window.location.search);
-      const oauth = usp.get('oauth');
-      const token = usp.get('token');
-      const email = usp.get('email');
-      const name = usp.get('name');
-      const uid = usp.get('uid');
-      const refreshToken = usp.get('refreshToken');
-      if (oauth && token && (email || uid)) {
-        const userObj = {
-          id: uid || `user_${Date.now()}`,
-          email: String(email || '').toLowerCase(),
-          username: name || (email ? String(email).split('@')[0] : 'User'),
-          password: '',
-          createdAt: Date.now(),
-          lastLogin: Date.now(),
-          profile: {}
-        };
-        try {
-          localStorage.setItem('lira_current_user', JSON.stringify(userObj));
-          localStorage.setItem('lira_session', JSON.stringify({
-            userId: userObj.id,
-            token,
-            refreshToken,
-            expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000
-          }));
-        } catch { }
+      const error = usp.get('error');
+      if (error) {
+        console.error('[OAuth] Error from backend:', error);
         // Clean URL
-        const cleanUrl = window.location.origin + window.location.pathname;
-        window.history.replaceState({}, document.title, cleanUrl);
+        window.history.replaceState({}, document.title, window.location.origin + window.location.pathname);
       }
     } catch { }
+
     if (currentUser && authenticated) {
       setUsername(currentUser.username);
       setIsLoggedIn(true);
