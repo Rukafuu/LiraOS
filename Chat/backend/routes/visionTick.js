@@ -87,7 +87,7 @@ Máximo 15 palavras, SEM TIMIDEZ, COM EMOÇÃO!
         }
 
         // Gemini Vision Analysis
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
         const result = await model.generateContent([
             prompt,

@@ -896,7 +896,7 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
           console.log('[ADMIN] Sending follow-up request with tool output...');
 
           // Follow up request (Non-streaming for safety)
-          const finalRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`, {
+          const finalRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
