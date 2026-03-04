@@ -254,27 +254,26 @@ export const award = async (userId, rewards, plan = 'free') => {
 
 export const getLeaderboard = async () => {
   try {
-    // Manual join to avoid schema dependency for now
     const topGamers = await prisma.gamification.findMany({
       where: { level: { lt: 50 } },
       orderBy: { xp: 'desc' },
-      take: 10
+      take: 10,
+      include: {
+        user: {
+          select: { username: true, avatar: true }
+        }
+      }
     });
     
-    // Fetch users
     const results = [];
     for (const g of topGamers) {
-      const user = await prisma.user.findUnique({
-        where: { id: g.userId },
-        select: { username: true, avatar: true }
-      });
-      if (user) {
+      if (g.user) {
         results.push({
           userId: g.userId,
           xp: g.xp,
           level: g.level,
-          username: user.username,
-          avatar: user.avatar
+          username: g.user.username,
+          avatar: g.user.avatar
         });
       }
     }
