@@ -107,6 +107,20 @@ export const saveState = async (userId, data) => {
     const existing = await getState(userId);
     const now = Date.now();
     
+    // Verify user exists in DB before upsert (prevents FK violation for Guest/local IDs)
+    if (!existing) {
+      const userExists = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+      if (!userExists) {
+        console.warn(`[Gamification] User ${userId} not found in DB — returning default state (no save)`);
+        return {
+          userId, xp: data.xp || 0, coins: data.coins || 0, level: data.level || 1,
+          stats: data.stats || {}, unlockedThemes: data.unlockedThemes || [],
+          unlockedPersonas: data.unlockedPersonas || [], achievements: data.achievements || [],
+          activePersonaId: data.activePersonaId || 'default', updatedAt: now
+        };
+      }
+    }
+
     // Construct data
     const upsertData = {
       xp: data.xp !== undefined ? data.xp : (existing?.xp || 0),
