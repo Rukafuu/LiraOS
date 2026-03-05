@@ -92,14 +92,51 @@ export const MessageList: React.FC<MessageListProps> = ({
   const [atBottom, setAtBottom] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
 
-
-
-  const suggestions = [
+  // Dynamic suggestion pools — picks random ones per session
+  const allSuggestions = [
+    // Code
     { icon: Code, text: "Write a React hook for fetching data", label: "Code" },
+    { icon: Code, text: "Create a responsive navbar in CSS", label: "Code" },
+    { icon: Code, text: "Build a REST API with Express.js", label: "Code" },
+    { icon: Code, text: "Write a Python script to scrape data", label: "Code" },
+    { icon: Code, text: "Create a to-do app with local storage", label: "Code" },
+    // Creative
     { icon: Pencil, text: "Write a cyberpunk story intro", label: "Creative" },
+    { icon: Pencil, text: "Write a haiku about artificial intelligence", label: "Creative" },
+    { icon: Pencil, text: "Create a rap verse about coding", label: "Creative" },
+    { icon: Pencil, text: "Write a love letter from a robot", label: "Creative" },
+    { icon: Pencil, text: "Imagine a dialogue between Einstein and Tesla", label: "Creative" },
+    // Learn
     { icon: Lightbulb, text: "Explain quantum computing simply", label: "Learn" },
+    { icon: Lightbulb, text: "How does blockchain actually work?", label: "Learn" },
+    { icon: Lightbulb, text: "What are black holes made of?", label: "Learn" },
+    { icon: Lightbulb, text: "Explain neural networks like I'm 10", label: "Learn" },
+    { icon: Lightbulb, text: "How does the internet actually work?", label: "Learn" },
+    // Plan
     { icon: Compass, text: "Plan a trip to Neo Tokyo", label: "Plan" },
+    { icon: Compass, text: "Design a workout routine for beginners", label: "Plan" },
+    { icon: Compass, text: "Create a study plan for learning Japanese", label: "Plan" },
+    { icon: Compass, text: "Plan a surprise birthday party", label: "Plan" },
+    { icon: Compass, text: "Help me organize my week", label: "Plan" },
+    // Fun
+    { icon: Compass, text: "Tell me the most interesting fact you know", label: "Fun" },
+    { icon: Pencil, text: "Give me a riddle to solve", label: "Fun" },
+    { icon: Lightbulb, text: "What's a mind-blowing science fact?", label: "Fun" },
+    { icon: Code, text: "Generate a random password and explain why it's secure", label: "Fun" },
   ];
+
+  const [suggestions] = useState(() => {
+    // Pick one from each primary category, then fill remaining slot randomly
+    const categories = ['Code', 'Creative', 'Learn', 'Plan'];
+    const picked: typeof allSuggestions = [];
+    
+    for (const cat of categories) {
+      const pool = allSuggestions.filter(s => s.label === cat);
+      picked.push(pool[Math.floor(Math.random() * pool.length)]);
+    }
+    
+    return picked;
+  });
 
   return (
     <div className="flex-1 px-2 md:px-0 relative min-h-0">

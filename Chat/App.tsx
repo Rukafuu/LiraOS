@@ -165,8 +165,10 @@ const LiraAppContent = () => {
         window.history.replaceState({}, document.title, window.location.pathname);
         const user = getCurrentUser();
         setIsLoggedIn(true);
-        // If fresh user (loginCount <= 1), show onboarding
-        if (user && user.loginCount <= 1) {
+        // Show onboarding only if NEVER seen before (global + per-user check)
+        const globalSeen = localStorage.getItem('lira_onboarding_seen');
+        const userSeen = user ? localStorage.getItem(`lira_onboarding_seen_${user.id}`) : null;
+        if (!globalSeen && !userSeen) {
           setShowOnboarding(true);
         }
       }
@@ -619,6 +621,8 @@ const [connectionError, setConnectionError] = useState('');
 
   const handleOnboardingComplete = () => {
     setShowOnboarding(false);
+    // Mark as seen globally AND per-user to prevent re-showing
+    localStorage.setItem('lira_onboarding_seen', 'true');
     const currentUser = getCurrentUser();
     if (currentUser?.id) {
       localStorage.setItem(`lira_onboarding_seen_${currentUser.id}`, 'true');
