@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MessageSquare, Search, Settings, X, Trash2, Sparkles, Command, LayoutGrid, ShoppingBag, Keyboard, Shield, Video, Crown, Gamepad2, Gift, CheckSquare, Calendar, Heart } from 'lucide-react';
+import { Plus, MessageSquare, Search, Settings, X, Trash2, Sparkles, Command, LayoutGrid, ShoppingBag, Keyboard, Shield, Video, Crown, Gamepad2, Gift, CheckSquare, Calendar, Heart, Bell } from 'lucide-react';
 import { ChatSession } from '../types';
 import { LIRA_AVATAR } from '../constants';
 import { getCurrentUser } from '../services/userService';
 import { useTranslation } from 'react-i18next';
 import { FeedbackModal } from './FeedbackModal';
 import { SystemStatus } from './SystemStatus';
+import { useChangelogBadge } from './WhatsNewModal';
 
 interface SidebarProps {
     sessions: ChatSession[];
@@ -29,6 +30,7 @@ interface SidebarProps {
     onOpenCalendar: () => void;
     onOpenTraePanel: () => void;
     onOpenPricing: () => void;
+    onOpenWhatsNew: () => void;
     isOpen: boolean;
     onCloseMobile: () => void;
 }
@@ -54,6 +56,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onOpenCalendar,
     onOpenTraePanel,
     onOpenPricing,
+    onOpenWhatsNew,
     isOpen,
     onCloseMobile
 }) => {
@@ -62,6 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     const [isMobile, setIsMobile] = useState(false);
     const [currentUser, setCurrentUser] = useState(getCurrentUser());
     const [showFeedback, setShowFeedback] = useState(false);
+    const { hasNew: hasNewChangelog } = useChangelogBadge();
     /* Footer Auto-Expand Logic */
     const [isFooterExpanded, setIsFooterExpanded] = useState(false);
     const [isItemsExpanded, setIsItemsExpanded] = useState(false);
@@ -225,6 +229,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                                 </svg>
                                             </div>
                                             <span className="text-sm">{t('sidebar.discord_hub')}</span>
+                                        </button>
+
+                                        <button onClick={onOpenWhatsNew} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group relative">
+                                            <Bell size={16} className="text-cyan-400 group-hover:scale-110 transition-transform" />
+                                            <span className="text-sm">What's New</span>
+                                            {hasNewChangelog && (
+                                                <span className="absolute right-3 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                                            )}
                                         </button>
 
                                         <button onClick={onOpenSupporters} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">

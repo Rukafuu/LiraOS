@@ -9,6 +9,7 @@ const DashboardModal = React.lazy(() => import('./components/DashboardModal').th
 const CalendarApp = React.lazy(() => import('./components/CalendarApp').then(m => ({ default: m.CalendarApp })));
 const StoreModal = React.lazy(() => import('./components/StoreModal').then(m => ({ default: m.StoreModal })));
 const PricingModal = React.lazy(() => import('./components/PricingModal').then(m => ({ default: m.PricingModal })));
+const WhatsNewModal = React.lazy(() => import('./components/WhatsNewModal').then(m => ({ default: m.WhatsNewModal })));
 const TodoPanel = React.lazy(() => import('./components/TodoPanel').then(m => ({ default: m.TodoPanel })));
 import { BootSequence } from './components/ui/BootSequence';
 import { LoginScreen } from './components/LoginScreen';
@@ -194,6 +195,7 @@ const LiraAppContent = () => {
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isStoreOpen, setIsStoreOpen] = useState(false);
   const [isPricingOpen, setIsPricingOpen] = useState(false);
+  const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isCookieModalOpen, setIsCookieModalOpen] = useState(false);
   const [isGamerOpen, setIsGamerOpen] = useState(false);
@@ -1240,6 +1242,7 @@ const [connectionError, setConnectionError] = useState('');
         onOpenCalendar={() => setIsCalendarOpen(true)}
         onOpenTraePanel={() => setIsTraePanelOpen(true)}
         onOpenPricing={() => setIsPricingOpen(true)}
+        onOpenWhatsNew={() => setIsWhatsNewOpen(true)}
         isOpen={isSidebarOpen}
         onCloseMobile={() => setIsSidebarOpen(false)}
       />
@@ -1445,6 +1448,10 @@ const [connectionError, setConnectionError] = useState('');
           isOpen={isPricingOpen}
           onClose={() => setIsPricingOpen(false)}
           currentPlan={stats.plan || 'free'}
+        />
+        <WhatsNewModal
+          isOpen={isWhatsNewOpen}
+          onClose={() => setIsWhatsNewOpen(false)}
         />
         <ShortcutsModal
           isOpen={isShortcutsOpen}

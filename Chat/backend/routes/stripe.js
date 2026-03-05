@@ -5,18 +5,21 @@ import { requireAuth } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
-// Init Stripe
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
-const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://liraos-production.up.railway.app';
-
+// Lazy Stripe init — env vars may not be loaded at import time
 let stripe = null;
-if (STRIPE_SECRET_KEY) {
-    stripe = new Stripe(STRIPE_SECRET_KEY);
-    console.log('[STRIPE] Payment system initialized');
-} else {
-    console.warn('[STRIPE] STRIPE_SECRET_KEY not set — payments disabled');
+function getStripe() {
+    if (stripe) return stripe;
+    const key = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_KEY;
+    if (key) {
+        stripe = new Stripe(key);
+        console.log('[STRIPE] ✅ Payment system initialized (lazy)');
+    } else {
+        console.warn('[STRIPE] ⚠️ No STRIPE_SECRET_KEY found in env');
+    }
+    return stripe;
 }
+
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://liraos-production.up.railway.app';
 
 // ─────────────────────────────────────────
 // TIER DEFINITIONS
@@ -97,7 +100,8 @@ router.get('/tiers', (req, res) => {
 // Auth: Create a Stripe Checkout session
 // ─────────────────────────────────────────
 router.post('/create-checkout', requireAuth, async (req, res) => {
-    if (!stripe) return res.status(503).json({ error: 'Payment system not configured' });
+    const s = getStripe();
+    if (!s) return res.status(503).json({ error: 'Payment system not configured' });
 
     const userId = req.userId;
     const { tier, currency = 'usd' } = req.body;
@@ -123,7 +127,7 @@ router.post('/create-checkout', requireAuth, async (req, res) => {
         let customerId = user.stripeCustomerId;
         
         if (!customerId) {
-            const customer = await stripe.customers.create({
+            const customer = await s.customers.create({
                 email: user.email,
                 metadata: {
                     liraos_user_id: userId,
@@ -137,7 +141,7 @@ router.post('/create-checkout', requireAuth, async (req, res) => {
         // Determine price based on currency
         const unitAmount = currency === 'brl' ? tierData.priceBRL : tierData.priceUSD;
 
-        const session = await stripe.checkout.sessions.create({
+        const session = await s.checkout.sessions.create({
             customer: customerId,
             mode: 'subscription',
             payment_method_types: currency === 'brl' 
@@ -186,7 +190,8 @@ router.post('/create-checkout', requireAuth, async (req, res) => {
 // Auth: Open Stripe Customer Portal (manage subscription)
 // ─────────────────────────────────────────
 router.post('/customer-portal', requireAuth, async (req, res) => {
-    if (!stripe) return res.status(503).json({ error: 'Payment system not configured' });
+    const s = getStripe();
+    if (!s) return res.status(503).json({ error: 'Payment system not configured' });
 
     const userId = req.userId;
     const user = await getUserById(userId);
@@ -196,7 +201,7 @@ router.post('/customer-portal', requireAuth, async (req, res) => {
     }
 
     try {
-        const portalSession = await stripe.billingPortal.sessions.create({
+        const portalSession = await s.billingPortal.sessions.create({
             customer: user.stripeCustomerId,
             return_url: FRONTEND_URL
         });
@@ -213,7 +218,8 @@ router.post('/customer-portal', requireAuth, async (req, res) => {
 // Auth: Check current subscription status
 // ─────────────────────────────────────────
 router.get('/status', requireAuth, async (req, res) => {
-    if (!stripe) return res.status(503).json({ error: 'Payment system not configured' });
+    const s = getStripe();
+    if (!s) return res.status(503).json({ error: 'Payment system not configured' });
 
     const userId = req.userId;
     const user = await getUserById(userId);
@@ -231,7 +237,7 @@ router.get('/status', requireAuth, async (req, res) => {
     // If user has a Stripe customer, check active subscriptions
     if (user.stripeCustomerId) {
         try {
-            const subscriptions = await stripe.subscriptions.list({
+            const subscriptions = await s.subscriptions.list({
                 customer: user.stripeCustomerId,
                 status: 'active',
                 limit: 1
@@ -259,15 +265,17 @@ router.get('/status', requireAuth, async (req, res) => {
 // Stripe webhook (no auth, verified by signature)
 // ─────────────────────────────────────────
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-    if (!stripe) return res.status(503).send('Not configured');
+    const s = getStripe();
+    if (!s) return res.status(503).send('Not configured');
 
     let event;
 
     // Verify webhook signature
+    const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
     if (STRIPE_WEBHOOK_SECRET) {
         try {
             const sig = req.headers['stripe-signature'];
-            event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
+            event = s.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
         } catch (err) {
             console.error('[STRIPE] Webhook signature failed:', err.message);
             return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -300,7 +308,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
                 const customerId = subscription.customer;
 
                 // Find user by stripeCustomerId
-                const customer = await stripe.customers.retrieve(customerId);
+                const customer = await s.customers.retrieve(customerId);
                 const userId = customer.metadata?.liraos_user_id;
 
                 if (userId) {
@@ -319,7 +327,7 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
                 const subscription = event.data.object;
                 const customerId = subscription.customer;
 
-                const customer = await stripe.customers.retrieve(customerId);
+                const customer = await s.customers.retrieve(customerId);
                 const userId = customer.metadata?.liraos_user_id;
 
                 if (userId) {
