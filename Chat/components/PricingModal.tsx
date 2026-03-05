@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Check, Crown, Zap, Star, Gem, ExternalLink, Loader2 } from 'lucide-react';
 import { getAuthHeaders } from '../services/userService';
+import LiraLogo from '../assets/liralogo.png';
 
 const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
 
@@ -140,7 +141,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, cur
           <div className="sticky top-0 z-10 bg-[#0a0a12]/95 backdrop-blur-lg border-b border-white/5 p-6 flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold text-white flex items-center gap-2">
-                <Sparkles className="text-purple-400" size={24} />
+                <img src={LiraLogo} alt="Lira" className="w-7 h-7 object-contain" />
                 LiraOS Premium
               </h2>
               <p className="text-sm text-gray-400 mt-1">
