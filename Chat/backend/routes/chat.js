@@ -925,35 +925,58 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
           // Log result internally but do not show raw JSON to user to avoid UI clutter
           console.log(`[ADMIN] Tool Output (Hidden from UI):`, typeof functionResult === 'object' ? JSON.stringify(functionResult).substring(0, 100) + '...' : functionResult);
 
-          console.log('[ADMIN] Sending follow-up request with tool output...');
-
-          // Follow up request with retry (Non-streaming for safety)
-          const finalRes = await geminiWithRetry(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-            {
-              contents: [
-                ...contents,
-                { role: 'model', parts: [{ functionCall }] },
-                { role: 'function', parts: [{ functionResponse: { name: functionCall.name, response: functionResult } }] }
-              ],
-              system_instruction: { parts: [{ text: adminSystemPrompt }] }
+          // OPTIMIZATION: Skip follow-up Gemini call for tools that don't need contextual AI response
+          // This halves API usage and avoids 429 rate limits
+          const skipFollowUp = ['generate_image', 'get_user_stats', 'get_system_stats'];
+          
+          if (skipFollowUp.includes(functionCall.name)) {
+            console.log(`[ADMIN] ⚡ Skipping follow-up for ${functionCall.name} (pre-defined response)`);
+            
+            const quickResponses = {
+              'generate_image': '', // Widget already sent, no text needed
+              'get_user_stats': functionResult.error 
+                ? `Não consegui carregar suas stats: ${functionResult.error}` 
+                : `📊 Suas stats:\n- **XP:** ${functionResult.xp}\n- **Coins:** ${functionResult.coins}\n- **Level:** ${functionResult.level}`,
+              'get_system_stats': functionResult.error
+                ? `Erro ao obter stats do sistema: ${functionResult.error}`
+                : `🖥️ **Sistema:**\n${Object.entries(functionResult).map(([k, v]) => `- **${k}:** ${v}`).join('\n')}`
+            };
+            
+            const quickText = quickResponses[functionCall.name];
+            if (quickText) {
+              res.write(`data: ${JSON.stringify({ content: quickText })}\n\n`);
             }
-          );
+          } else {
+            console.log('[ADMIN] Sending follow-up request with tool output...');
 
-          console.log(`[ADMIN] Follow-up status: ${finalRes.status}`);
+            // Follow up request with retry (Non-streaming for safety)
+            const finalRes = await geminiWithRetry(
+              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+              {
+                contents: [
+                  ...contents,
+                  { role: 'model', parts: [{ functionCall }] },
+                  { role: 'function', parts: [{ functionResponse: { name: functionCall.name, response: functionResult } }] }
+                ],
+                system_instruction: { parts: [{ text: adminSystemPrompt }] }
+              }
+            );
 
-          if (!finalRes.ok) {
-            const errText = await finalRes.text();
-            console.error('[ADMIN] Follow-up Error:', errText);
-          }
+            console.log(`[ADMIN] Follow-up status: ${finalRes.status}`);
 
-          const finalData = await finalRes.json();
-          const finalText = finalData.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!finalRes.ok) {
+              const errText = await finalRes.text();
+              console.error('[ADMIN] Follow-up Error:', errText);
+            }
 
-          console.log(`[ADMIN] Final text length: ${finalText ? finalText.length : 0}`);
+            const finalData = await finalRes.json();
+            const finalText = finalData.candidates?.[0]?.content?.parts?.[0]?.text;
 
-          if (finalText) {
-            res.write(`data: ${JSON.stringify({ content: finalText })}\n\n`);
+            console.log(`[ADMIN] Final text length: ${finalText ? finalText.length : 0}`);
+
+            if (finalText) {
+              res.write(`data: ${JSON.stringify({ content: finalText })}\n\n`);
+            }
           }
 
         } else {

@@ -10,7 +10,7 @@ class AgentBrain extends EventEmitter {
         super();
         this.gemini = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
         this.lastThoughtTime = 0;
-        this.minInterval = 20000; // Mínimo 20s entre pensamentos para não floodar
+        this.minInterval = 60000; // Mínimo 60s entre pensamentos para não floodar
         this.cooldown = false;
     }
 
@@ -37,7 +37,7 @@ class AgentBrain extends EventEmitter {
 
             console.log(`[BRAIN] 🧠 Thinking... (Trigger: ${triggerSource})`);
 
-            const model = this.gemini.getGenerativeModel({ model: "gemini-2.0-flash-lite-preview-02-05" });
+            const model = this.gemini.getGenerativeModel({ model: "gemini-2.0-flash" });
             
             const systemPrompt = `
             Você é a mente da Lira, uma assistente virtual fofa, inteligente e um pouco atrevida.
