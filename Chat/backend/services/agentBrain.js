@@ -37,7 +37,7 @@ class AgentBrain extends EventEmitter {
 
             console.log(`[BRAIN] 🧠 Thinking... (Trigger: ${triggerSource})`);
 
-            const model = this.gemini.getGenerativeModel({ model: "gemini-2.0-flash" });
+            const model = this.gemini.getGenerativeModel({ model: "gemini-1.5-flash-8b" });
             
             const systemPrompt = `
             Você é a mente da Lira, uma assistente virtual fofa, inteligente e um pouco atrevida.

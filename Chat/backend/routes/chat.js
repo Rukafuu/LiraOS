@@ -949,9 +949,9 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
           } else {
             console.log('[ADMIN] Sending follow-up request with tool output...');
 
-            // Follow up request with retry (Non-streaming for safety)
+            // Follow up request with retry — uses LIGHTER model (separate rate limit bucket)
             const finalRes = await geminiWithRetry(
-              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
               {
                 contents: [
                   ...contents,
