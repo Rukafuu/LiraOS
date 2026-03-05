@@ -158,6 +158,10 @@ router.get('/google/callback', async (req, res) => {
     }
     
     // Exchange code for access token
+    const redirectUri = `${OAUTH_REDIRECT_BASE}/api/auth/google/callback`;
+    console.log(`[OAuth Google] Token exchange with redirect_uri: ${redirectUri}`);
+    console.log(`[OAuth Google] Client ID present: ${!!GOOGLE_CLIENT_ID}, Secret present: ${!!GOOGLE_CLIENT_SECRET}`);
+    
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -165,13 +169,14 @@ router.get('/google/callback', async (req, res) => {
         code,
         client_id: GOOGLE_CLIENT_ID,
         client_secret: GOOGLE_CLIENT_SECRET,
-        redirect_uri: `${OAUTH_REDIRECT_BASE}/api/auth/google/callback`,
+        redirect_uri: redirectUri,
         grant_type: 'authorization_code'
       })
     });
     
     if (!tokenRes.ok) {
-      console.error('[OAuth Google] Token exchange failed');
+      const errBody = await tokenRes.text();
+      console.error('[OAuth Google] Token exchange failed:', tokenRes.status, errBody);
       return res.status(401).send('Token exchange failed');
     }
     
@@ -264,7 +269,7 @@ router.get('/github/init', (req, res) => {
   const state = Buffer.from(JSON.stringify(stateObj)).toString('base64url');
   const params = {
     client_id: GITHUB_CLIENT_ID,
-    redirect_uri: `${OAUTH_REDIRECT_BASE}/api/auth/github/callback`,
+    redirect_uri: `${OAUTH_REDIRECT_BASE}/auth/github/callback`,
     scope: 'read:user user:email',
     state
   };
@@ -292,7 +297,7 @@ router.get('/github/callback', async (req, res) => {
         code,
         client_id: GITHUB_CLIENT_ID,
         client_secret: GITHUB_CLIENT_SECRET,
-        redirect_uri: `${OAUTH_REDIRECT_BASE}/api/auth/github/callback`
+        redirect_uri: `${OAUTH_REDIRECT_BASE}/auth/github/callback`
       })
     });
     
@@ -398,7 +403,7 @@ router.get('/patreon/init', (req, res) => {
   const state = Buffer.from(JSON.stringify(stateObj)).toString('base64url');
   const params = {
     client_id: PATREON_CLIENT_ID,
-    redirect_uri: `${OAUTH_REDIRECT_BASE}/api/auth/patreon/callback`,
+    redirect_uri: `${OAUTH_REDIRECT_BASE}/auth/patreon/callback`,
     response_type: 'code',
     scope: 'identity identity[email] identity.memberships',
     state
@@ -427,7 +432,7 @@ router.get('/patreon/callback', async (req, res) => {
         code,
         client_id: PATREON_CLIENT_ID,
         client_secret: PATREON_CLIENT_SECRET,
-        redirect_uri: `${OAUTH_REDIRECT_BASE}/api/auth/patreon/callback`,
+        redirect_uri: `${OAUTH_REDIRECT_BASE}/auth/patreon/callback`,
         grant_type: 'authorization_code'
       })
     });

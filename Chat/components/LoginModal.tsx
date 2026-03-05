@@ -137,8 +137,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogge
   const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
   const oauth = {
     google: `${backendUrl}/api/auth/google/init?return_to=${encodeURIComponent(origin)}`,
-    github: `${backendUrl}/api/auth/github/init?return_to=${encodeURIComponent(origin)}`,
-    patreon: `${backendUrl}/api/auth/patreon/init?return_to=${encodeURIComponent(origin)}`
+    github: `${backendUrl}/auth/github/init?return_to=${encodeURIComponent(origin)}`,
+    patreon: `${backendUrl}/auth/patreon/init?return_to=${encodeURIComponent(origin)}`
   };
 
   return (
