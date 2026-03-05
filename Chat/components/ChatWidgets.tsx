@@ -226,6 +226,7 @@ const GeneratingImageWidget: React.FC<{ prompt: string }> = ({ prompt }) => {
 const SmartProgressiveWidget: React.FC<{ jobId: string; prompt: string }> = ({ jobId, prompt }) => {
   const [status, setStatus] = React.useState<'idle' | 'generating' | 'ready' | 'error'>('generating');
   const [finalSrc, setFinalSrc] = React.useState<string | undefined>(undefined);
+  const notFoundCount = React.useRef(0);
 
   React.useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -233,7 +234,7 @@ const SmartProgressiveWidget: React.FC<{ jobId: string; prompt: string }> = ({ j
 
     const poll = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/images/${jobId}`, {
+        const res = await fetch(`${API_BASE_URL}/api/images/${jobId}?_t=${Date.now()}`, {
            headers: getAuthHeaders(),
            cache: 'no-cache' // Prevent caching
         });
@@ -252,7 +253,15 @@ const SmartProgressiveWidget: React.FC<{ jobId: string; prompt: string }> = ({ j
            }
         } else {
             if (res.status === 404) {
-                 // Job might be expired or invalid
+                 notFoundCount.current += 1;
+                 console.log(`[POLL] Job ${jobId} not found (404), attempt ${notFoundCount.current}/5`);
+                 if (notFoundCount.current >= 5) {
+                     // Job clearly doesn't exist after 5 seconds
+                     setStatus('error');
+                     clearInterval(interval);
+                 }
+            } else {
+                 // Outros erros (500, etc) aborta direto
                  setStatus('error');
                  clearInterval(interval);
             }

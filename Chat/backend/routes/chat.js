@@ -945,7 +945,7 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
 
           // OPTIMIZATION: Skip follow-up Gemini call for tools that don't need contextual AI response
           // This halves API usage and avoids 429 rate limits
-          const skipFollowUp = ['generate_image', 'get_user_stats', 'get_system_stats'];
+          const skipFollowUp = ['generate_image', 'get_user_stats', 'get_system_stats', 'execute_system_command', 'organize_folder'];
           
           if (skipFollowUp.includes(functionCall.name)) {
             console.log(`[ADMIN] ⚡ Skipping follow-up for ${functionCall.name} (pre-defined response)`);
@@ -957,7 +957,13 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                 : `📊 Suas stats:\n- **XP:** ${functionResult.xp}\n- **Coins:** ${functionResult.coins}\n- **Level:** ${functionResult.level}`,
               'get_system_stats': functionResult.error
                 ? `Erro ao obter stats do sistema: ${functionResult.error}`
-                : `🖥️ **Sistema:**\n${Object.entries(functionResult).map(([k, v]) => `- **${k}:** ${v}`).join('\n')}`
+                : `🖥️ **Sistema:**\n${Object.entries(functionResult).map(([k, v]) => `- **${k}:** ${v}`).join('\n')}`,
+              'execute_system_command': functionResult.error
+                ? `\n> ❌ **Aviso Local:** ${functionResult.error}\n`
+                : `\n> ✅ **Executando:** \`${functionCall.args.command || 'comando'}\`\n`,
+              'organize_folder': functionResult.error
+                ? `\n> ❌ **Erro ao organizar pasta:** ${functionResult.error}\n`
+                : `\n> ✅ **Ação em andamento:** Organizando pastas locais...\n`
             };
             
             const quickText = quickResponses[functionCall.name];
