@@ -32,6 +32,7 @@ import imagesRoutes from './routes/images.js';
 import todosRoutes from './routes/todos.js';
 import googleAuthRoutes from './routes/authGoogle.js';
 import traeRoutes from './routes/trae.js';
+import stripeRoutes from './routes/stripe.js';
 
 // Services & Utils
 import { discordService } from './services/discordService.js';
@@ -69,6 +70,10 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// Stripe webhook needs raw body (before JSON parser)
+app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
+
 app.use(express.json({ limit: '50mb' }));
 
 // Debug Middleware (Less verbose in Production)
@@ -133,6 +138,7 @@ app.use('/api/auth/google', googleAuthRoutes);
 import whatsappHook from './routes/whatsappHook.js';
 app.use('/api/webhook/whatsapp', whatsappHook);
 app.use('/api/trae', traeRoutes);
+app.use('/api/stripe', stripeRoutes);
 
 // Generic fallback (must be last)
 app.use('/api', chatRoutes);

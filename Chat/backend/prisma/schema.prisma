@@ -27,6 +27,7 @@ model User {
   githubToken        String?       @map("github_token")
   githubOwner        String?       @map("github_owner")
   githubRepo         String?       @map("github_repo")
+  stripeCustomerId   String?       @unique @map("stripe_customer_id")
 
   @@map("users")
 }

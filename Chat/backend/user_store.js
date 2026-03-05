@@ -22,7 +22,8 @@ function mapUser(user) {
     discordId: user.discordId,
     githubToken: user.githubToken,
     githubOwner: user.githubOwner,
-    githubRepo: user.githubRepo
+    githubRepo: user.githubRepo,
+    stripeCustomerId: user.stripeCustomerId
   };
 }
 
@@ -146,6 +147,7 @@ export async function updateUser(userId, updates) {
     if (updates.loginCount !== undefined) prismaData.loginCount = updates.loginCount;
     if (updates.warnings !== undefined) prismaData.warnings = updates.warnings;
     if (updates.isBanned !== undefined) prismaData.isBanned = updates.isBanned;
+    if (updates.stripeCustomerId !== undefined) prismaData.stripeCustomerId = updates.stripeCustomerId;
     if (updates.preferences !== undefined) prismaData.preferencesStr = typeof updates.preferences === 'string' ? updates.preferences : JSON.stringify(updates.preferences);
 
     const updated = await prisma.user.update({
