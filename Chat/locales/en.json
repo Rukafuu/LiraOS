@@ -34,7 +34,9 @@
     "discord_hub": "Discord",
     "shortcuts_title": "Keyboard Shortcuts (Cmd+/)",
     "legal": "Legal & Privacy",
-    "supporters": "Supporters"
+    "supporters": "Supporters",
+    "premium": "Premium",
+    "whats_new": "What's New"
   },
   "common": {
     "search": "Search"
@@ -312,5 +314,29 @@
       "disclaimer_text": "Lira is still learning and can make mistakes. Please verify important information.",
       "important_info": "Important Information",
       "cookies": "Cookie Preferences"
+  },
+  "pricing": {
+    "title": "LiraOS Premium",
+    "subtitle": "Unlock the full power of Lira",
+    "current": "Current",
+    "subscribe": "Subscribe",
+    "manage_plan": "Manage Plan",
+    "redirecting": "Redirecting...",
+    "most_popular": "Most Popular",
+    "per_month": "/mo",
+    "secure_payment": "Secure payment powered by Stripe. Cancel anytime.",
+    "manage_subscription": "Manage your subscription",
+    "currency_brl": "R$ BRL",
+    "currency_usd": "$ USD"
+  },
+  "whats_new": {
+    "title": "What's New",
+    "subtitle": "Latest updates & improvements",
+    "latest": "Latest",
+    "built_with": "LiraOS • Built with 💜",
+    "type_feature": "New",
+    "type_fix": "Fix",
+    "type_improvement": "Improved",
+    "type_security": "Security"
   }
 }

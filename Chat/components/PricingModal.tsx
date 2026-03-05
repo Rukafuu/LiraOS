@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Check, Crown, Zap, Star, Gem, ExternalLink, Loader2 } from 'lucide-react';
 import { getAuthHeaders } from '../services/userService';
 import LiraLogo from '../assets/liralogo.png';
+import { useTranslation } from 'react-i18next';
 
 const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
 
@@ -50,6 +51,7 @@ const TIER_STYLES: Record<string, { icon: React.ReactNode; gradient: string; glo
 };
 
 export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, currentPlan = 'free' }) => {
+  const { t } = useTranslation();
   const [tiers, setTiers] = useState<TierData[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkingOut, setCheckingOut] = useState<string | null>(null);
@@ -142,13 +144,13 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, cur
             <div>
               <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                 <img src={LiraLogo} alt="Lira" className="w-7 h-7 object-contain" />
-                LiraOS Premium
+                {t('pricing.title')}
               </h2>
               <p className="text-sm text-gray-400 mt-1">
-                Unlock the full power of Lira
+                {t('pricing.subtitle')}
                 {currentPlan !== 'free' && (
                   <span className="ml-2 px-2 py-0.5 bg-purple-500/20 text-purple-300 rounded-full text-xs uppercase">
-                    Current: {currentPlan}
+                    {t('pricing.current')}: {currentPlan}
                   </span>
                 )}
               </p>
@@ -162,7 +164,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, cur
                     currency === 'brl' ? 'bg-green-500/20 text-green-300' : 'text-gray-500 hover:text-gray-300'
                   }`}
                 >
-                  R$ BRL
+                  {t('pricing.currency_brl')}
                 </button>
                 <button
                   onClick={() => setCurrency('usd')}
@@ -170,7 +172,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, cur
                     currency === 'usd' ? 'bg-blue-500/20 text-blue-300' : 'text-gray-500 hover:text-gray-300'
                   }`}
                 >
-                  $ USD
+                  {t('pricing.currency_usd')}
                 </button>
               </div>
               <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white">
@@ -209,7 +211,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, cur
                       {/* Popular Badge */}
                       {isPopular && (
                         <div className={`absolute top-0 left-0 right-0 py-1 text-center text-[10px] font-bold uppercase tracking-widest bg-gradient-to-r ${style.gradient} text-white`}>
-                          Most Popular
+                          {t('pricing.most_popular')}
                         </div>
                       )}
 
@@ -224,7 +226,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, cur
                         <div className="mb-5">
                           <div className="flex items-baseline gap-1">
                             <span className="text-3xl font-black text-white">{priceFormatted}</span>
-                            <span className="text-gray-500 text-sm">/mo</span>
+                            <span className="text-gray-500 text-sm">{t('pricing.per_month')}</span>
                           </div>
                         </div>
 
@@ -245,7 +247,7 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, cur
                             className="w-full py-2.5 px-4 border border-purple-500/30 text-purple-300 rounded-xl text-sm font-medium hover:bg-purple-500/10 transition-all flex items-center justify-center gap-2"
                           >
                             <ExternalLink size={14} />
-                            Manage Plan
+                            {t('pricing.manage_plan')}
                           </button>
                         ) : (
                           <button
@@ -256,12 +258,12 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, cur
                             {checkingOut === tier.id ? (
                               <>
                                 <Loader2 className="animate-spin" size={16} />
-                                Redirecting...
+                                {t('pricing.redirecting')}
                               </>
                             ) : (
                               <>
                                 <Sparkles size={14} />
-                                Subscribe
+                                {t('pricing.subscribe')}
                               </>
                             )}
                           </button>
@@ -276,14 +278,14 @@ export const PricingModal: React.FC<PricingModalProps> = ({ isOpen, onClose, cur
             {/* Footer */}
             <div className="mt-8 text-center space-y-2">
               <p className="text-xs text-gray-500">
-                Secure payment powered by Stripe. Cancel anytime.
+                {t('pricing.secure_payment')}
               </p>
               {currentPlan !== 'free' && (
                 <button
                   onClick={handleManageSubscription}
                   className="text-xs text-purple-400 hover:text-purple-300 underline transition-colors"
                 >
-                  Manage your subscription
+                  {t('pricing.manage_subscription')}
                 </button>
               )}
             </div>

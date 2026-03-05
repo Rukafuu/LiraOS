@@ -2,15 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Bug, Zap, Shield, Bell, ChevronRight, Gift } from 'lucide-react';
 import changelog, { ChangelogEntry } from '../data/changelog';
+import { useTranslation } from 'react-i18next';
+
 
 const CHANGELOG_SEEN_KEY = 'lira_changelog_seen';
-
-const TYPE_CONFIG = {
-  feature: { icon: <Sparkles size={14} />, label: 'New', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
-  fix: { icon: <Bug size={14} />, label: 'Fix', color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/20' },
-  improvement: { icon: <Zap size={14} />, label: 'Improved', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
-  security: { icon: <Shield size={14} />, label: 'Security', color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' }
-};
 
 interface WhatsNewModalProps {
   isOpen: boolean;
@@ -18,7 +13,15 @@ interface WhatsNewModalProps {
 }
 
 export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose }) => {
+  const { t } = useTranslation();
   const [expandedVersion, setExpandedVersion] = useState<string | null>(changelog[0]?.version || null);
+
+  const TYPE_CONFIG = {
+    feature: { icon: <Sparkles size={14} />, label: t('whats_new.type_feature'), color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' },
+    fix: { icon: <Bug size={14} />, label: t('whats_new.type_fix'), color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/20' },
+    improvement: { icon: <Zap size={14} />, label: t('whats_new.type_improvement'), color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
+    security: { icon: <Shield size={14} />, label: t('whats_new.type_security'), color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' }
+  };
 
   useEffect(() => {
     if (isOpen && changelog.length > 0) {
@@ -53,8 +56,8 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
                 <Gift size={20} className="text-white" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-white">What's New</h2>
-                <p className="text-xs text-gray-500">Latest updates & improvements</p>
+                <h2 className="text-lg font-bold text-white">{t('whats_new.title')}</h2>
+                <p className="text-xs text-gray-500">{t('whats_new.subtitle')}</p>
               </div>
             </div>
             <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white">
@@ -90,7 +93,7 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold text-white">{entry.title}</span>
                         {isLatest && (
-                          <span className="text-[9px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded-full font-bold uppercase">Latest</span>
+                          <span className="text-[9px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded-full font-bold uppercase">{t('whats_new.latest')}</span>
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
@@ -141,7 +144,7 @@ export const WhatsNewModal: React.FC<WhatsNewModalProps> = ({ isOpen, onClose })
           {/* Footer */}
           <div className="p-4 border-t border-white/5 text-center">
             <p className="text-[10px] text-gray-600">
-              LiraOS • Built with 💜
+              {t('whats_new.built_with')}
             </p>
           </div>
         </motion.div>
