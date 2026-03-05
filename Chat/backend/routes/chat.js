@@ -568,43 +568,61 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
 
         let response, data, candidate, part, functionCall;
 
-        // Helper: Gemini fetch with retry for 429
-        const geminiWithRetry = async (url, body, maxRetries = 2) => {
-          for (let attempt = 0; attempt <= maxRetries; attempt++) {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000);
-            try {
-              const res = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-                signal: controller.signal
-              });
-              clearTimeout(timeoutId);
+        // Helper: Gemini cascade — tries multiple models on 429
+        const GEMINI_MODELS = [
+          'gemini-2.0-flash',
+          'gemini-2.0-flash-lite', 
+          'gemini-1.5-flash'
+        ];
 
-              if (res.status === 429 && attempt < maxRetries) {
-                const wait = (attempt + 1) * 3000; // 3s, 6s
-                console.warn(`[ADMIN] 429 Rate Limited. Retrying in ${wait}ms (attempt ${attempt + 1}/${maxRetries})...`);
-                await new Promise(r => setTimeout(r, wait));
-                continue;
+        const geminiCascade = async (body, models = GEMINI_MODELS) => {
+          let lastError = null;
+          for (const model of models) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+            
+            // Try each model with 1 retry
+            for (let attempt = 0; attempt < 2; attempt++) {
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 30000);
+              try {
+                console.log(`[ADMIN] Trying ${model}${attempt > 0 ? ` (retry ${attempt})` : ''}...`);
+                const res = await fetch(url, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(body),
+                  signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                if (res.status === 429) {
+                  console.warn(`[ADMIN] 429 on ${model}. ${attempt === 0 ? 'Retrying in 3s...' : 'Trying next model...'}`);
+                  if (attempt === 0) {
+                    await new Promise(r => setTimeout(r, 3000));
+                    continue;
+                  }
+                  lastError = new Error(`429 on ${model}`);
+                  break; // Move to next model
+                }
+                
+                console.log(`[ADMIN] ✅ ${model} responded: ${res.status}`);
+                return res;
+              } catch (e) {
+                clearTimeout(timeoutId);
+                lastError = e;
+                if (e.name === 'AbortError') break; // Timeout, skip to next model
+                if (attempt === 0) {
+                  await new Promise(r => setTimeout(r, 2000));
+                  continue;
+                }
+                break;
               }
-              return res;
-            } catch (e) {
-              clearTimeout(timeoutId);
-              if (attempt < maxRetries && e.name !== 'AbortError') {
-                await new Promise(r => setTimeout(r, 2000));
-                continue;
-              }
-              throw e;
             }
           }
+          throw lastError || new Error('All Gemini models returned 429');
         };
 
         try {
-          response = await geminiWithRetry(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-            payload
-          );
+          response = await geminiCascade(payload);
 
           console.log(`[ADMIN] Gemini Response Status: ${response.status}`);
 
@@ -949,9 +967,9 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
           } else {
             console.log('[ADMIN] Sending follow-up request with tool output...');
 
-            // Follow up request with retry — uses LIGHTER model (separate rate limit bucket)
-            const finalRes = await geminiWithRetry(
-              `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
+            // Follow-up uses cascade starting from lighter models
+            const FOLLOWUP_MODELS = ['gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+            const finalRes = await geminiCascade(
               {
                 contents: [
                   ...contents,
@@ -959,7 +977,8 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                   { role: 'function', parts: [{ functionResponse: { name: functionCall.name, response: functionResult } }] }
                 ],
                 system_instruction: { parts: [{ text: adminSystemPrompt }] }
-              }
+              },
+              FOLLOWUP_MODELS
             );
 
             console.log(`[ADMIN] Follow-up status: ${finalRes.status}`);
