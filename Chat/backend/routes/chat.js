@@ -685,18 +685,24 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
               const prompt = functionCall.args.prompt;
               const jobId = uuidv4();
 
-              // 1. Create Job in DB
-              await jobStore.create(jobId, {
-                prompt: prompt,
-                status: 'generating',
-                progress: 0,
-                createdAt: Date.now(),
-                userId: userId,
-                provider: 'gemini' // Admin uses gemini implicitly or whatever genImage uses
-              });
-
-              // 2. Emit Progressive Widget IMMEDIATELY
-              res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_image|{"jobId": "${jobId}", "prompt": "${prompt.replace(/"/g, '\\"')}"}]]\n\n` })}\n\n`);
+              // 1. Create Job in DB (Wait for it so polling doesn't 404!)
+              try {
+                await jobStore.create(jobId, {
+                  prompt: prompt,
+                  status: 'generating',
+                  progress: 0,
+                  createdAt: Date.now(),
+                  userId: userId,
+                  provider: 'gemini' 
+                });
+                
+                // 2. Emit Progressive Widget ONLY after DB confirms insertion
+                res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_image|{"jobId": "${jobId}", "prompt": "${prompt.replace(/"/g, '\\"')}"}]]\n\n` })}\n\n`);
+              } catch (dbErr) {
+                 console.error('[ADMIN_GEN] Database insertion failed:', dbErr);
+                 functionResult = { success: false, error: 'Database error preventing job creation' };
+                 break;
+              }
 
               // 3. Start Async Process (Fire & Forget)
               // 3. Start Async Process (Fire & Forget)
@@ -1367,19 +1373,26 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
                   if (isUserAdmin) userPlanLower = 'singularity';
                   const providerInfo = getProviderInfo(userPlanLower);
 
-                  // Create Job in DB
-                  const jobId = uuidv4();
-                  await jobStore.create(jobId, {
-                    prompt: finalPrompt,
-                    status: 'generating',
-                    progress: 0,
-                    createdAt: Date.now(),
-                    userId: userId,
-                    provider: providerInfo.name
-                  });
+                  // Create Job in DB and WAIT for it
+                  try {
+                    await jobStore.create(jobId, {
+                      prompt: finalPrompt,
+                      status: 'generating',
+                      progress: 0,
+                      createdAt: Date.now(),
+                      userId: userId,
+                      provider: providerInfo.name
+                    });
 
-                  // Emit Widget for Standard Mode too!
-                  res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_image|{"jobId": "${jobId}", "prompt": "${finalPrompt.replace(/"/g, '\\"')}"}]]\n\n` })}\n\n`);
+                    // Emit Widget ONLY AFTER db insertion validates!
+                    res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_image|{"jobId": "${jobId}", "prompt": "${finalPrompt.replace(/"/g, '\\"')}"}]]\n\n` })}\n\n`);
+                  } catch (dbErr) {
+                    console.error('[STD_GEN] Error inserting Job into database:', dbErr);
+                    res.write(`data: ${JSON.stringify({ content: `\n> ❌ **Erro no Servidor:** Falha ao iniciar geração (DB Error).\n\n` })}\n\n`);
+                    currentToolCall = null;
+                    toolArgsBuffer = '';
+                    continue; // Skip generation since it's not tracked
+                  }
 
                   // Start Async Gen
                   (async () => {
