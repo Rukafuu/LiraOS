@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "node server.js",
-    "start": "node scripts/migrate_github.js && node scripts/migrate_sessions.js && node server.js",
+    "start": "sh start.sh",
     "postinstall": "prisma generate"
   },
   "dependencies": {
