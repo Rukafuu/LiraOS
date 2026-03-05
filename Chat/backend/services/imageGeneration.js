@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { uploadBase64ToS3, isStorageEnabled } from './storageService.js';
 
@@ -89,42 +89,38 @@ function generateProdiaUrl(prompt, seed = Date.now()) {
 }
 
 /**
- * Generate image using Google Gemini 3
+ * Generate image using Google Gemini (Nano Banana / Imagen 3)
  */
 async function generateGeminiImage(prompt, apiKey) {
     if (!apiKey) throw new Error('Gemini API key required');
 
-    const genAI = new GoogleGenerativeAI(apiKey);
+    const ai = new GoogleGenAI({ apiKey });
     
-    // Use gemini-2.0-flash-exp with image generation support
-    const model = genAI.getGenerativeModel({ 
-        model: 'gemini-2.0-flash-exp',
-        generationConfig: {
-            responseModalities: ['TEXT', 'IMAGE']
-        }
-    });
+    console.log(`[GEMINI] Generating image (Nano Banana): "${prompt.substring(0, 60)}..."`);
+    
+    try {
+        // Nano Banana / Google Imagen 3 Model
+        const response = await ai.models.generateImages({
+            model: 'imagen-3.0-generate-001',
+            prompt: prompt,
+            config: {
+                numberOfImages: 1,
+                outputMimeType: 'image/png',
+                aspectRatio: '1:1'
+            }
+        });
 
-    console.log(`[GEMINI] Generating image: "${prompt.substring(0, 60)}..."`);
-    
-    // Prefix prompt to force image generation
-    const imagePrompt = `Generate an image: ${prompt}. Do not include any text in the image.`;
-    
-    const result = await model.generateContent(imagePrompt);
-    const response = await result.response;
-    
-    if (response.candidates && response.candidates[0]?.content?.parts) {
-        const imagePart = response.candidates[0].content.parts.find(p => p.inlineData);
-        if (imagePart) {
-            const base64 = imagePart.inlineData.data;
-            const mimeType = imagePart.inlineData.mimeType || 'image/png';
-            console.log(`[GEMINI] Image generated (${mimeType}, ${Math.round(base64.length / 1024)}KB)`);
-            return `data:${mimeType};base64,${base64}`;
+        if (response.generatedImages && response.generatedImages.length > 0) {
+            const base64 = response.generatedImages[0].image.imageBytes;
+            console.log(`[GEMINI] Nano Banana Image generated successfully (${Math.round(base64.length / 1024)}KB)`);
+            return `data:image/png;base64,${base64}`;
         }
+    } catch (error) {
+        console.error('[GEMINI] Nano Banana error:', error.message);
+        throw error;
     }
     
-    // Log response for debugging
-    console.error('[GEMINI] No image in response:', JSON.stringify(response.candidates?.[0]?.content?.parts?.map(p => p.text || '[image]') || 'empty'));
-    throw new Error('Gemini response did not contain image data');
+    throw new Error('Gemini/NanoBanana response did not contain image data');
 }
 
 /**
