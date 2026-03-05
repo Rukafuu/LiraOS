@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { uploadBase64ToS3, isStorageEnabled } from './storageService.js';
 
@@ -94,36 +94,29 @@ function generateProdiaUrl(prompt, seed = Date.now()) {
 async function generateGeminiImage(prompt, apiKey) {
     if (!apiKey) throw new Error('Gemini API key required');
 
-    const genAI = new GoogleGenerativeAI(apiKey);
+    const ai = new GoogleGenAI({ apiKey });
     
-    // Using the latest Gemini model that natively supports image generation output
-    const model = genAI.getGenerativeModel({ 
-        model: 'gemini-2.5-flash',
-        generationConfig: {
-            responseModalities: ['IMAGE']
-        }
-    });
-
-    console.log(`[GEMINI] Generating image with Gemini 2.5: "${prompt.substring(0, 60)}..."`);
-    
-    // Ask the model directly for the image
-    const imagePrompt = `Generate a high-quality image based on the following prompt: ${prompt}. Do not include any text in the image.`;
+    console.log(`[GEMINI] Generating image with Imagen 3: "${prompt.substring(0, 60)}..."`);
     
     try {
-        const result = await model.generateContent(imagePrompt);
-        const response = await result.response;
-        
-        if (response.candidates && response.candidates[0]?.content?.parts) {
-            const imagePart = response.candidates[0].content.parts.find(p => p.inlineData);
-            if (imagePart) {
-                const base64 = imagePart.inlineData.data;
-                const mimeType = imagePart.inlineData.mimeType || 'image/png';
-                console.log(`[GEMINI] Image generated successfully! (${mimeType}, ${Math.round(base64.length / 1024)}KB)`);
-                return `data:${mimeType};base64,${base64}`;
+        const response = await ai.models.generateImages({
+            model: 'imagen-3.0-generate-001',
+            prompt: prompt,
+            config: {
+                numberOfImages: 1,
+                outputMimeType: 'image/jpeg',
+                aspectRatio: '1:1'
             }
+        });
+        
+        if (response.generatedImages && response.generatedImages.length > 0) {
+            const base64 = response.generatedImages[0].image.imageBytes;
+            const mimeType = 'image/jpeg';
+            console.log(`[GEMINI] Image generated successfully! (${mimeType}, ${Math.round(base64.length / 1024)}KB)`);
+            return `data:${mimeType};base64,${base64}`;
         }
         
-        console.error('[GEMINI] No image part found in response:', JSON.stringify(response.candidates?.[0]?.content?.parts?.map(p => p.text || '[image]') || 'empty'));
+        console.error('[GEMINI] No image part found in response:', response);
     } catch (error) {
         console.error('[GEMINI] Generation error:', error.message);
         throw error;
