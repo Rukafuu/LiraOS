@@ -160,7 +160,8 @@ router.get('/google/callback', async (req, res) => {
     // Exchange code for access token
     const redirectUri = `${OAUTH_REDIRECT_BASE}/api/auth/google/callback`;
     console.log(`[OAuth Google] Token exchange with redirect_uri: ${redirectUri}`);
-    console.log(`[OAuth Google] Client ID present: ${!!GOOGLE_CLIENT_ID}, Secret present: ${!!GOOGLE_CLIENT_SECRET}`);
+    console.log(`[OAuth Google] Client ID: ${GOOGLE_CLIENT_ID ? GOOGLE_CLIENT_ID.substring(0, 10) + '...' : 'MISSING'}`);
+    console.log(`[OAuth Google] Secret: ${GOOGLE_CLIENT_SECRET ? GOOGLE_CLIENT_SECRET.substring(0, 6) + '...' + GOOGLE_CLIENT_SECRET.slice(-4) : 'MISSING'} (len=${GOOGLE_CLIENT_SECRET?.length || 0})`);
     
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
