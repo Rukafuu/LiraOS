@@ -47,10 +47,10 @@ const PROVIDERS = {
  */
 export function getProviderForTier(userTier = 'free') {
     // Gemini for ALL tiers (free API key)
-    if (process.env.GEMINI_API_KEY) {
+    if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
         return 'gemini';
     }
-    // Fallback to Pollinations only if no Gemini key
+    // Fallback to Pollinations only if no Gemini/Google key
     return 'pollinations';
 }
 
@@ -198,8 +198,8 @@ export async function generateImage(prompt, userTier = 'free', hfApiKey = null) 
         
         switch (provider) {
             case 'gemini':
-                const geminiKey = process.env.GEMINI_API_KEY;
-                if (!geminiKey) throw new Error('GEMINI_API_KEY is missing in env');
+                const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+                if (!geminiKey) throw new Error('GEMINI/GOOGLE API KEY is missing in env');
                 imageUrl = await generateGeminiImage(prompt, geminiKey);
                 isBase64 = true;
                 break;
