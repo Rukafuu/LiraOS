@@ -8,6 +8,7 @@ const SettingsModal = React.lazy(() => import('./components/SettingsModal').then
 const DashboardModal = React.lazy(() => import('./components/DashboardModal').then(m => ({ default: m.DashboardModal })));
 const CalendarApp = React.lazy(() => import('./components/CalendarApp').then(m => ({ default: m.CalendarApp })));
 const StoreModal = React.lazy(() => import('./components/StoreModal').then(m => ({ default: m.StoreModal })));
+const PricingModal = React.lazy(() => import('./components/PricingModal').then(m => ({ default: m.PricingModal })));
 const TodoPanel = React.lazy(() => import('./components/TodoPanel').then(m => ({ default: m.TodoPanel })));
 import { BootSequence } from './components/ui/BootSequence';
 import { LoginScreen } from './components/LoginScreen';
@@ -192,6 +193,7 @@ const LiraAppContent = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isStoreOpen, setIsStoreOpen] = useState(false);
+  const [isPricingOpen, setIsPricingOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isCookieModalOpen, setIsCookieModalOpen] = useState(false);
   const [isGamerOpen, setIsGamerOpen] = useState(false);
@@ -275,6 +277,7 @@ const LiraAppContent = () => {
       setIsCookieModalOpen(false);
       setIsGamerOpen(false);
       setIsDailyQuestsOpen(false);
+      setIsPricingOpen(false);
     },
     onGodMode: handleGodMode
   });
@@ -1236,6 +1239,7 @@ const [connectionError, setConnectionError] = useState('');
         onOpenTodoPanel={() => setIsTodoPanelOpen(true)}
         onOpenCalendar={() => setIsCalendarOpen(true)}
         onOpenTraePanel={() => setIsTraePanelOpen(true)}
+        onOpenPricing={() => setIsPricingOpen(true)}
         isOpen={isSidebarOpen}
         onCloseMobile={() => setIsSidebarOpen(false)}
       />
@@ -1436,6 +1440,11 @@ const [connectionError, setConnectionError] = useState('');
         <StoreModal
           isOpen={isStoreOpen}
           onClose={() => setIsStoreOpen(false)}
+        />
+        <PricingModal
+          isOpen={isPricingOpen}
+          onClose={() => setIsPricingOpen(false)}
+          currentPlan={stats.plan || 'free'}
         />
         <ShortcutsModal
           isOpen={isShortcutsOpen}

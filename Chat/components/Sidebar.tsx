@@ -28,6 +28,7 @@ interface SidebarProps {
     onOpenTodoPanel: () => void;
     onOpenCalendar: () => void;
     onOpenTraePanel: () => void;
+    onOpenPricing: () => void;
     isOpen: boolean;
     onCloseMobile: () => void;
 }
@@ -52,6 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onOpenTodoPanel,
     onOpenCalendar,
     onOpenTraePanel,
+    onOpenPricing,
     isOpen,
     onCloseMobile
 }) => {
@@ -230,6 +232,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                             <span className="text-sm">{t('sidebar.supporters')}</span>
                                         </button>
 
+                                        <button onClick={onOpenPricing} className="w-full flex items-center gap-3 p-2.5 rounded-lg bg-gradient-to-r from-yellow-500/10 to-amber-500/10 hover:from-yellow-500/20 hover:to-amber-500/20 border border-yellow-500/20 hover:border-yellow-500/40 text-yellow-300 hover:text-yellow-200 transition-all group">
+                                            <Crown size={16} className="text-yellow-400 group-hover:scale-110 transition-transform" />
+                                            <span className="text-sm font-semibold">Premium</span>
+                                            <span className="ml-auto text-[9px] bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded-full font-bold animate-pulse">NEW</span>
+                                        </button>
+
                                         {/* TRAE MODE - ADMIN ONLY */}
                                         {(currentUser?.id === 'user_1734661833589' || currentUser?.username?.toLowerCase().includes('admin')) && (
                                             <button onClick={onOpenTraePanel} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group border border-purple-500/20 hover:border-purple-500/40">
@@ -271,6 +279,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         </div>
                                         <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center hover:bg-pink-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenSupporters(); }}>
                                             <Heart size={16} className="text-pink-500" />
+                                        </div>
+                                        <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center hover:bg-yellow-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenPricing(); }}>
+                                            <Crown size={16} className="text-yellow-400" />
                                         </div>
                                     </motion.div>
                                 )}
