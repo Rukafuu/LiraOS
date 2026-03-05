@@ -1,11 +1,9 @@
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
-import { firestoreService } from './services/firestoreService.js';
+import prisma from './prismaClient.js';
 
-// Collection Names
-const USERS_COLLECTION = 'users';
-const REFRESH_TOKENS_COLLECTION = 'refreshTokens';
-const RECOVER_CODES_COLLECTION = 'recoverCodes';
+// Helper to convert BigInt to Number
+const toInt = (n) => Number(n || 0);
 
 function mapUser(user) {
   if (!user) return null;
@@ -16,17 +14,22 @@ function mapUser(user) {
     passwordHash: user.passwordHash,
     passwordSalt: user.passwordSalt || '',
     avatar: user.avatar,
-    createdAt: Number(user.createdAt),
-    lastLogin: Number(user.lastLogin || 0),
+    createdAt: toInt(user.createdAt),
+    lastLogin: toInt(user.lastLogin),
     loginCount: user.loginCount || 0,
-    preferences: user.preferences || {},
+    preferences: safeParseJSON(user.preferencesStr, {}),
     plan: user.plan || 'free',
     discordId: user.discordId,
-    // GitHub new fields
     githubToken: user.githubToken,
     githubOwner: user.githubOwner,
     githubRepo: user.githubRepo
   };
+}
+
+function safeParseJSON(str, fallback = {}) {
+  if (!str) return fallback;
+  if (typeof str === 'object') return str;
+  try { return JSON.parse(str); } catch { return fallback; }
 }
 
 async function hashPassword(password) {
@@ -34,9 +37,11 @@ async function hashPassword(password) {
   return { salt: null, hash };
 }
 
+// ─────── USER CRUD (Prisma/PostgreSQL) ───────
+
 export async function getUserByEmail(email) {
   try {
-    const user = await firestoreService.findOne(USERS_COLLECTION, 'email', email.toLowerCase());
+    const user = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
     return mapUser(user);
   } catch (e) {
     console.error('getUserByEmail error:', e);
@@ -46,10 +51,20 @@ export async function getUserByEmail(email) {
 
 export async function getUserByDiscordId(discordId) {
   try {
-    const user = await firestoreService.findOne(USERS_COLLECTION, 'discordId', discordId);
+    const user = await prisma.user.findUnique({ where: { discordId } });
     return mapUser(user);
   } catch (e) {
     console.error('getUserByDiscordId error:', e);
+    return null;
+  }
+}
+
+export async function getUserById(userId) {
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    return mapUser(user);
+  } catch (e) {
+    console.error('getUserById error:', e);
     return null;
   }
 }
@@ -62,22 +77,21 @@ export async function createUser(email, username, password) {
   const id = `usr_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
   const now = Date.now();
 
-  const userData = {
-    id,
-    email: email.toLowerCase(),
-    username,
-    passwordHash: hash,
-    passwordSalt: '',
-    createdAt: now,
-    lastLogin: 0,
-    loginCount: 0,
-    preferences: {},
-    plan: 'free'
-  };
-
   try {
-    await firestoreService.setDoc(USERS_COLLECTION, id, userData);
-    return mapUser(userData);
+    const user = await prisma.user.create({
+      data: {
+        id,
+        email: email.toLowerCase(),
+        username,
+        passwordHash: hash,
+        passwordSalt: '',
+        createdAt: now,
+        lastLogin: BigInt(0),
+        loginCount: 0,
+        plan: 'free'
+      }
+    });
+    return mapUser(user);
   } catch (e) {
     console.error('createUser error:', e);
     return null;
@@ -98,25 +112,16 @@ export async function updateLoginStats(email) {
     const user = await getUserByEmail(email);
     if (!user) return null;
 
-    const updates = {
-      lastLogin: Date.now(),
-      loginCount: (user.loginCount || 0) + 1
-    };
-
-    await firestoreService.setDoc(USERS_COLLECTION, user.id, updates, true);
-    return { ...user, ...updates };
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        lastLogin: BigInt(Date.now()),
+        loginCount: (user.loginCount || 0) + 1
+      }
+    });
+    return mapUser(updated);
   } catch (e) {
     console.error('updateLoginStats error:', e);
-    return null;
-  }
-}
-
-export async function getUserById(userId) {
-  try {
-    const user = await firestoreService.getDoc(USERS_COLLECTION, userId);
-    return mapUser(user);
-  } catch (e) {
-    console.error('getUserById error:', e);
     return null;
   }
 }
@@ -125,31 +130,53 @@ export async function updateUser(userId, updates) {
   try {
     if (Object.keys(updates).length === 0) return getUserById(userId);
 
-    await firestoreService.setDoc(USERS_COLLECTION, userId, updates, true); // Merge
-    return getUserById(userId);
+    // Map JS object fields to Prisma column names
+    const prismaData = {};
+    if (updates.email !== undefined) prismaData.email = updates.email;
+    if (updates.username !== undefined) prismaData.username = updates.username;
+    if (updates.avatar !== undefined) prismaData.avatar = updates.avatar;
+    if (updates.plan !== undefined) prismaData.plan = updates.plan;
+    if (updates.discordId !== undefined) prismaData.discordId = updates.discordId;
+    if (updates.githubToken !== undefined) prismaData.githubToken = updates.githubToken;
+    if (updates.githubOwner !== undefined) prismaData.githubOwner = updates.githubOwner;
+    if (updates.githubRepo !== undefined) prismaData.githubRepo = updates.githubRepo;
+    if (updates.googleRefreshToken !== undefined) prismaData.googleRefreshToken = updates.googleRefreshToken;
+    if (updates.passwordHash !== undefined) prismaData.passwordHash = updates.passwordHash;
+    if (updates.lastLogin !== undefined) prismaData.lastLogin = BigInt(updates.lastLogin);
+    if (updates.loginCount !== undefined) prismaData.loginCount = updates.loginCount;
+    if (updates.warnings !== undefined) prismaData.warnings = updates.warnings;
+    if (updates.isBanned !== undefined) prismaData.isBanned = updates.isBanned;
+    if (updates.preferences !== undefined) prismaData.preferencesStr = typeof updates.preferences === 'string' ? updates.preferences : JSON.stringify(updates.preferences);
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: prismaData
+    });
+    return mapUser(updated);
   } catch (e) {
     console.error('updateUser error:', e);
     return null;
   }
 }
 
-// Refresh Tokens (Stored in sub-collection or separate collection)
+// ─────── REFRESH TOKENS (Prisma) ───────
+
 export async function issueRefreshToken(userId) {
   const token = `rt_${crypto.randomBytes(32).toString('hex')}`;
   const expiresAt = Date.now() + 30 * 24 * 3600 * 1000; // 30 days
 
-  const tokenData = {
-    token,
-    userId,
-    createdAt: Date.now(),
-    expiresAt,
-    revoked: 0
-  };
-
   try {
-    await firestoreService.setDoc(REFRESH_TOKENS_COLLECTION, token, tokenData);
+    await prisma.refreshToken.create({
+      data: {
+        token,
+        userId,
+        createdAt: BigInt(Date.now()),
+        expiresAt: BigInt(expiresAt),
+        revoked: 0
+      }
+    });
   } catch (e) {
-    console.error('issueRefreshToken DB error:', e);
+    console.error('issueRefreshToken error:', e);
   }
 
   return { token, expiresAt };
@@ -157,7 +184,7 @@ export async function issueRefreshToken(userId) {
 
 export async function verifyRefreshToken(token) {
   try {
-    const rt = await firestoreService.getDoc(REFRESH_TOKENS_COLLECTION, token);
+    const rt = await prisma.refreshToken.findUnique({ where: { token } });
 
     if (!rt) return null;
     if (rt.revoked) return null;
@@ -172,7 +199,10 @@ export async function verifyRefreshToken(token) {
 
 export async function revokeRefreshToken(token) {
   try {
-    await firestoreService.setDoc(REFRESH_TOKENS_COLLECTION, token, { revoked: 1 }, true);
+    await prisma.refreshToken.update({
+      where: { token },
+      data: { revoked: 1 }
+    });
     return true;
   } catch (e) {
     console.error('revokeRefreshToken error:', e);
@@ -180,63 +210,77 @@ export async function revokeRefreshToken(token) {
   }
 }
 
-// Password Recovery
+// ─────── PASSWORD RECOVERY (Prisma) ───────
+
 export async function createRecoverCode(email) {
   const code = crypto.randomBytes(3).toString('hex').toUpperCase();
   const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
-  const id = `${email}_${code}`; // Composite ID for easier lookup/dedup if needed
 
   try {
-    await firestoreService.addDoc(RECOVER_CODES_COLLECTION, {
-      email: email.toLowerCase(),
-      code,
-      expiresAt,
-      used: 0
+    await prisma.recoverCode.create({
+      data: {
+        email: email.toLowerCase(),
+        code,
+        expiresAt: BigInt(expiresAt),
+        used: 0
+      }
     });
     return { code, expiresAt };
   } catch (e) {
     console.error('createRecoverCode error:', e);
-    return null;
+    // If unique constraint fails (same email+code), try with new code
+    const newCode = crypto.randomBytes(3).toString('hex').toUpperCase();
+    try {
+      await prisma.recoverCode.create({
+        data: {
+          email: email.toLowerCase(),
+          code: newCode,
+          expiresAt: BigInt(expiresAt),
+          used: 0
+        }
+      });
+      return { code: newCode, expiresAt };
+    } catch (e2) {
+      console.error('createRecoverCode retry error:', e2);
+      return null;
+    }
   }
 }
 
 export async function consumeRecoverCode(email, code) {
   try {
-    // Firestore query needs index for compound queries, so we do simpler logical check in code if vol is low,
-    // or use exact query.
-    // Query: email == email AND code == code
-    // Since we don't have compound index guaranteed, let's find by email and filter in memory (safe for small scale)
-    // OR better: Since codes are random, finding by code is usually unique enough.
-    
-    // Let's rely on findOne (which uses limit 1).
-    // But we need to check usage.
-    
-    // Better strategy for NoSQL:
-    // Query collection where email == email.
-    
-    const snapshot = await firestoreService.db.collection(RECOVER_CODES_COLLECTION)
-        .where('email', '==', email.toLowerCase())
-        .where('code', '==', code)
-        .limit(1)
-        .get();
+    const rc = await prisma.recoverCode.findUnique({
+      where: {
+        email_code: {
+          email: email.toLowerCase(),
+          code
+        }
+      }
+    });
 
-    if (snapshot.empty) return false;
-    
-    const doc = snapshot.docs[0];
-    const data = doc.data();
-    
-    if (data.used) return false;
-    if (Date.now() > Number(data.expiresAt)) return false;
+    if (!rc) return false;
+    if (rc.used) return false;
+    if (Date.now() > Number(rc.expiresAt)) return false;
 
     // Mark used
-    await doc.ref.update({ used: 1 });
-    return true;
+    await prisma.recoverCode.update({
+      where: {
+        email_code: {
+          email: email.toLowerCase(),
+          code
+        }
+      },
+      data: { used: 1 }
+    });
 
+    return true;
   } catch (e) {
     console.error('consumeRecoverCode error:', e);
     return false;
   }
 }
+
+// ─────── ADMIN ───────
 
 const envAdmins = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(',').map(e => e.trim()) : [];
 export const ADMIN_EMAILS = [...envAdmins];
@@ -246,14 +290,19 @@ export async function isAdmin(userId) {
   return user && ADMIN_EMAILS.includes(user.email);
 }
 
+// ─────── PASSWORD RESET ───────
+
 export async function setPassword(email, newPassword) {
   try {
     const user = await getUserByEmail(email);
     if (!user) return false;
-    
+
     const { hash } = await hashPassword(newPassword);
-    
-    await firestoreService.setDoc(USERS_COLLECTION, user.id, { passwordHash: hash }, true);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: hash }
+    });
     return true;
   } catch (e) {
     console.error('setPassword error:', e);
