@@ -15,15 +15,15 @@ const TIMEOUT_MS = 30000;
  */
 const PROVIDERS = {
     gemini: {
-        name: 'Google Gemini 3',
-        model: 'gemini-3-pro-image-preview',
-        tiers: ['sirius', 'antares', 'supernova', 'singularity', 'vega'],
+        name: 'Google Gemini',
+        model: 'gemini-2.0-flash-exp',
+        tiers: ['free', 'observer', 'vega', 'sirius', 'antares', 'supernova', 'singularity'],
         quality: 'ultra'
     },
     pollinations: {
         name: 'Pollinations.ai',
         model: 'Flux',
-        tiers: ['free', 'observer'],
+        tiers: [],
         quality: 'standard'
     },
     prodia: {
@@ -46,14 +46,11 @@ const PROVIDERS = {
  * @returns {string} Provider name
  */
 export function getProviderForTier(userTier = 'free') {
-    const tier = userTier.toLowerCase();
-    
-    // Premium tiers (and Vega) get Gemini 3
-    if (['sirius', 'antares', 'supernova', 'singularity', 'vega'].includes(tier)) {
+    // Gemini for ALL tiers (free API key)
+    if (process.env.GEMINI_API_KEY) {
         return 'gemini';
     }
-    
-    // Free/Observer get Pollinations
+    // Fallback to Pollinations only if no Gemini key
     return 'pollinations';
 }
 
@@ -98,24 +95,36 @@ async function generateGeminiImage(prompt, apiKey) {
     if (!apiKey) throw new Error('Gemini API key required');
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    // Use correct Gemini 3 model from list
-    const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-image-preview' });
-
-    console.log(`[GEMINI] Generating image with prompt: "${prompt.substring(0, 50)}..." via gemini-3-pro-image-preview`);
     
-    const result = await model.generateContent(prompt);
+    // Use gemini-2.0-flash-exp with image generation support
+    const model = genAI.getGenerativeModel({ 
+        model: 'gemini-2.0-flash-exp',
+        generationConfig: {
+            responseModalities: ['TEXT', 'IMAGE']
+        }
+    });
+
+    console.log(`[GEMINI] Generating image: "${prompt.substring(0, 60)}..."`);
+    
+    // Prefix prompt to force image generation
+    const imagePrompt = `Generate an image: ${prompt}. Do not include any text in the image.`;
+    
+    const result = await model.generateContent(imagePrompt);
     const response = await result.response;
     
-    if (response.candidates && response.candidates[0].content.parts) {
+    if (response.candidates && response.candidates[0]?.content?.parts) {
         const imagePart = response.candidates[0].content.parts.find(p => p.inlineData);
         if (imagePart) {
             const base64 = imagePart.inlineData.data;
             const mimeType = imagePart.inlineData.mimeType || 'image/png';
+            console.log(`[GEMINI] Image generated (${mimeType}, ${Math.round(base64.length / 1024)}KB)`);
             return `data:${mimeType};base64,${base64}`;
         }
     }
     
-    throw new Error('Gemini response did not contain image data. Check logs.');
+    // Log response for debugging
+    console.error('[GEMINI] No image in response:', JSON.stringify(response.candidates?.[0]?.content?.parts?.map(p => p.text || '[image]') || 'empty'));
+    throw new Error('Gemini response did not contain image data');
 }
 
 /**
