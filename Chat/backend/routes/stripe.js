@@ -9,7 +9,7 @@ const router = express.Router();
 let stripe = null;
 function getStripe() {
     if (stripe) return stripe;
-    const key = process.env.STRIPE_SECRET_KEY || process.env.STRIPE_KEY;
+    const key = (process.env.STRIPE_SECRET_KEY || process.env.STRIPE_KEY)?.trim();
     if (key) {
         stripe = new Stripe(key);
         console.log('[STRIPE] ✅ Payment system initialized (lazy)');
