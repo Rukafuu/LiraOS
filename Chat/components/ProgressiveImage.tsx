@@ -31,12 +31,6 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = React.memo(({
   // Debug Props
   console.log(`[ProgressiveImage] Render. Status: ${status}, FinalSrc: ${finalSrc ? finalSrc.substring(0, 30) + '...' : 'undefined'}`);
 
-  // Disable Overlay for Debugging
-  useEffect(() => {
-    setShowOverlay(false);
-  }, [status, imageLoaded]);
-
-  /*
   useEffect(() => {
     if (status === 'generating' && !hasShownOverlayRef.current) {
       setShowOverlay(true);
@@ -47,7 +41,6 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = React.memo(({
       setShowOverlay(false);
     }
   }, [status, imageLoaded]);
-  */
 
   // Overlay Component for Inline Loading
   const LoadingOverlay = () => (
