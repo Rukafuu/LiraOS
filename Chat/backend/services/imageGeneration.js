@@ -97,37 +97,45 @@ async function generateGeminiImage(prompt, apiKey) {
 
     const ai = new GoogleGenAI({ apiKey });
     
-    // gemini-3.1-flash-image-preview (Nano Banana 2) is Google's recommended
-    // image gen model via the standard Gemini API key - best quality/cost balance
-    const MODEL = 'gemini-3.1-flash-image-preview';
+    // Model priority order: best quality first, fallback to stable
+    const MODELS = [
+        'gemini-3.1-flash-image-preview',  // Nano Banana 2 - recommended
+        'gemini-2.5-flash-preview-04-17',  // Nano Banana stable
+        'gemini-2.0-flash-exp',            // experimental fallback
+    ];
     
-    console.log(`[GEMINI] Generating image with ${MODEL}: "${prompt.substring(0, 60)}..."`);
-    
-    try {
-        const response = await ai.models.generateContent({
-            model: MODEL,
-            contents: prompt,
-            config: {
-                responseModalities: ['TEXT', 'IMAGE'],
+    for (const MODEL of MODELS) {
+        console.log(`[GEMINI] Trying image generation with ${MODEL}...`);
+        try {
+            const response = await ai.models.generateContent({
+                model: MODEL,
+                contents: prompt,
+                config: {
+                    responseModalities: ['IMAGE', 'TEXT'],
+                }
+            });
+            
+            const parts = response.candidates?.[0]?.content?.parts || [];
+            
+            // Look for image data first
+            for (const part of parts) {
+                if (part.inlineData) {
+                    const base64 = part.inlineData.data;
+                    const mimeType = part.inlineData.mimeType || 'image/png';
+                    console.log(`[GEMINI] ✅ Image generated with ${MODEL}! (${mimeType}, ${Math.round(base64.length / 1024)}KB)`);
+                    return `data:${mimeType};base64,${base64}`;
+                }
             }
-        });
-        
-        for (const part of response.candidates[0].content.parts) {
-            if (part.inlineData) {
-                const base64 = part.inlineData.data;
-                const mimeType = part.inlineData.mimeType || 'image/png';
-                console.log(`[GEMINI] Image generated successfully! (${mimeType}, ${Math.round(base64.length / 1024)}KB)`);
-                return `data:${mimeType};base64,${base64}`;
-            }
+            
+            // Only got text back - log it and try next model
+            const textResponse = parts.map(p => p.text).filter(Boolean).join(' ');
+            console.warn(`[GEMINI] ${MODEL} returned text only: "${textResponse.substring(0, 100)}"`);
+        } catch (err) {
+            console.warn(`[GEMINI] ${MODEL} failed: ${err.message?.substring(0, 120)}`);
         }
-        
-        console.error('[GEMINI] No image part found in response parts:', response.candidates[0].content.parts.map(p => p.text ? '[text]' : '[unknown]'));
-    } catch (error) {
-        console.error('[GEMINI] Generation error:', error.message);
-        throw error;
     }
     
-    throw new Error('Gemini response did not contain image data');
+    throw new Error('All Gemini models failed to return image data');
 }
 
 /**
