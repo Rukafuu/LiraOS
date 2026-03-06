@@ -1,6 +1,8 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -38,10 +40,9 @@ import stripeRoutes from './routes/stripe.js';
 import { discordService } from './services/discordService.js';
 import { cleanupExpiredBans } from './utils/moderation.js';
 
-dotenv.config();
-
 console.log('[DEBUG] MINIMAX_API_KEY:', process.env.MINIMAX_API_KEY ? 'Língua preservada (Presente)' : 'AUSENTE ❌');
-console.log('[DEBUG] MINIMAX_GROUP_ID:', process.env.MINIMAX_GROUP_ID || 'AUSENTE ❌');
+console.log('[DEBUG] STRIPE_SECRET_KEY:', process.env.STRIPE_SECRET_KEY ? 'Presente ✅' : 'AUSENTE ❌');
+console.log('[DEBUG] Available Stripe Keys:', Object.keys(process.env).filter(k => k.toLowerCase().includes('stripe')));
 
 const app = express();
 const PORT = process.env.PORT || 4000;
