@@ -94,13 +94,16 @@ function generateProdiaUrl(prompt, seed = Date.now()) {
 async function generateGeminiImage(prompt, apiKey) {
     if (!apiKey) throw new Error('Gemini API key required');
 
-    const ai = new GoogleGenAI({ apiKey });
+    const ai = new GoogleGenAI({ 
+        apiKey,
+        httpOptions: { apiVersion: 'v1alpha' }
+    });
     
     console.log(`[GEMINI] Generating image with Imagen 3: "${prompt.substring(0, 60)}..."`);
     
     try {
         const response = await ai.models.generateImages({
-            model: 'imagen-3.0-generate-001',
+            model: 'imagen-3.0-generate-002',
             prompt: prompt,
             config: {
                 numberOfImages: 1,
