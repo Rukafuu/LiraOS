@@ -25,12 +25,20 @@ import {
   Waveform, 
   Keyboard, 
   Info, 
-  Heart, 
   ChatCenteredText, 
-  ArrowSquareOut, 
+  ArrowSquareOut,
   Gear,
   Graph,
-  List
+  List,
+  IdentificationCard,
+  MapPin,
+  Calendar,
+  EnvelopeSimple,
+  Note,
+  Heart,
+  Briefcase,
+  Users,
+  BookOpen
 } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
@@ -60,7 +68,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState<'' | 'profile' | 'contact' | 'location' | 'birthday' | 'note'>('');
+  const [category, setCategory] = useState<'' | 'personal_info' | 'preferences' | 'projects' | 'important_dates' | 'contacts' | 'learning' | 'general'>('');
   const [priority, setPriority] = useState<'' | 'low' | 'medium' | 'high'>('');
   const { currentTheme, setTheme, availableThemes } = useTheme();
   const { stats, setUsername, unlockedThemes } = useGamification();
@@ -657,99 +665,126 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                        <h3 className="text-xl font-semibold text-white mb-2">{t('settings.memories.title')}</h3>
                        <p className="text-gray-500 text-sm mb-6">{t('settings.memories.desc')}</p>
                        
-                       <div className="flex flex-wrap items-center gap-3 mb-4">
-                          <input
-                            type="text"
-                            placeholder={t('settings.memories.search_placeholder')}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="flex-1 min-w-[180px] bg-[#18181b] border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-white/30 outline-none transition-all"
-                          />
-                          <select
-                            onChange={(e) => setCategory(e.target.value as any)}
-                            className="bg-[#18181b] border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-white/30 outline-none transition-all"
-                          >
-                            <option value="">{t('settings.memories.all_categories')}</option>
-                            <option value="profile">{t('settings.memories.cat_profile')}</option>
-                            <option value="contact">{t('settings.memories.cat_contact')}</option>
-                            <option value="location">{t('settings.memories.cat_location')}</option>
-                            <option value="birthday">{t('settings.memories.cat_birthday')}</option>
-                            <option value="note">{t('settings.memories.cat_note')}</option>
-                          </select>
-                          <select
-                            onChange={(e) => setPriority(e.target.value as any)}
-                            className="bg-[#18181b] border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-white/30 outline-none transition-all"
-                          >
-                            <option value="">{t('settings.memories.all_priorities')}</option>
-                            <option value="high">{t('settings.memories.pri_high')}</option>
-                            <option value="medium">{t('settings.memories.pri_medium')}</option>
-                             <option value="low">{t('settings.memories.pri_low')}</option>
-                          </select>
-                            
-                          <div className="flex bg-[#18181b] p-1 rounded-lg border border-white/10 ml-auto">
-                             <button 
-                                onClick={() => setMemoryViewMode('list')}
-                                className={`p-1.5 rounded-md transition-all ${memoryViewMode === 'list' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}
-                                title="List View"
-                             >
-                                <List size={16} />
-                             </button>
-                             <button 
-                                onClick={() => setMemoryViewMode('graph')}
-                                className={`p-1.5 rounded-md transition-all ${memoryViewMode === 'graph' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}
-                                title="Graph View"
-                             >
-                                <Graph size={16} />
-                             </button>
-                          </div>
-                       </div>
-                       
-                       {memoryViewMode === 'graph' ? (
-                          <MemoryGraph memories={memories} />
-                       ) : (
-                       (() => {
-                          const [searchState, categoryState, priorityState] = [search, category, priority];
-                          const filtered = memories.filter(m => {
-                            const textMatch = (m.content || '').toLowerCase().includes((searchState || '').toLowerCase());
-                            const catMatch = categoryState ? m.category === categoryState : true;
-                            const priMatch = priorityState ? m.priority === priorityState : true;
-                            return textMatch && catMatch && priMatch;
-                          });
-                         
-                         return filtered.length === 0 ? (
-                           <div className="p-8 border border-dashed border-white/10 rounded-xl text-center text-gray-500 text-sm">
-                              {t('settings.memories.no_memories')}
+                       <div className="flex flex-col gap-4">
+                        <div className="flex flex-wrap items-center gap-3">
+                           <div className="relative flex-1 min-w-[200px]">
+                              <input
+                                type="text"
+                                placeholder={t('settings.memories.search_placeholder')}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="w-full bg-[#18181b] border border-white/10 rounded-xl px-10 py-2.5 text-white text-sm focus:border-white/30 outline-none transition-all placeholder-gray-600"
+                              />
+                              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600">
+                                 <List size={18} />
+                              </div>
                            </div>
-                         ) : (
-                            <div className="space-y-0 border border-white/5 rounded-xl overflow-hidden bg-[#121215]">
-                               {filtered.map((mem, idx) => (
-                                  <div key={mem.id} className={`p-4 flex items-center justify-between group hover:bg-white/5 transition-colors ${idx !== filtered.length - 1 ? 'border-b border-white/5' : ''}`}>
-                                     <div className="flex-1 min-w-0 pr-4">
-                                        <p className="text-sm text-gray-200 line-clamp-1 group-hover:line-clamp-none transition-all duration-300">{mem.content}</p>
-                                        <div className="mt-1.5 flex items-center gap-3">
-                                          <span className="text-[10px] text-gray-600 font-medium uppercase tracking-wider">
-                                             {new Date(mem.createdAt).toLocaleDateString()}
-                                          </span>
-                                          {mem.category && (
-                                            <div className="flex items-center gap-1 opacity-60">
-                                               <Database size={10} className="text-lira-pink" />
-                                               <span className="text-[10px] text-gray-400 capitalize">{mem.category}</span>
-                                            </div>
-                                          )}
-                                        </div>
-                                     </div>
-                                     <button 
-                                       onClick={() => onDeleteMemory && onDeleteMemory(mem.id)}
-                                       className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                                     >
-                                        <Trash size={16} />
-                                     </button>
-                                  </div>
-                               ))}
+                           
+                           <select
+                             value={category}
+                             onChange={(e) => setCategory(e.target.value as any)}
+                             className="bg-[#18181b] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:border-white/30 outline-none transition-all appearance-none cursor-pointer hover:bg-[#202024]"
+                           >
+                             <option value="">{t('settings.memories.all_categories')}</option>
+                             <option value="personal_info">{t('settings.memories.cat_personal')}</option>
+                             <option value="preferences">{t('settings.memories.cat_prefs')}</option>
+                             <option value="projects">{t('settings.memories.cat_projects')}</option>
+                             <option value="important_dates">{t('settings.memories.cat_dates')}</option>
+                             <option value="contacts">{t('settings.memories.cat_contacts')}</option>
+                             <option value="learning">{t('settings.memories.cat_learning')}</option>
+                           </select>
+                             
+                           <div className="flex bg-[#18181b] p-1.5 rounded-xl border border-white/10">
+                              <button 
+                                 onClick={() => setMemoryViewMode('list')}
+                                 className={`p-1.5 rounded-lg transition-all ${memoryViewMode === 'list' ? 'bg-white/10 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                                 title="List View"
+                              >
+                                 <List size={18} />
+                              </button>
+                              <button 
+                                 onClick={() => setMemoryViewMode('graph')}
+                                 className={`p-1.5 rounded-lg transition-all ${memoryViewMode === 'graph' ? 'bg-white/10 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                                 title="Graph View"
+                              >
+                                 <Graph size={18} />
+                              </button>
+                           </div>
+                        </div>
+                        
+                        {memoryViewMode === 'graph' ? (
+                           <div className="bg-[#121215] border border-white/5 rounded-2xl p-4 min-h-[400px]">
+                              <MemoryGraph memories={memories} />
+                           </div>
+                        ) : (
+                        (() => {
+                           const filtered = memories.filter(m => {
+                             const textMatch = (m.content || '').toLowerCase().includes((search || '').toLowerCase());
+                             const catMatch = category ? m.category === category : true;
+                             return textMatch && catMatch;
+                           });
+                          
+                          return filtered.length === 0 ? (
+                            <div className="py-20 flex flex-col items-center justify-center border border-dashed border-white/10 rounded-2xl bg-white/[0.02] text-center">
+                               <div className="p-4 bg-white/5 rounded-full text-gray-600 mb-4">
+                                  <Brain size={40} weight="light" />
+                               </div>
+                               <h4 className="text-gray-400 font-medium mb-1">{t('settings.memories.no_memories')}</h4>
+                               <p className="text-xs text-gray-600 max-w-[200px]">{t('settings.memories.no_memories_desc') || "A Lira aprenderá sobre você conforme conversam."}</p>
                             </div>
-                         );
-                       })()
-                       )}
-                      </div>
+                          ) : (
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {filtered.map((mem) => {
+                                   const getIcon = (cat?: string) => {
+                                      switch(cat) {
+                                         case 'personal_info': return <IdentificationCard size={18} className="text-blue-400" />;
+                                         case 'preferences': return <Heart size={18} className="text-pink-400" />;
+                                         case 'projects': return <Briefcase size={18} className="text-orange-400" />;
+                                         case 'important_dates': return <Calendar size={18} className="text-red-400" />;
+                                         case 'contacts': return <Users size={18} className="text-purple-400" />;
+                                         case 'learning': return <BookOpen size={18} className="text-green-400" />;
+                                         default: return <Note size={18} className="text-gray-400" />;
+                                      }
+                                   };
+                                   
+                                   return (
+                                      <motion.div 
+                                        layout
+                                        key={mem.id} 
+                                        className="p-4 bg-[#18181b] border border-white/5 rounded-2xl flex flex-col justify-between group hover:border-white/10 hover:bg-[#1c1c20] transition-all"
+                                      >
+                                         <div className="flex items-start justify-between mb-3">
+                                            <div className="p-2 bg-white/5 rounded-xl">
+                                               {getIcon(mem.category)}
+                                            </div>
+                                            <button 
+                                              onClick={() => onDeleteMemory && onDeleteMemory(mem.id)}
+                                              className="p-2 text-gray-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                              title="Esquecer"
+                                            >
+                                               <Trash size={16} />
+                                            </button>
+                                         </div>
+                                         <div>
+                                            <p className="text-sm font-medium text-gray-100 leading-relaxed mb-3">{mem.content}</p>
+                                            <div className="flex items-center justify-between">
+                                               <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">
+                                                  {new Date(mem.createdAt).toLocaleDateString()}
+                                               </span>
+                                               {mem.category && (
+                                                 <span className="text-[10px] text-gray-500 bg-white/5 px-2 py-0.5 rounded-full border border-white/5 font-medium">
+                                                    {t(`settings.memories.cat_${mem.category.replace('personal_info', 'personal').replace('preferences', 'prefs').replace('important_dates', 'dates').replace('contacts', 'contacts').replace('learning', 'learning')}`)}
+                                                 </span>
+                                               )}
+                                            </div>
+                                         </div>
+                                      </motion.div>
+                                   );
+                                })}
+                             </div>
+                          );
+                        })()
+                        )}
+                       </div>
                       
                       <div className="mt-6 p-4 border border-red-500/20 rounded-xl bg-red-500/5">
                         <div className="flex items-center justify-between">
@@ -792,7 +827,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                             />
                           </label>
                         </div>
-                      </div>
+                       </div>
+                    </div>
                  </motion.div>
               )}
 
