@@ -2,6 +2,7 @@ import fetch from 'node-fetch';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { uploadBase64ToS3, isStorageEnabled } from './storageService.js';
+import { uploadToBlob } from './blobService.js';
 import { jobStore } from './jobStore.js';
 import { getTierLimit } from './tierLimits.js';
 
@@ -250,19 +251,24 @@ export async function generateImage(prompt, userId = null, userTier = 'free', hf
                 break;
         }
 
-        // ☁️ S3 UPLOAD INTEGRATION
-        // If we have a Base64 image and Storage is enabled, upload it!
-        if (isBase64 && isStorageEnabled()) {
+        // ☁️ BLOB UPLOAD INTEGRATION
+        // If we have a Base64 image, upload it to Vercel Blob!
+        if (isBase64) {
             try {
-                console.log('[IMAGE_GEN] Uploading generated image to S3...');
-                const s3Url = await uploadBase64ToS3(imageUrl, 'images/gen');
-                if (s3Url) {
-                    imageUrl = s3Url;
+                console.log('[IMAGE_GEN] Uploading generated image to Vercel Blob...');
+                const base64Data = imageUrl.replace(/^data:image\/\w+;base64,/, "");
+                const buffer = Buffer.from(base64Data, 'base64');
+                const ext = imageUrl.includes('jpeg') ? 'jpg' : 'png';
+                const filename = `images/gen-${seed}.${ext}`;
+
+                const blobResult = await uploadToBlob(filename, buffer);
+                if (blobResult && blobResult.url) {
+                    imageUrl = blobResult.url;
                     isBase64 = false; // It's now a reliable URL
-                    console.log('[IMAGE_GEN] S3 Upload Complete:', s3Url);
+                    console.log('[IMAGE_GEN] Blob Upload Complete:', blobResult.url);
                 }
             } catch (uploadErr) {
-                console.error('[IMAGE_GEN] S3 Upload failed (using Base64 fallback):', uploadErr.message);
+                console.error('[IMAGE_GEN] Blob Upload failed (using Base64 fallback):', uploadErr.message);
                 // We keep imageUrl as Base64 so the user still gets their image
             }
         }

@@ -18,6 +18,7 @@
     "@octokit/rest": "^21.0.2",
     "@prisma/adapter-pg": "^5.22.0",
     "@prisma/client": "5.22.0",
+    "@vercel/blob": "^2.3.1",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
