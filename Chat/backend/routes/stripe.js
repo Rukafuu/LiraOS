@@ -141,12 +141,15 @@ router.post('/create-checkout', requireAuth, async (req, res) => {
         // Determine price based on currency
         const unitAmount = currency === 'brl' ? tierData.priceBRL : tierData.priceUSD;
 
+        // Simplified Session Creation using recommend automatic payment methods
+        // This avoids issues with Boleto requiring specialized fields on manual setup
         const session = await s.checkout.sessions.create({
             customer: customerId,
             mode: 'subscription',
-            payment_method_types: currency === 'brl' 
-                ? ['card', 'boleto'] 
-                : ['card'],
+            // automatic_payment_methods is preferred over payment_method_types for modern accounts
+            // and subscriptions. It will show whatever is enabled in the Dashboard.
+            // If you need to force card only, use payment_method_types: ['card']
+            payment_method_types: ['card'], 
             line_items: [{
                 price_data: {
                     currency: currency,
@@ -180,8 +183,17 @@ router.post('/create-checkout', requireAuth, async (req, res) => {
         });
 
     } catch (error) {
-        console.error('[STRIPE] Checkout error:', error);
-        res.status(500).json({ error: 'Failed to create checkout session', details: error.message });
+        console.error('[STRIPE] ❌ Checkout session creation failed!');
+        console.error('[STRIPE] Reason:', error.message);
+        if (error.raw) {
+            console.error('[STRIPE] Raw Error Type:', error.raw.type);
+            console.error('[STRIPE] Raw Error Msg:', error.raw.message);
+        }
+        res.status(500).json({ 
+            error: 'Failed to create checkout session', 
+            details: error.message,
+            type: error.type
+        });
     }
 });
 

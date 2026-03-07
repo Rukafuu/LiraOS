@@ -136,9 +136,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 initial={false}
                 animate={isOpen ? 'open' : 'closed'}
                 variants={sidebarVariants}
-                className={`fixed md:relative z-[100] h-full bg-[#0a0a0a]/95 backdrop-blur-xl border-r border-white/5 flex flex-col overflow-hidden ${isMobile ? 'top-0 left-0 w-[280px]' : ''}`}
+                className={`fixed md:relative z-[100] h-full bg-[#0a0a0a]/98 backdrop-blur-2xl border-r border-white/5 flex flex-col overflow-hidden ${isMobile ? 'top-0 left-0 w-[80%] max-w-[300px]' : ''}`}
             >
-                {/* HEADER */}
+                {/* MOBILE CLOSE BUTTON */}
+                {isMobile && (
+                    <button 
+                        onClick={onCloseMobile}
+                        className="absolute top-4 right-4 p-2 rounded-full bg-white/5 text-gray-400 z-50 hover:text-white"
+                    >
+                        <X size={20} />
+                    </button>
+                )}
                 <div className="p-4 border-b border-white/5 space-y-4">
 
                     <div className="flex items-center gap-3 px-2">
@@ -176,14 +184,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
 
                 {/* NAVIGATION LINKS */}
-                <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 space-y-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
 
                     <div
-                        className="border-y border-white/5 bg-[#080808]/50 transition-all duration-300 ease-in-out"
+                        className="border-y border-white/5 bg-[#080808]/50 transition-all duration-300 ease-in-out rounded-lg overflow-hidden"
                         onMouseEnter={handleItemsEnter}
                         onMouseLeave={handleItemsLeave}
                     >
-                        <div className="p-3">
+                        <div className="p-2 md:p-3">
                             <AnimatePresence mode="wait">
                                 {isItemsExpanded ? (
                                     // EXPANDED VIEW
@@ -267,7 +275,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         animate={{ opacity: 1 }}
                                         exit={{ opacity: 0 }}
                                         onClick={() => setIsItemsExpanded(true)}
-                                        className="flex items-center justify-around cursor-pointer py-2"
+                                        className="flex items-center justify-around cursor-pointer py-1.5"
                                     >
                                         <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center hover:bg-blue-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenDashboard(); }}>
                                             <LayoutGrid size={16} className="text-blue-400" />

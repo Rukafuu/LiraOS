@@ -194,7 +194,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <div className="w-full pb-6 md:pb-6 px-2 md:px-4 z-20">
+    <div className="w-full pb-3 md:pb-6 px-1 md:px-4 z-20">
       <div className="max-w-3xl mx-auto relative">
         <style>{`
           @keyframes neon-pulse {
@@ -237,8 +237,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           className={`
-          relative flex items-end gap-1 md:gap-2 p-1.5 md:p-2 
-          bg-[#18181b] rounded-[26px] 
+          relative flex items-end gap-1 md:gap-2 p-1 md:p-2 
+          bg-[#18181b] rounded-[22px] md:rounded-[26px] 
           transition-all duration-300 border
           ${isFocused 
             ? 'input-glow-active' 
@@ -256,7 +256,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           
           <button 
             onClick={() => fileInputRef.current?.click()}
-            className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all mb-0.5 md:mb-1 ml-0.5 md:ml-1 flex-shrink-0"
+            className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all mb-0.5 ml-0.5 flex-shrink-0"
             title={t('chat_input.attach_tooltip')}
           >
             <Plus size={18} strokeWidth={2} />
@@ -290,7 +290,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 <button
                   onClick={() => setShowMenu(!showMenu)}
                   className={`
-                    h-8 md:h-9 px-2 md:px-3 rounded-full flex items-center gap-1.5 md:gap-2 text-xs font-medium transition-all
+                    h-8 md:h-9 px-1.5 md:px-3 rounded-full flex items-center gap-1 md:gap-2 text-xs font-medium transition-all
                     ${showMenu ? 'bg-white/10 text-white' : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'}
                   `}
                 >
@@ -299,8 +299,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   ) : (
                      <Zap size={14} className="text-green-400" />
                   )}
-                  <span className="hidden sm:inline">{selectedModel === 'mistral' ? t('chat_input.pro') : t('chat_input.premium')}</span>
-                  <ChevronDown size={12} className={`transition-transform duration-200 ${showMenu ? 'rotate-180' : ''}`} />
+                  <span className="hidden md:inline">{selectedModel === 'mistral' ? t('chat_input.pro') : t('chat_input.premium')}</span>
+                  <ChevronDown size={10} className={`transition-transform duration-200 ${showMenu ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Dropdown Menu */}

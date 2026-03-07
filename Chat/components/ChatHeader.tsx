@@ -57,12 +57,12 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-30 w-full glass-panel border-x-0 border-t-0 border-b border-lira-blue/5 backdrop-blur-2xl">
-      <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="mx-auto px-2 md:px-4 h-14 md:h-16 flex items-center justify-between">
         
-        <div className="flex items-center">
+        <div className="flex items-center min-w-0 flex-1">
             <button 
               onClick={onToggleSidebar}
-              className="relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors focus:outline-none z-50 mr-2 md:mr-6"
+              className="relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors focus:outline-none z-50 mr-1 md:mr-6 flex-shrink-0"
               aria-label="Toggle Sidebar"
             >
               <div className="w-5 h-3.5 relative flex flex-col justify-between">
@@ -92,7 +92,7 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                   key={title}
                   initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="font-semibold text-sm md:text-[15px] text-white/90 truncate flex-1 min-w-0 max-w-[150px] md:max-w-md"
+                  className="font-semibold text-sm sm:text-base text-white/90 truncate flex-1 min-w-0 max-w-[120px] sm:max-w-[200px] md:max-w-md"
                 >
                   {title}
                 </motion.h2>
@@ -136,23 +136,23 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           </div>
         </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-0.5 sm:gap-2 ml-1">
             {onToggleVoice && (
               <button
                 onClick={onToggleVoice}
-                className={`p-2.5 rounded-xl transition-all ${voiceEnabled ? 'text-green-400 bg-green-400/10' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                className={`p-2 sm:p-2.5 rounded-xl transition-all ${voiceEnabled ? 'text-green-400 bg-green-400/10' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
                 title={voiceEnabled ? "Disable Read Aloud" : "Enable Read Aloud"}
               >
-                {voiceEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+                {voiceEnabled ? <Volume2 size={18} className="sm:w-5 sm:h-5" /> : <VolumeX size={18} className="sm:w-5 sm:h-5" />}
               </button>
             )}
           {onStartVoiceCall && (
              <button 
                onClick={onStartVoiceCall}
-               className="p-2.5 rounded-xl text-white hover:text-lira-pink hover:bg-white/5 transition-all"
+               className="p-2 sm:p-2.5 rounded-xl text-white hover:text-lira-pink hover:bg-white/5 transition-all"
                title={t('chat_header.start_call')}
              >
-               <Headset size={20} />
+               <Headset size={18} className="sm:w-5 sm:h-5" />
              </button>
           )}
 
