@@ -1161,7 +1161,7 @@ if (window.innerWidth < 768) setSidebarOpen(false);
              onClick={() => setActiveModal('pricing')}
           >
              <p className="text-[12px] font-bold text-red-200 text-center flex items-center gap-2">
-                🛡️ [TESTE ANTI-BOT ATIVO]: O sistema da LiraOS está sob stress-test pelas próximas 24h. A plataforma poderá apresentar lentidão.
+                [TESTE ANTI-BOT ATIVO]: O sistema da LiraOS está sob stress-test pelas próximas 24h. A plataforma poderá apresentar lentidão.
              </p>
              <ChevronRight size={14} className="text-red-400 group-hover:translate-x-0.5 transition-transform" />
           </motion.div>
