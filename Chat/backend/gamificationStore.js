@@ -84,14 +84,17 @@ export const getState = async (userId) => {
     const parsedStats = safeParse(row.statsStr, {});
     const stats = await checkDailyRotation(userId, parsedStats);
 
+    const themes = safeParse(row.unlockedThemesStr, []);
+    const personas = safeParse(row.unlockedPersonasStr, []);
+
     return {
       userId: row.userId,
       xp: row.xp || 0,
       coins: row.coins || 0,
       level: row.level || 1,
       stats: stats, 
-      unlockedThemes: safeParse(row.unlockedThemesStr, []),
-      unlockedPersonas: safeParse(row.unlockedPersonasStr, []),
+      unlockedThemes: themes.includes('lira-dark') ? themes : [...themes, 'lira-dark'],
+      unlockedPersonas: personas.includes('default') ? personas : [...personas, 'default'],
       achievements: safeParse(row.achievementsStr, []),
       activePersonaId: row.activePersonaId || 'default',
       updatedAt: toInt(row.updatedAt)
@@ -182,8 +185,8 @@ export const getOrCreateDefault = async (userId) => {
     coins: 0,
     level: 1,
     stats: { dailyQuests: generateDailyQuests() },
-    unlockedThemes: [],
-    unlockedPersonas: [],
+    unlockedThemes: ['lira-dark'],
+    unlockedPersonas: ['default'],
     activePersonaId: 'default'
   };
   await saveState(userId, def);

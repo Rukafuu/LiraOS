@@ -87,7 +87,7 @@ router.post('/purchase', async (req, res) => {
     const userId = req.userId;
     const { type, itemId, cost } = req.body || {};
     
-    if (!type || !itemId || !cost) {
+    if (!type || !itemId || cost === undefined) {
       return res.status(400).json({ error: 'Missing required fields: type, itemId, cost' });
     }
     
