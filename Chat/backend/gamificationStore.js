@@ -9,13 +9,24 @@ function getTodayDate() {
 }
 
 function generateDailyQuests() {
+  const pool = [
+    { id: 'daily_login', title: 'Login Diário', desc: 'Entre no sistema hoje', target: 1, progress: 1, reward: 50, claimed: false, type: 'login' },
+    { id: 'msg_10', title: 'Conversador', desc: 'Envie 10 mensagens', target: 10, progress: 0, reward: 100, claimed: false, type: 'message_count' },
+    { id: 'xp_200', title: 'Evolução', desc: 'Ganhe 200 XP', target: 200, progress: 0, reward: 150, claimed: false, type: 'xp_gain' },
+    { id: 'image_gen', title: 'Visão Artística', desc: 'Gere uma imagem com a Lira', target: 1, progress: 0, reward: 120, claimed: false, type: 'image' },
+    { id: 'pro_mode', title: 'Explorador Deep', desc: 'Use o Modo Profundo (Deep)', target: 1, progress: 0, reward: 150, claimed: false, type: 'pro' },
+    { id: 'settings_mod', title: 'Estilista', desc: 'Mude as configurações ou tema', target: 1, progress: 0, reward: 80, claimed: false, type: 'settings' },
+    { id: 'chat_specialist', title: 'Interação Ativa', desc: 'Fale com a Lira 5 vezes', target: 5, progress: 0, reward: 90, claimed: false, type: 'chat' }
+  ];
+
+  // Pick 3 random quests, ensuring login is often there (or first 3)
+  const shuffled = [...pool].sort(() => 0.5 - Math.random());
+  const selected = shuffled.slice(0, 3);
+
+  // Sort them so consistent IDs come first if possible, or just return
   return {
     date: getTodayDate(),
-    quests: [
-      { id: 'daily_login', title: 'Login Diário', desc: 'Entre no sistema hoje', target: 1, progress: 1, reward: 50, claimed: false, type: 'login' },
-      { id: 'msg_10', title: 'Conversador', desc: 'Envie 10 mensagens', target: 10, progress: 0, reward: 100, claimed: false, type: 'message_count' },
-      { id: 'xp_200', title: 'Evolução', desc: 'Ganhe 200 XP', target: 200, progress: 0, reward: 150, claimed: false, type: 'xp_gain' }
-    ]
+    quests: selected
   };
 }
 
@@ -59,7 +70,8 @@ export const getState = async (userId) => {
     };
     
     if (isAdm) {
-        const adminStats = safeParse(row?.statsStr, {});
+        const adminStatsRaw = safeParse(row?.statsStr, {});
+        const adminStats = await checkDailyRotation(userId, adminStatsRaw);
         const adminThemes = safeParse(row?.unlockedThemesStr, []);
         const adminPersonas = safeParse(row?.unlockedPersonasStr, []);
         const adminAchievements = safeParse(row?.achievementsStr, []);
@@ -248,14 +260,17 @@ export const award = async (userId, rewards, plan = 'free') => {
       
       let increment = 0;
       // Existing type message_count OR new type messages
-      if ((q.type === 'message_count' || q.type === 'messages') && (rewards.xp > 0 || rewards.messages)) increment = 1; 
+      if ((q.type === 'message_count' || q.type === 'messages') && (rewards.xp > 0 || rewards.messages || rewards.messageInc)) increment = 1; 
       
       // XP Gain tracking
       if (q.type === 'xp_gain' && xpGain > 0) increment = xpGain;
       
-      // Feature specific tracking (these will be triggered by specialized award calls in the future)
+      // Feature specific tracking
       if (q.type === 'image' && rewards.image) increment = 1;
-      if (q.type === 'pro' && rewards.pro) increment = 1;
+      if (q.type === 'pro' && (rewards.pro || rewards.isDeepMode)) increment = 1;
+      if (q.type === 'chat' && rewards.chat) increment = 1;
+      if (q.type === 'settings' && rewards.settings) increment = 1;
+      if (q.type === 'login' && rewards.login) increment = 1;
 
       if (increment > 0) {
           q.progress = Math.min(q.target, q.progress + increment);

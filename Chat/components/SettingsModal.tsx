@@ -107,8 +107,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
         if (settings.systemInstructions !== undefined) setSystemInstructions(settings.systemInstructions);
         if (settings.model) setModelSpeed(settings.model);
         if (settings.theme) setTheme(settings.theme as any);
-        if (settings.model) setModelSpeed(settings.model);
-        if (settings.theme) setTheme(settings.theme as any);
         if (settings.notifications !== undefined) setNotifications(settings.notifications);
         if (settings.dynamicPersona !== undefined) setDynamicPersona(settings.dynamicPersona);
       });
@@ -306,9 +304,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
               </nav>
 
               <div className="p-4 border-t border-white/5">
-                <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-lira-pink/5 to-transparent rounded-lg border border-lira-pink/10">
-                  <Sparkle size={14} weight="fill" className="text-lira-pink" />
-                  <span className="text-xs font-semibold text-lira-pink uppercase tracking-widest">{currentUser?.plan || 'Free'}</span>
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${currentUser?.plan === 'singularity' ? 'bg-gradient-to-r from-yellow-500/10 to-transparent border-yellow-500/20' : 'bg-gradient-to-r from-lira-pink/5 to-transparent border-lira-pink/10'}`}>
+                  <Sparkle size={14} weight="fill" className={currentUser?.plan === 'singularity' ? 'text-yellow-500' : 'text-lira-pink'} />
+                  <span className={`text-xs font-semibold uppercase tracking-widest ${currentUser?.plan === 'singularity' ? 'text-yellow-500' : 'text-lira-pink'}`}>
+                    {currentUser?.plan === 'singularity' ? 'Singularity (Elite)' : (currentUser?.plan || 'Free')}
+                  </span>
                 </div>
                 <button
                   onClick={() => onLogout && onLogout()}
@@ -501,7 +501,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                                         type="password"
                                         value={passwordForm.confirm}
                                         onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})}
-                                        className={`w-full bg-[#18181b] border rounded-lg py-2.5 px-3 text-sm text-white outline-none transition-all placeholder-gray-700 ${passwordStatus === 'error' ? 'border-red-500/50' : 'border-white/10 focus:border-white/30'}`}
+                                        className={`w-full bg-[#18181b] border rounded-lg py-2.5 px-3 text-sm text-white outline-none transition-all placeholder-gray-700 ${passwordStatus === 'error' || (passwordForm.confirm && passwordForm.new !== passwordForm.confirm) ? 'border-red-500/50' : 'border-white/10 focus:border-white/30'}`}
                                         placeholder={t('settings.security.confirm_pwd_placeholder')}
                                     />
                                 </div>
@@ -551,7 +551,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                                   className={`p-4 rounded-xl border text-left transition-all ${modelSpeed === 'flash' ? 'bg-white/10 border-white/20' : 'bg-[#18181b] border-white/5 hover:border-white/10'}`}
                                 >
                                    <div className="flex justify-between items-start mb-2">
-                                      <span className="font-semibold text-white text-sm">Turbo</span>
+                                      <span className="font-semibold text-white text-sm">Flash (Turbo)</span>
                                       {modelSpeed === 'flash' && <Check size={14} className="text-white" />}
                                    </div>
                                    <p className="text-xs text-gray-500">{t('settings.intelligence.flash_desc')}</p>
@@ -561,7 +561,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                                   className={`p-4 rounded-xl border text-left transition-all ${modelSpeed === 'pro' ? 'bg-white/10 border-white/20' : 'bg-[#18181b] border-white/5 hover:border-white/10'}`}
                                 >
                                    <div className="flex justify-between items-start mb-2">
-                                      <span className="font-semibold text-white text-sm">Flash</span>
+                                      <span className="font-semibold text-white text-sm">Pro (Ultra)</span>
                                       {modelSpeed === 'pro' && <Check size={14} className="text-white" />}
                                    </div>
                                    <p className="text-xs text-gray-500">{t('settings.intelligence.pro_desc')}</p>
@@ -569,43 +569,46 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                              </div>
                           </div>
 
-                           {/* Temperature */}
-                           {(() => {
-                               const TIER_ORDER = ['free', 'vega', 'sirius', 'antares', 'supernova', 'singularity'];
-                               const userTierIndex = TIER_ORDER.indexOf(currentUser?.plan || 'free');
-                               const antaresIndex = TIER_ORDER.indexOf('antares');
-                               const isRestricted = userTierIndex < antaresIndex;
+                            {/* Temperature */}
+                            {(() => {
+                                const TIER_ORDER = ['free', 'vega', 'sirius', 'singularity'];
+                                const userTierIndex = TIER_ORDER.indexOf(currentUser?.plan?.toLowerCase() || 'free');
+                                const requiredTierIndex = TIER_ORDER.indexOf('sirius');
+                                const isRestricted = userTierIndex < requiredTierIndex;
 
-                               return (
-                                 <div className={`space-y-3 ${isRestricted ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
-                                    <div className="flex justify-between">
-                                       <label className="text-xs font-medium text-gray-400 flex items-center gap-2">
-                                          <Pulse size={14} /> {t('settings.intelligence.creativity')}
-                                          {isRestricted && <Lock size={10} className="text-yellow-500" />}
-                                        </label>
-                                       <span className="text-xs text-white font-mono">{temperature.toFixed(1)}</span>
-                                    </div>
-                                    <input 
-                                       type="range" 
-                                       min="0" 
-                                       max="1" 
-                                       step="0.1"
-                                       value={temperature}
-                                       disabled={isRestricted}
-                                       onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                                       className="w-full accent-white h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer"
-                                    />
-                                    <div className="flex justify-between text-[10px] text-gray-600">
-                                       <span>{t('settings.intelligence.precise')}</span>
-                                       <span>{t('settings.intelligence.balanced')}</span>
-                                       <span>{t('settings.intelligence.creative')}</span>
-                                    </div>
-                                     {isRestricted && (
-                                         <p className="text-[10px] text-yellow-500/80 italic font-medium">{t('settings.intelligence.restricted_tier')}</p>
-                                     )}
-                                 </div>
-                               );
-                           })()}
+                                // Don't return null anymore, show disabled slider with label below
+
+                                return (
+                                  <div className={`space-y-3 ${isRestricted ? 'opacity-50' : ''}`}>
+                                     <div className="flex justify-between items-center">
+                                        <label className="text-xs font-medium text-gray-400 flex items-center gap-2">
+                                           <Pulse size={14} /> {t('settings.intelligence.creativity')}
+                                           {isRestricted && (
+                                              <span className="text-[9px] bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 rounded border border-yellow-500/10 font-bold">
+                                                 SIRIUS+ REQUIRED
+                                              </span>
+                                           )}
+                                         </label>
+                                        <span className="text-xs text-white font-mono">{temperature.toFixed(1)}</span>
+                                     </div>
+                                     <input 
+                                        type="range" 
+                                        min="0" 
+                                        max="1" 
+                                        step="0.1"
+                                        value={temperature}
+                                        disabled={isRestricted}
+                                        onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                                        className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer ${isRestricted ? 'bg-white/5 accent-gray-500' : 'bg-white/10 accent-white'}`}
+                                     />
+                                     <div className="flex justify-between text-[10px] text-gray-600">
+                                        <span>{t('settings.intelligence.precise')}</span>
+                                        <span>{t('settings.intelligence.balanced')}</span>
+                                        <span>{t('settings.intelligence.creative')}</span>
+                                     </div>
+                                  </div>
+                                );
+                            })()}
 
                           {/* Dynamic Persona Toggle */}
                           <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">

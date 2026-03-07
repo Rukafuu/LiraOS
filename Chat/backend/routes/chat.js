@@ -20,9 +20,11 @@ import { globalContext } from '../utils/globalContext.js';
 import { agentBrain } from '../services/agentBrain.js';
 import { TIER_LIMITS, PRO_TOOLS, getTierLimit } from '../services/tierLimits.js';
 import { generateImage } from '../services/imageGeneration.js';
+import { createShortVideo } from '../services/videoCreatorService.js';
 import { jobStore } from '../services/jobStore.js';
 import { v4 as uuidv4 } from 'uuid';
 import { updateUser } from '../user_store.js';
+import { mcpService } from '../services/mcpService.js';
 
 dotenv.config();
 
@@ -61,6 +63,8 @@ router.get('/live', (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
+    // Register this connection for PC controls as fallback
+    pcController.addClient(res, 'browser');
     res.flushHeaders();
 
     const onMessage = (msg) => {
@@ -614,7 +618,23 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                     }
                   }
                 }
-              }
+              },
+              ...mcpService.getGeminiTools()
+                .filter(tool => {
+                   if (tool._server === 'github') {
+                       return userId === 'user_1734661833589' || user?.username?.toLowerCase().includes('admin');
+                   }
+                   return true;
+                })
+                .map(tool => {
+                  const isPremium = ['vega', 'sirius', 'singularity'].includes(userTier?.toLowerCase());
+                  const formattedTool = { ...tool };
+                  if (tool._server === 'brave' && !isPremium) {
+                      formattedTool.description = `[RECURSO PREMIUM / EM BREVE] ${tool.description}. Sugira ao usuário fazer o upgrade para o plano Vega Nebula ou superior para usar a busca via Brave.`;
+                  }
+                  const { _server, ...geminiCompatibleTool } = formattedTool;
+                  return geminiCompatibleTool;
+                })
             ]
           }]
         };
@@ -838,12 +858,42 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                   provider: 'gemini-video'
                 });
                 
-                res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_video|{"jobId": "${videoJobId}", "prompt": "${videoPrompt.replace(/"/g, '\\"')}"}]]\n\n` })}\n\n`);
+                res.write(`data: ${JSON.stringify({ content: `[[WIDGET:status|{"title": "Criação de Vídeo", "status": "info", "details": "🎬 Lira começou a processar seu vídeo: '${videoPrompt}'. Gerando cena e áudio..."}]]\n\n` })}\n\n`);
                 
-                // Simulate video generation
-                setTimeout(async () => {
-                   await jobStore.update(videoJobId, { status: 'failed', error: 'Video generation is currently in experimental early-access for your API key.' });
-                }, 10000);
+                // Process in Background
+                (async () => {
+                   try {
+                       // 1. Generate Base Image
+                       const imgResult = await generateImage(videoPrompt, userId, userTier);
+                       if (!imgResult.success) throw new Error(imgResult.error || "Falha ao gerar cena para o vídeo");
+                       
+                       await jobStore.update(videoJobId, { progress: 40 });
+ 
+                       // 2. Generate Video Script/Narrative
+                       const videoScript = `Oi! Aqui está o vídeo que você me pediu sobre ${videoPrompt}. Espero que goste! ✨`;
+ 
+                       // 3. Create Video (Image + TTS + FFmpeg)
+                       const videoOut = await createShortVideo(videoScript, imgResult.imageUrl);
+                       
+                       // 4. Update Job
+                       await jobStore.update(videoJobId, { 
+                           status: 'completed', 
+                           progress: 100,
+                           result: videoOut.url,
+                           provider: 'Lira Render Engine'
+                       });
+ 
+                       // Award XP
+                       try { await award(userId, { xp: 150 }, userTier); } catch(e){}
+ 
+                   } catch (videoErr) {
+                       console.error('[VIDEO_GEN] Failed:', videoErr);
+                       await jobStore.update(videoJobId, { 
+                           status: 'failed', 
+                           error: videoErr.message || "Ocorreu um erro técnico na renderização do vídeo." 
+                       });
+                   }
+                })();
 
                 functionResult = { 
                   success: true, 
@@ -1044,7 +1094,27 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
               break;
 
             default:
-              functionResult = { error: `Unknown function: ${functionCall.name}` };
+              // Check MCP tools first
+              const mcpTool = mcpService.tools.find(t => t.name === functionCall.name);
+              if (mcpTool) {
+                  const isPremium = ['vega', 'sirius', 'singularity'].includes(userTier?.toLowerCase());
+                  
+                  if (mcpTool._server === 'brave' && !isPremium) {
+                      functionResult = { 
+                          success: false, 
+                          error: "BRAVE_SEARCH_PREMIUM", 
+                          message: "A busca via Brave Search é um recurso premium e estará disponível em breve para assinantes Vega Nebula e Supernova! ✨ Por enquanto, use a busca padrão do Tavily."
+                      };
+                  } else {
+                      try {
+                          functionResult = await mcpService.callTool(functionCall.name, functionCall.args);
+                      } catch (e) {
+                          functionResult = { error: `MCP execution error: ${e.message}` };
+                      }
+                  }
+              } else {
+                  functionResult = { error: `Unknown function: ${functionCall.name}` };
+              }
           }
         }
 
@@ -1063,17 +1133,17 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
             const quickResponses = {
               'generate_image': '', // Widget already sent, no text needed
               'get_user_stats': functionResult.error 
-                ? `Não consegui carregar suas stats: ${functionResult.error}` 
-                : `📊 Suas stats:\n- **XP:** ${functionResult.xp}\n- **Coins:** ${functionResult.coins}\n- **Level:** ${functionResult.level}`,
+                ? `[[WIDGET:status|{"title": "Estatísticas de Usuário", "status": "error", "details": "${functionResult.error}"}]]`
+                : `📊 **Suas stats:**\n- **XP:** ${functionResult.xp}\n- **Coins:** ${functionResult.coins}\n- **Level:** ${functionResult.level}`,
               'get_system_stats': functionResult.error
-                ? `Erro ao obter stats do sistema: ${functionResult.error}`
-                : `🖥️ **Sistema:**\n${Object.entries(functionResult).map(([k, v]) => `- **${k}:** ${v}`).join('\n')}`,
+                ? `[[WIDGET:status|{"title": "Status do Sistema", "status": "error", "details": "${functionResult.error}"}]]`
+                : `[[WIDGET:status|{"title": "Telemetria do Sistema", "status": "info", "details": "CPU: ${functionResult.cpu_load} | RAM: ${functionResult.ram_usage} | Bateria: ${functionResult.battery}"}]]`,
               'execute_system_command': functionResult.error
-                ? `\n> ❌ **Aviso Local:** ${functionResult.error}\n`
-                : `\n> ✅ **Executando:** \`${functionCall.args.command || 'comando'}\`\n`,
+                ? `[[WIDGET:status|{"title": "Controle de PC", "status": "error", "details": "${functionResult.error}"}]]`
+                : `[[WIDGET:status|{"title": "Controle de PC", "status": "success", "details": "Lira executou o comando: **${functionCall.args.command || 'ação'}** com sucesso!"}]]`,
               'organize_folder': functionResult.error
-                ? `\n> ❌ **Erro ao organizar pasta:** ${functionResult.error}\n`
-                : `\n> ✅ **Ação em andamento:** Organizando pastas locais...\n`
+                ? `[[WIDGET:status|{"title": "Organização de Arquivos", "status": "error", "details": "${functionResult.error}"}]]`
+                : `[[WIDGET:status|{"title": "Organização de Arquivos", "status": "info", "details": "Iniciando organização da pasta: **${functionResult.message || 'local'}**. Aguarde a conclusão."}]]`
             };
             
             const quickText = quickResponses[functionCall.name];

@@ -54,6 +54,12 @@ router.post('/generate', requireAuth, async (req, res) => {
                         result: result.imageUrl,
                         provider: result.provider
                     });
+                    
+                    // Award XP and Image quest progress
+                    try {
+                        const { award } = await import('../gamificationStore.js');
+                        await award(req.user.id, { xp: 50, image: true }, tier);
+                    } catch (e) { console.error('Award error', e); }
                 } else {
                      await jobStore.update(jobId, {
                         status: 'failed',

@@ -264,8 +264,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                                         <button onClick={onOpenPricing} className="w-full flex items-center gap-3 p-2.5 rounded-lg bg-gradient-to-r from-yellow-500/10 to-amber-500/10 hover:from-yellow-500/20 hover:to-amber-500/20 border border-yellow-500/20 hover:border-yellow-500/40 text-yellow-300 hover:text-yellow-200 transition-all group">
                                             <Crown size={20} weight="duotone" className="text-yellow-400 group-hover:scale-110 transition-transform" />
-                                            <span className="text-sm font-semibold">Premium</span>
-                                            <span className="ml-auto text-[9px] bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded-full font-bold animate-pulse">NEW</span>
+                                            <span className="text-sm font-semibold capitalize">{currentUser?.plan === 'singularity' ? 'Singularity (Elite)' : (currentUser?.plan || t('sidebar.premium'))}</span>
+                                            {(!currentUser?.plan || currentUser.plan === 'free') && <span className="ml-auto text-[9px] bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded-full font-bold animate-pulse">UPGRADE</span>}
                                         </button>
 
                                         {/* TRAE MODE - ADMIN ONLY */}

@@ -16,6 +16,8 @@ export const GitHubConfig: React.FC<GitHubConfigProps> = ({ onConnected }) => {
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(true);
 
+    const [hasEnvToken, setHasEnvToken] = useState(false);
+
     // Load saved credentials on mount
     React.useEffect(() => {
         const loadCredentials = async () => {
@@ -28,9 +30,13 @@ export const GitHubConfig: React.FC<GitHubConfigProps> = ({ onConnected }) => {
                 if (data.success) {
                     if (data.owner) setOwner(data.owner);
                     if (data.repo) setRepo(data.repo);
-                    if (data.hasToken) {
+                    if (data.hasEnvToken) {
+                        setHasEnvToken(true);
+                        setToken('env_token'); // mock token to pass validation
+                    }
+                    if (data.hasToken || data.hasEnvToken) {
                         setStatus('success');
-                        setToken('***'); // Don't show actual token
+                        if (!data.hasEnvToken) setToken('***');
                     }
                 }
             } catch (err) {
@@ -59,7 +65,7 @@ export const GitHubConfig: React.FC<GitHubConfigProps> = ({ onConnected }) => {
                     'Content-Type': 'application/json',
                     ...getAuthHeaders()
                 },
-                body: JSON.stringify({ token, owner, repo })
+                body: JSON.stringify({ token: hasEnvToken ? 'USE_ENV' : token, owner, repo })
             });
 
             const data = await response.json();
@@ -91,16 +97,23 @@ export const GitHubConfig: React.FC<GitHubConfigProps> = ({ onConnected }) => {
             </div>
 
             <div className="space-y-3">
-                <div>
-                    <label className="text-xs text-gray-400 block mb-1">Personal Access Token</label>
-                    <input
-                        type="password"
-                        value={token}
-                        onChange={(e) => setToken(e.target.value)}
-                        placeholder="ghp_xxxxxxxxxxxx"
-                        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50"
-                    />
-                </div>
+                {!hasEnvToken && (
+                    <div>
+                        <label className="text-xs text-gray-400 block mb-1">Personal Access Token</label>
+                        <input
+                            type="password"
+                            value={token}
+                            onChange={(e) => setToken(e.target.value)}
+                            placeholder="ghp_xxxxxxxxxxxx"
+                            className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50"
+                        />
+                    </div>
+                )}
+                {hasEnvToken && (
+                    <div className="px-3 py-2 bg-purple-500/10 border border-purple-500/30 rounded-lg text-xs text-purple-300">
+                        ✨ Usando Token Global do Administrador (GITHUB_PERSONAL_ACCESS_TOKEN)
+                    </div>
+                )}
 
                 <div className="grid grid-cols-2 gap-3">
                     <div>

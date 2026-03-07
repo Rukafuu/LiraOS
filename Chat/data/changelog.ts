@@ -21,6 +21,20 @@ export interface ChangelogEntry {
 
 const changelog: ChangelogEntry[] = [
   {
+    version: '2.8.0',
+    date: '2026-03-07',
+    title: '🧠 Expansão MCP & Controle do PC',
+    description: 'A LiraOS agora tem Integração Direta com MCPs, permitindo leitura de arquivos, buscas aprimoradas na web e gerenciamento de repositórios.',
+    changes: [
+      { type: 'feature', text: 'Adicionado MCP Tavily Search gratuito aberto a todos os usuários' },
+      { type: 'feature', text: 'Adicionado MCP Brave Search Premium para assinantes Vega+' },
+      { type: 'feature', text: 'Integração de leitura de sistema de arquivos e memória SQLite local' },
+      { type: 'feature', text: 'Adicionado MCP GitHub para que o Lira Agent Manager acesse seu repositório' },
+      { type: 'improvement', text: 'Comandos flexíveis para abrir Spotify e Youtube via PC Controller usando regex' },
+      { type: 'improvement', text: 'Ocultado botões e ajustes de acesso Premium para usuários não inscritos' }
+    ]
+  },
+  {
     version: '2.7.0',
     date: '2025-03-05',
     title: '💳 Sistema de Pagamento & Melhorias',

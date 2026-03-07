@@ -38,6 +38,7 @@ import stripeRoutes from './routes/stripe.js';
 
 // Services & Utils
 import { discordService } from './services/discordService.js';
+import { mcpService } from './services/mcpService.js';
 import { cleanupExpiredBans } from './utils/moderation.js';
 
 console.log('[DEBUG] --- ENV DIAGNOSTICS ---');
@@ -301,6 +302,53 @@ server.listen(PORT, '0.0.0.0', async () => {
     console.log('[STARTUP] Starting Gaming Service...');
     gamingService.start();
   }).catch(err => console.error('Failed to load Gaming Service:', err));
+
+  // Initialize MCP (Model Context Protocol)
+  console.log('[STARTUP] Initializing MCP Clients...');
+  await mcpService.init().catch(e => console.error('[MCP] Init failed:', e));
+  
+  // Register Tavily Search MCP (FREE for all)
+  if (process.env.TAVILY_API_KEY) {
+      console.log('[MCP] Tavily Search detected. Connecting (Global access)...');
+      mcpService.registerServer('tavily', 'npx', ['-y', '@modelcontextprotocol/server-tavily'], { TAVILY_API_KEY: process.env.TAVILY_API_KEY });
+  }
+
+  // Register Brave Search MCP (Premium / VEGA+)
+  if (process.env.BRAVE_API_KEY) {
+      console.log('[MCP] Brave Search detected. Connecting (Vega+ exclusive)...');
+      mcpService.registerServer('brave', 'npx', ['-y', '@modelcontextprotocol/server-brave-search'], { BRAVE_API_KEY: process.env.BRAVE_API_KEY });
+  }
+
+  // Register Google Maps MCP
+  if (process.env.GOOGLE_MAPS_API_KEY) {
+      console.log('[MCP] Google Maps detected. Connecting...');
+      mcpService.registerServer('google-maps', 'npx', ['-y', '@modelcontextprotocol/server-google-maps'], { GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY });
+  }
+
+  // Register YouTube MCP (Search)
+  if (process.env.YOUTUBE_API_KEY) {
+      console.log('[MCP] YouTube Search detected. Connecting...');
+      mcpService.registerServer('youtube', 'npx', ['-y', '@modelcontextprotocol/server-youtube'], { YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY });
+  }
+
+  // Register SQLite MCP (Universal Local Memory)
+  console.log('[MCP] Connecting SQLite Persistent Memory...');
+  const dbPath = path.resolve(__dirname, './data/mcp_memory.db');
+  mcpService.registerServer('sqlite', 'npx', ['-y', '@modelcontextprotocol/server-sqlite', '--db', dbPath]);
+
+  // Register Filesystem MCP (Access to user data)
+  if (process.platform === 'win32' && process.env.USERPROFILE) {
+      const downloads = path.join(process.env.USERPROFILE, 'Downloads');
+      const documents = path.join(process.env.USERPROFILE, 'Documents');
+      console.log(`[MCP] Activating file access: ${downloads}`);
+      mcpService.registerServer('filesystem', 'npx', ['-y', '@modelcontextprotocol/server-filesystem', downloads, documents]);
+  }
+
+  // Register GitHub MCP (Admin Only)
+  if (process.env.GITHUB_PERSONAL_ACCESS_TOKEN) {
+      console.log('[MCP] GitHub Token detected. Connecting (Admin exclusive)...');
+      mcpService.registerServer('github', 'npx', ['-y', '@modelcontextprotocol/server-github'], { GITHUB_PERSONAL_ACCESS_TOKEN: process.env.GITHUB_PERSONAL_ACCESS_TOKEN });
+  }
 
   // Discord Bot
   if (process.env.DISCORD_TOKEN) {

@@ -52,7 +52,6 @@ import { VoiceCallOverlay } from './components/VoiceCallOverlay';
 // import { IrisModal } from './components/IrisModal'; (Removed)
 import { DiscordModal } from './components/DiscordModal';
 import { MaintenanceScreen } from './components/MaintenanceScreen';
-import { PhotoBooth } from './components/PhotoBooth';
 import { AdminPanel } from './components/AdminPanel';
 import { TraePanel } from './components/TraePanel';
 import { WindowControls } from './components/WindowControls';
@@ -161,7 +160,23 @@ const LiraAppContent = () => {
     addToast(newVal ? 'Read Aloud Enabled 🔊' : 'Read Aloud Disabled 🔇', 'info');
   };
 
-  const { stats, addXp, increaseBond, setUsername, activePersonaId, setActivePersonaId, unlockedPersonas, personas, addCoins } = useGamification();
+  const { currentTheme } = useTheme();
+  const { 
+    stats, addXp, addCoins, increaseBond, 
+    completeQuest, claimReward, setUsername, setPlan,
+    activePersonaId, setActivePersonaId,
+    personas, achievements, unlockedThemes
+  } = useGamification();
+  
+  const lastThemeIdRef = useRef(currentTheme.id);
+
+  // Track Theme Changes for Quests
+  useEffect(() => {
+    if (currentTheme.id !== lastThemeIdRef.current) {
+       addXp(10, { settings: true });
+       lastThemeIdRef.current = currentTheme.id;
+    }
+  }, [currentTheme.id, addXp]);
   const { addToast } = useToast();
   const { t } = useTranslation();
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -197,7 +212,7 @@ const LiraAppContent = () => {
   const activePersona = personas.find(p => p.id === activePersonaId) || personas[0];
 
   const { glowClassName } = useAmbientGlow(currentSession?.messages || []);
-  const { currentTheme, setTheme } = useTheme();
+  const { setTheme } = useTheme();
 
   const handleGodMode = () => {
     if (isGodMode) return;
@@ -232,6 +247,9 @@ setVoiceActive(true);
   /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 const [connectionError, setConnectionError] = useState('');
+
+  const sessionRef = useRef(currentSessionId);
+  const statsRef = useRef(stats);
 
   useEffect(() => {
     // Detecta se o usuário perdeu a internet
@@ -494,17 +512,21 @@ setSidebarOpen(s.isSidebarOpen);
   }, [memories]);
 
   useEffect(() => {
-    // 🧠 Connect to LIVE BRAIN (Proactive Messages)
+    // 🧠 Connect to LIVE BRAIN (Proactive Messages & PC Control)
     if (!isLoggedIn) return;
 
-    const eventSource = new EventSource(`${API_BASE_URL}/api/chat/live?token=${encodeURIComponent(JSON.parse(localStorage.getItem('lira_session') || '{}').token || '')}`);
+    sessionRef.current = currentSessionId;
+    statsRef.current = stats;
+
+    const url = `${API_BASE_URL}/api/chat/live?token=${encodeURIComponent(JSON.parse(localStorage.getItem('lira_session') || '{}').token || '')}`;
+    const eventSource = new EventSource(url);
 
     eventSource.onmessage = (event) => {
         try {
             if (event.data.startsWith(':')) return; // Heartbeat
             const data = JSON.parse(event.data);
             
-            if (data.type === 'proactive' && data.content && currentSessionId) {
+            if (data.type === 'proactive' && data.content && sessionRef.current) {
                 console.log('🧠 Received Proactive Thought:', data.content);
                 
                 // Add to Chat
@@ -517,14 +539,14 @@ setSidebarOpen(s.isSidebarOpen);
                 };
 
                 setSessions(prev => prev.map(s => {
-                    if (s.id === currentSessionId) {
+                    if (s.id === sessionRef.current) {
                         return { ...s, messages: [...s.messages, newMessage] };
                     }
                     return s;
                 }));
-
+ 
                 // Auto Speak (Proactive needs to be heard!)
-                const userTier = (stats as any).tier || stats.plan || 'free';
+                const userTier = (statsRef.current as any).tier || statsRef.current.plan || 'free';
                 let voiceId = localStorage.getItem('lira_premium_voice_id') || 'lira-local';
                 if (['antares', 'supernova', 'singularity', 'vega', 'pro', 'architect'].includes(userTier.toLowerCase()) && voiceId === 'lira-local') {
                    voiceId = 'minimax-playful';
@@ -537,6 +559,28 @@ setSidebarOpen(s.isSidebarOpen);
                 
                 addToast('Lira teve uma ideia! 💡', 'success');
             }
+
+            if (data.type === 'command' && data.command) {
+                console.log('🔧 [LiraOS] Received System Command:', data.command, data.payload);
+                if (data.command === 'open' && data.payload) {
+                    const url = data.payload;
+                    // For better reliability on browser (blocked popups), 
+                    // we can try a direct navigation for standard URLs or stay with window.open
+                    if (url.startsWith('http')) {
+                         const win = window.open(url, '_blank');
+                         if (!win) {
+                             addToast('Aviso: Pop-up bloqueado. Clique no link na mensagem.', 'info');
+                         } else {
+                             addToast(`Abrindo: ${url}`, 'info');
+                         }
+                    } else {
+                         // Likely an app scheme or local app
+                         window.location.href = url; 
+                    }
+                } else if (data.command === 'volume') {
+                   console.log('Volume control not implemented in browser yet:', data.payload);
+                }
+            }
         } catch (e) {
             console.warn('Live Event Error:', e);
         }
@@ -545,7 +589,7 @@ setSidebarOpen(s.isSidebarOpen);
     return () => {
         eventSource.close();
     };
-  }, [isLoggedIn, currentSessionId, stats]); // Re-connect if session changes? Ideally not, but we need currentSessionId in scope.
+  }, [isLoggedIn]); // Only reconnect if login status changes
 
   const handleBootComplete = () => {
     setIsBooted(true);
@@ -773,7 +817,7 @@ if (window.innerWidth < 768) setSidebarOpen(false);
 
       // Post-Generation Logic (XP, Fallback Memory)
       const hadImage = (attachments || []).some(att => att.type === 'image');
-      if (hadImage) addXp(50);
+      if (hadImage) addXp(50, { image: true });
 
       if (!extractedMemory && (promptText.toLowerCase().includes("remember") || promptText.toLowerCase().includes("my name is"))) {
          const created = await addMemoryServer(promptText, ['auto'], 'note', 'medium', userId);
@@ -846,7 +890,12 @@ if (window.innerWidth < 768) setSidebarOpen(false);
 
   const handleSendMessage = async (text: string, attachments: Attachment[] = []) => {
     let activeSessionId = currentSessionId;
-    addXp(10);
+    const isAskingAboutMood = text.toLowerCase().includes('sente') || text.toLowerCase().includes('sentindo') || text.toLowerCase().includes('status');
+    addXp(10, { 
+      messageInc: 1, 
+      isDeepMode: isDeepMode, 
+      chat: isAskingAboutMood 
+    });
     increaseBond(1);
     
     if (!activeSessionId) {
@@ -1016,9 +1065,16 @@ if (window.innerWidth < 768) setSidebarOpen(false);
 
                 // Check for first-time login onboarding
                 const hasSeenOnboarding = localStorage.getItem(`lira_onboarding_seen_${u.id}`);
+                const hasSeenChangelog = localStorage.getItem('lira_changelog_seen');
+                // The current version should match the top entry of changelog.ts
+                const currentVersion = '2.8.0'; 
+                
                 if (!hasSeenOnboarding) {
                   setShowOnboarding(true);
                   setShowWelcome(false); // Don't show generic welcome if showing tour
+                } else if (hasSeenChangelog !== currentVersion) {
+                  setShowWelcome(false);
+                  setActiveModal('whatsnew');
                 } else {
                   setShowWelcome(true);
                 }
@@ -1310,7 +1366,6 @@ if (window.innerWidth < 768) setSidebarOpen(false);
         </Suspense>
       </ChunkErrorBoundary>
 
-      {!isVoiceActive && <PhotoBooth messages={currentSession?.messages || []} />}
     </div>
     </>
   );

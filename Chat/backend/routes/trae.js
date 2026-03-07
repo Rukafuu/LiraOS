@@ -446,9 +446,13 @@ ${projectStructure}
 // Initialize GitHub connection
 router.post('/github/connect', async (req, res) => {
     try {
-        const { token, owner, repo } = req.body;
+        let { token, owner, repo } = req.body;
         const userId = req.userId; // From requireAuth middleware
         
+        if (token === 'USE_ENV') {
+            token = process.env.GITHUB_PERSONAL_ACCESS_TOKEN;
+        }
+
         if (!token || !owner || !repo) {
             return res.status(400).json({ 
                 error: 'token, owner, and repo are required' 
@@ -472,7 +476,8 @@ router.post('/github/connect', async (req, res) => {
         
         res.json(result);
     } catch (e) {
-        res.status(500).json({ error: e.message });
+         console.error('[GITHUB] Connection failed:', e.message);
+         res.status(500).json({ error: e.message });
     }
 });
 
@@ -483,15 +488,24 @@ router.get('/github/credentials', async (req, res) => {
         const { getUserById } = await import('../authStore.js');
         const user = await getUserById(userId);
         
-        if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+        let hasToken = false;
+        let owner = '';
+        let repo = '';
+
+        if (user) {
+            hasToken = !!user.githubToken;
+            owner = user.githubOwner || '';
+            repo = user.githubRepo || '';
         }
+
+        const envToken = process.env.GITHUB_PERSONAL_ACCESS_TOKEN;
         
         res.json({
             success: true,
-            hasToken: !!user.githubToken,
-            owner: user.githubOwner || '',
-            repo: user.githubRepo || ''
+            hasToken: hasToken,
+            owner: owner,
+            repo: repo,
+            hasEnvToken: !!envToken
         });
     } catch (e) {
         res.status(500).json({ error: e.message });
