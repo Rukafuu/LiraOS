@@ -777,8 +777,13 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
               const { jobStore: videoJobStore } = await import('../services/jobStore.js');
               const { v4: uuidv4Video } = await import('uuid');
 
-              const videoPrompt = functionCall.args.prompt;
+              const videoPrompt = functionCall.args.prompt || 'Animation';
               const videoJobId = uuidv4Video();
+
+              if (!functionCall.args.prompt) {
+                 functionResult = { success: false, error: 'Prompt is required for video generation' };
+                 break;
+              }
 
               try {
                 await videoJobStore.create(videoJobId, {

@@ -40,7 +40,7 @@ import { getCurrentUser, isAuthenticated, logout as userLogout, getAuthHeaders, 
 import { liraVoice } from './services/lira_voice';
 import { initialMoodState, updateMood, MoodState } from './services/moodEngine';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Zap } from 'lucide-react';
+import { Zap, Sparkles, ChevronRight } from 'lucide-react';
 import { LoginModal } from './components/LoginModal';
 import { LegalModal } from './components/LegalModal';
 import { WelcomeModal } from './components/WelcomeModal';
@@ -1153,6 +1153,20 @@ if (window.innerWidth < 768) setSidebarOpen(false);
         />
 
         <div className="flex-1 flex flex-col min-w-0">
+          {stats.plan === 'free' && (
+            <motion.div 
+               initial={{ opacity: 0, y: -20 }}
+               animate={{ opacity: 1, y: 0 }}
+               className="bg-gradient-to-r from-purple-600/10 via-pink-600/10 to-purple-600/10 border-b border-white/5 py-1.5 px-4 flex items-center justify-center gap-2 group cursor-pointer hover:bg-white/5 transition-all z-[60]"
+               onClick={() => setActiveModal('pricing')}
+            >
+                <Sparkles size={14} className="text-yellow-400 animate-pulse" />
+                <p className="text-[11px] font-medium text-gray-300">
+                    Você está no plano <span className="text-white font-bold">Standard</span>. Evolua seu sistema para o <span className="text-lira-pink font-bold">Vega Nebula</span> para IA ilimitada e ultra rápida.
+                </p>
+                <ChevronRight size={12} className="text-gray-500 group-hover:translate-x-0.5 transition-transform" />
+            </motion.div>
+          )}
           <ChatHeader
             title={currentSession?.title || 'Lira Chat'}
             isMobile={window.innerWidth < 768}
