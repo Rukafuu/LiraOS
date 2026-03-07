@@ -141,14 +141,16 @@ router.post('/create-checkout', requireAuth, async (req, res) => {
         // Determine price based on currency
         const unitAmount = currency === 'brl' ? tierData.priceBRL : tierData.priceUSD;
 
+        // Ensure FRONTEND_URL has a protocol (Stripe requires https:// or http://)
+        const baseUrl = FRONTEND_URL.startsWith('http') ? FRONTEND_URL : `https://${FRONTEND_URL}`;
+
         // Simplified Session Creation using recommend automatic payment methods
         // This avoids issues with Boleto requiring specialized fields on manual setup
         const session = await s.checkout.sessions.create({
             customer: customerId,
             mode: 'subscription',
             // automatic_payment_methods is preferred over payment_method_types for modern accounts
-            // and subscriptions. It will show whatever is enabled in the Dashboard.
-            // If you need to force card only, use payment_method_types: ['card']
+            // It will show whatever is enabled in the Dashboard.
             payment_method_types: ['card'], 
             line_items: [{
                 price_data: {
@@ -169,8 +171,8 @@ router.post('/create-checkout', requireAuth, async (req, res) => {
                 liraos_user_id: userId,
                 tier: tier
             },
-            success_url: `${FRONTEND_URL}?payment=success&tier=${tier}`,
-            cancel_url: `${FRONTEND_URL}?payment=cancelled`,
+            success_url: `${baseUrl}?payment=success&tier=${tier}`,
+            cancel_url: `${baseUrl}?payment=cancelled`,
             allow_promotion_codes: true
         });
 
