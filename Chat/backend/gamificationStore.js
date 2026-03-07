@@ -244,9 +244,15 @@ export const award = async (userId, rewards, plan = 'free') => {
       if (q.progress >= q.target) return;
       
       let increment = 0;
-      if (q.type === 'message_count' && rewards.xp > 0) increment = 1; 
+      // Existing type message_count OR new type messages
+      if ((q.type === 'message_count' || q.type === 'messages') && (rewards.xp > 0 || rewards.messages)) increment = 1; 
+      
+      // XP Gain tracking
       if (q.type === 'xp_gain' && xpGain > 0) increment = xpGain;
-      // Login is auto-1 on generation
+      
+      // Feature specific tracking (these will be triggered by specialized award calls in the future)
+      if (q.type === 'image' && rewards.image) increment = 1;
+      if (q.type === 'pro' && rewards.pro) increment = 1;
 
       if (increment > 0) {
           q.progress = Math.min(q.target, q.progress + increment);

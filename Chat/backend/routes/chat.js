@@ -307,8 +307,19 @@ router.post('/stream', async (req, res) => {
       console.log('[ADMIN] 🔐 Agentic Lira Activated (Gemini 2.0 Flash Agent)');
 
       try {
+        const isDeepMode = req.body.deepMode || false;
+        const isPremiumMode = req.body.isPremium || false;
+
         const visionCtx = globalContext.getVisionContext();
         const visionText = visionCtx ? `\n\n### 👁️ VISÃO DE TELA (ATIVO AGORA):\nEu estou vendo a tela do usuário: "${visionCtx}"\nUse isso para responder perguntas sobre o que está na tela.` : "";
+
+        // Choose models based on requested quality
+        let GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+        if (isDeepMode) {
+          GEMINI_MODELS = ['gemini-2.0-flash-thinking-exp-01-21', 'gemini-2.0-flash', 'gemini-1.5-pro'];
+        } else if (isPremiumMode) {
+          GEMINI_MODELS = ['gemini-1.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+        }
 
         const adminSystemPrompt = (systemInstruction || `Você é LIRA Agent, uma IA autônoma e inteligente no controle deste PC.`) +
           `\n\n${LIRA_SELF_CONTENT}\n\nVocê tem acesso total ao SISTEMA e FERRAMENTAS.${visionText}
@@ -344,6 +355,10 @@ FERRAMENTAS DISPONÍVEIS:
 2. generate_image(prompt): Crie arte (OBRIGATÓRIO PARA PEDIDOS DE IMAGEM).
 3. execute_system_command: Ações reais no Windows.
 4. get_user_stats: Dados reais do usuário.
+5. generate_video(prompt): Crie vídeos curtos a partir de texto (Lyria/Gemini Video Mode).
+
+### 🎼 MULTIMODAL & LYRIA:
+Você tem acesso aos modelos multimodais do Gemini, incluindo o protótipo Lyria para criação/análise de áudio. Se o usuário quiser criar uma música ou áudio, use sua inteligência para descrever o processo ou, se disponível, use ferramentas de geração futuramente.
 
 ### 🎨 WIDGETS INTERATIVOS (CRITICAL):
 Quando o usuário pedir para "criar uma lista", "fazer um checklist", "organizar tarefas", você DEVE usar o widget TODO:
@@ -544,6 +559,20 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                 }
               },
               {
+                name: 'generate_video',
+                description: 'Generates a short video or animation using AI. Use this when the user asks to create a video, movie, or animation.',
+                parameters: {
+                  type: "object",
+                  required: ["prompt"],
+                  properties: {
+                    prompt: {
+                      type: "string",
+                      description: "Detailed description of the video to create."
+                    }
+                  }
+                }
+              },
+              {
                 name: 'execute_system_command',
                 description: 'Executes a system command on the user PC (open apps, files, websites, search logs).',
                 parameters: {
@@ -567,13 +596,6 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
         console.log('[ADMIN] Sending payload to Gemini...');
 
         let response, data, candidate, part, functionCall;
-
-        // Helper: Gemini cascade — tries multiple models on 429
-        const GEMINI_MODELS = [
-          'gemini-2.0-flash',
-          'gemini-2.0-flash-lite', 
-          'gemini-1.5-flash'
-        ];
 
         const geminiCascade = async (body, models = GEMINI_MODELS) => {
           let lastError = null;
@@ -750,6 +772,40 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                 status: "generating",
                 system_note: "✅ SUCCESS: The image is being generated in a LIVE WIDGET below your message. \n\nINSTRUCTION: \n1. Do NOT say 'I will show you when ready'. \n2. Do NOT say 'Waiting for result'. \n3. Simply say: 'Here is what I'm creating for you!' or describe the prompt enthusiastically.\n4. The Widget IS the result."
               };
+              break;
+            case 'generate_video':
+              const { jobStore: videoJobStore } = await import('../services/jobStore.js');
+              const { v4: uuidv4Video } = await import('uuid');
+
+              const videoPrompt = functionCall.args.prompt;
+              const videoJobId = uuidv4Video();
+
+              try {
+                await videoJobStore.create(videoJobId, {
+                  prompt: videoPrompt,
+                  status: 'generating',
+                  progress: 5,
+                  createdAt: Date.now(),
+                  userId: userId,
+                  type: 'video',
+                  provider: 'gemini-video'
+                });
+                
+                res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_video|{"jobId": "${videoJobId}", "prompt": "${videoPrompt.replace(/"/g, '\\"')}"}]]\n\n` })}\n\n`);
+                
+                // Simulate video generation (Real integration would call a video API here)
+                setTimeout(async () => {
+                   await videoJobStore.update(videoJobId, { status: 'failed', error: 'Video generation is currently in experimental early-access for your API key.' });
+                }, 10000);
+
+                functionResult = { 
+                  success: true, 
+                  jobId: videoJobId, 
+                  message: "Video generation started. Note: High-resolution video may take 1-2 minutes." 
+                };
+              } catch (dbErr) {
+                 functionResult = { success: false, error: 'Failed to start video job' };
+              }
               break;
             case 'create_calendar_event':
               try {
@@ -977,16 +1033,25 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
               res.write(`data: ${JSON.stringify({ content: quickText })}\n\n`);
             }
           } else {
-            console.log('[ADMIN] Sending follow-up request with tool output...');
+            // Follow-up uses cascade starting from lighter models (unless in deep mode)
+            let FOLLOWUP_MODELS = isDeepMode 
+               ? ['gemini-2.0-flash-thinking-exp-01-21', 'gemini-1.5-pro', 'gemini-2.0-flash'] 
+               : ['gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-2.0-flash'];
 
-            // Follow-up uses cascade starting from lighter models
-            const FOLLOWUP_MODELS = ['gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-2.0-flash'];
             const finalRes = await geminiCascade(
               {
                 contents: [
                   ...contents,
                   { role: 'model', parts: [{ functionCall }] },
-                  { role: 'function', parts: [{ functionResponse: { name: functionCall.name, response: functionResult } }] }
+                  { 
+                    role: 'user', // Recommended for v1beta function result delivery
+                    parts: [{ 
+                      functionResponse: { 
+                        name: functionCall.name, 
+                        response: { content: functionResult } 
+                      } 
+                    }] 
+                  }
                 ],
                 system_instruction: { parts: [{ text: adminSystemPrompt }] }
               },
@@ -1220,7 +1285,7 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
       body.messages = chatMessages;
     }
 
-    // Gemini Logic (Standard Mode - NOT Admin)
+    // Gemini Logic (Standard Mode)
     if (model.startsWith('gemini') && geminiClient) {
       try {
         const geminiMessages = chatMessages.filter(m => m.role !== 'system').map(m => ({
@@ -1228,35 +1293,76 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
           parts: [{ text: m.content }]
         }));
 
+        // Definition of standard tools for Gemini
+        const geminiTools = [{
+          function_declarations: [
+            {
+              name: 'generate_image',
+              description: 'Generates an image using AI art models. Use this when the user asks to draw, paint, or create a picture.',
+              parameters: {
+                type: "object",
+                required: ["prompt"],
+                properties: {
+                  prompt: { type: "string", description: "Detailed visual description of the image to generate." }
+                }
+              }
+            },
+            {
+              name: 'get_system_stats',
+              description: 'Get current server PC stats (CPU, RAM, Uptime).',
+              parameters: { type: "object", properties: {} }
+            }
+          ]
+        }];
+
         const result = await geminiClient.models.generateContentStream({
           model: 'gemini-2.0-flash',
           contents: geminiMessages,
           config: {
             systemInstruction: systemContent,
-            temperature: temperature
+            temperature: temperature,
+            tools: geminiTools
           }
         });
 
-        let fullGeminiContent = "";
         // FIX: Handle cases where stream is directly returned or in .stream property
         const stream = result.stream || result;
 
         for await (const chunk of stream) {
+          // If Gemini decides to call a function instead of replying text
+          const call = chunk.candidates?.[0]?.content?.parts?.find(p => p.functionCall);
+          if (call) {
+             const { name, args } = call.functionCall;
+             console.log(`[GEMINI] 🔧 Tool Call: ${name}`);
+             
+             if (name === 'generate_image') {
+                const { generateImage } = await import('../services/imageGeneration.js');
+                const { jobStore } = await import('../services/jobStore.js');
+                const { v4: uuidv4 } = await import('uuid');
+                const jobId = uuidv4();
+                
+                await jobStore.create(jobId, { prompt: args.prompt, status: 'generating', userId });
+                res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_image|{"jobId": "${jobId}", "prompt": "${args.prompt}"}]]\n\n` })}\n\n`);
+                
+                // Trigger async (simplified version of the admin one)
+                (async () => {
+                   const resImg = await generateImage(args.prompt, userPlan, process.env.HUGGINNGFACE_ACCESS_TOKEN);
+                   await jobStore.update(jobId, { status: resImg.success ? 'completed' : 'failed', result: resImg.imageUrl });
+                })();
+                continue;
+             }
+          }
+
           let text = "";
           try {
             if (typeof chunk.text === 'function') {
               text = chunk.text();
             } else if (chunk.candidates?.[0]?.content?.parts) {
               text = chunk.candidates[0].content.parts.map(p => p.text).join('');
-            } else if (typeof chunk === 'string') {
-              text = chunk;
             }
-          } catch (e) {
-            // Safety filter or empty chunk
-          }
+          } catch (e) { }
 
           if (text) {
-            fullGeminiContent += text;
             res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
           }
         }

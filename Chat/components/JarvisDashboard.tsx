@@ -13,21 +13,31 @@ interface SystemStats {
 export const JarvisDashboard: React.FC = () => {
     const [visionImage, setVisionImage] = useState<string | null>(null);
     const [logs, setLogs] = useState<string[]>([]);
-    const [stats, setStats] = useState<SystemStats>({ cpu: 12, ram: 45, temp: 55 });
+    const [stats, setStats] = useState<SystemStats>({ cpu: 0, ram: 0, temp: 40 });
     
-    // Simulate live data flow
-    useEffect(() => {
-        const i = setInterval(() => {
-            setStats(prev => ({
-                cpu: Math.min(100, Math.max(0, prev.cpu + (Math.random() * 10 - 5))),
-                ram: Math.min(100, Math.max(0, prev.ram + (Math.random() * 5 - 2.5))),
-                temp: prev.temp
-            }));
-            
-            if (Math.random() > 0.8) {
-                addLog(`SYSTEM UPDATE: Process ID ${Math.floor(Math.random() * 9999)} analyzed.`);
+    const fetchRealStats = async () => {
+        try {
+            const res = await fetch('/api/system/stats', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('lira_token')}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                // Parse "12.5%" -> 12.5
+                const cpu = parseFloat(data.cpu_load.replace('%', '')) || 0;
+                // Parse "4.2GB / 16GB" -> calculate %
+                const ramParts = data.ram_usage.split('/');
+                const used = parseFloat(ramParts[0]) || 0;
+                const total = parseFloat((ramParts[1] || '1').split(' ')[0]) || 1;
+                const ram = (used / total) * 100;
+
+                setStats({ cpu, ram, temp: 45 });
             }
-        }, 1000);
+        } catch (e) {}
+    };
+
+    useEffect(() => {
+        fetchRealStats();
+        const i = setInterval(fetchRealStats, 5000);
         return () => clearInterval(i);
     }, []);
 

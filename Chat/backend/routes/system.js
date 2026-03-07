@@ -84,28 +84,56 @@ router.post('/alert', async (req, res) => {
     }
 });
 
+// Helper function for uptime formatting
+const formatUptime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+};
+
 router.get('/stats', async (req, res) => {
-    const totalRam = os.totalmem() / (1024 ** 3); // GB
-    const freeRam = os.freemem() / (1024 ** 3); // GB
-    const usedRam = totalRam - freeRam;
+  try {
+    const load = os.loadavg();
+    const cpuCount = os.cpus()?.length || 1;
+    const cpuUsage = Math.min(100, (load[0] / cpuCount) * 100).toFixed(1);
     
-    // CPU Load (1min avg)
-    const load = os.loadavg()[0];
-    const cores = os.cpus().length;
-    const cpuLoad = (load / cores) * 100;
+    let totalMem = os.totalmem();
+    let freeMem = os.freemem();
 
-    const uptime = os.uptime();
-    const hours = Math.floor(uptime / 3600);
-    const minutes = Math.floor((uptime % 3600) / 60);
+    // Container limit detection (Linux only)
+    if (os.platform() === 'linux') {
+      try {
+        const fs = await import('fs');
+        // Read Memory Limit
+        if (fs.existsSync('/sys/fs/cgroup/memory/memory.limit_in_bytes')) {
+          const limit = parseInt(fs.readFileSync('/sys/fs/cgroup/memory/memory.limit_in_bytes', 'utf8'));
+          if (limit > 0 && limit < totalMem) {
+            totalMem = limit;
+          }
+        }
+        // Read Memory Usage
+        if (fs.existsSync('/sys/fs/cgroup/memory/memory.usage_in_bytes')) {
+          const usage = parseInt(fs.readFileSync('/sys/fs/cgroup/memory/memory.usage_in_bytes', 'utf8'));
+          freeMem = totalMem - usage;
+        }
+      } catch (err) {
+        console.warn('[System] Failed to read cgroup memory:', err.message);
+      }
+    }
 
-    res.json({ 
-        status: 'online', 
-        cpu_load: `${cpuLoad.toFixed(1)}%`,
-        ram_usage: `${usedRam.toFixed(1)}/${totalRam.toFixed(0)} GB`,
-        battery: 'AC/Desktop', // Node.js cannot easily see battery without extra libs
-        uptime: `${hours}h ${minutes}m`,
-        platform: os.platform()
+    const usedMem = totalMem - freeMem;
+    const ramFormatted = `${(usedMem / 1024 / 1024 / 1024).toFixed(2)}/${(totalMem / 1024 / 1024 / 1024).toFixed(2)} GB`;
+
+    res.json({
+      cpu: `${cpuUsage}%`,
+      ram: ramFormatted,
+      uptime: formatUptime(os.uptime()),
+      platform: os.platform().toUpperCase()
     });
+  } catch (e) {
+    console.error('[System Stats Error]', e);
+    res.status(500).json({ error: 'Internal stats error' });
+  }
 });
 
 export default router;

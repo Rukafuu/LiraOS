@@ -250,6 +250,40 @@ class PCControllerService {
         console.log('[PC Controller] Unknown command pattern, trying to open as app/url...');
         return await this.openApp(cmd);
     }
+
+    async getSystemStats() {
+        if (this.remoteClients.length > 0) {
+            // In a real scenario, we'd wait for a response from the satellite.
+            // For now, if a satellite is connected, we assume we want its data.
+            // Since SSE is one-way, we might need a different approach for true "request-response"
+            // But let's check if we're running locally too.
+            this.broadcast('request_stats', null);
+            return { message: "Status request sent to PC. Check the Telemetry widget in a few seconds." };
+        }
+
+        if (process.env.NODE_ENV === 'production') {
+            return { error: "No local PC connected via Lira Link." };
+        }
+
+        // Local execution (Windows)
+        try {
+            const cpu = await this.runPowershell('(Get-WmiObject -Query "Select LoadPercentage from Win32_Processor").LoadPercentage');
+            const ramTotal = await this.runPowershell('[Math]::Round((Get-CimInstance Win32_PhysicalMemory | Measure-Object -Property capacity -Sum).Sum / 1GB)');
+            const ramFree = await this.runPowershell('[Math]::Round((Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory / 1MB)');
+            const battery = await this.runPowershell('(Get-WmiObject Win32_Battery).EstimatedChargeRemaining');
+            const uptime = await this.runPowershell('(New-TimeSpan -Start (Get-CimInstance Win32_OperatingSystem).LastBootUpTime).ToString("dd\\:hh\\:mm\\:ss")');
+
+            return {
+                cpu_load: `${cpu || 0}%`,
+                ram_usage: `${(ramTotal - ramFree / 1024).toFixed(1)}GB / ${ramTotal}GB`,
+                battery: battery ? `${battery}%` : 'AC Power',
+                uptime: uptime,
+                platform: process.platform
+            };
+        } catch (e) {
+            return { error: "Failed to collect local stats: " + e.message };
+        }
+    }
     
     start() {
         console.log('[PC Controller] Ready (Cloud Hybrid Mode).');

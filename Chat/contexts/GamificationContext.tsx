@@ -286,12 +286,11 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
                 }).catch(() => { });
               }, 1000);
             }
-            setQuests(questsToSet);
-
-            if (Array.isArray(data?.unlockedThemes)) setUnlockedThemes(data.unlockedThemes);
-            if (Array.isArray(data?.unlockedPersonas)) setUnlockedPersonas(data.unlockedPersonas);
-            if (data?.activePersonaId) setActivePersonaId(data.activePersonaId as PersonaId);
-            if (Array.isArray(data?.achievements)) setAchievements(data.achievements);
+            if (Array.isArray(data?.quests)) {
+                setQuests(data.quests);
+            } else if (data?.stats?.dailyQuests?.quests) {
+                setQuests(data.stats.dailyQuests.quests);
+            }
 
 
             // Recovery from local if server looks default and local has richer state
@@ -481,7 +480,11 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         if (r.ok) {
           const data = await r.json();
           setStats(mapBackendToFrontend(data));
-          if (Array.isArray(data?.quests)) setQuests(data.quests);
+          if (Array.isArray(data?.quests)) {
+              setQuests(data.quests);
+          } else if (data?.stats?.dailyQuests?.quests) {
+              setQuests(data.stats.dailyQuests.quests);
+          }
         } else {
           setStats(prev => ({ ...prev, currentXp: prev.currentXp + amount, totalMessages: prev.totalMessages + 1 }));
         }

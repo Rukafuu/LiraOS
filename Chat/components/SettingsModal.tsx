@@ -20,11 +20,12 @@ interface SettingsModalProps {
   onExportUserData?: () => void;
   onImportUserData?: (data: any) => void;
   onOpenLegal?: (section: 'terms' | 'privacy' | 'cookies') => void;
+  onOpenFeedback?: () => void;
 }
 
 type Tab = 'profile' | 'security' | 'intelligence' | 'shortcuts' | 'memories' | 'appearance' | 'help';
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, memories = [], onDeleteMemory, onClearUserData, onLogout, onExportUserData, onImportUserData, onOpenLegal }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, memories = [], onDeleteMemory, onClearUserData, onLogout, onExportUserData, onImportUserData, onOpenLegal, onOpenFeedback }) => {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
   const [search, setSearch] = useState('');
@@ -842,15 +843,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                                     <p className="text-xs text-gray-400">{t('settings.help.feedback_desc')}</p>
                                 </div>
                               </div>
-                              <a 
-                                href="https://forms.google.com/example-feedback" 
-                                target="_blank"
-                                rel="noopener noreferrer" 
-                                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-2"
+                              <button 
+                                onClick={onOpenFeedback}
+                                className="px-4 py-2 bg-white text-black text-xs font-semibold rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
                               >
                                 {t('settings.help.send_feedback')}
-                                <ExternalLink size={12} />
-                              </a>
+                                <MessageSquare size={12} />
+                              </button>
                            </div>
 
                            {/* Social Media */}

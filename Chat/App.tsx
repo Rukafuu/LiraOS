@@ -16,7 +16,6 @@ import { LoginScreen } from './components/LoginScreen';
 import { OnboardingTour } from './components/OnboardingTour';
 import { LandingChat } from './components/LandingChat';
 const CookieConsentModal = React.lazy(() => import('./components/CookieConsentModal').then(m => ({ default: m.CookieConsentModal })));
-const LiraCompanionWidget = React.lazy(() => import('./components/LiraCompanionWidget').then(m => ({ default: m.LiraCompanionWidget })));
 const CompanionPage = React.lazy(() => import('./components/CompanionPage').then(m => ({ default: m.CompanionPage })));
 import { CookiePreferences } from './components/CookieConsentModal';
 const ShortcutsModal = React.lazy(() => import('./components/ShortcutsModal').then(m => ({ default: m.ShortcutsModal })));
@@ -45,6 +44,7 @@ import { Zap } from 'lucide-react';
 import { LoginModal } from './components/LoginModal';
 import { LegalModal } from './components/LegalModal';
 import { WelcomeModal } from './components/WelcomeModal';
+import { FeedbackModal } from './components/FeedbackModal';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ResetPassword } from './components/ResetPassword';
 import { VoiceCallOverlay } from './components/VoiceCallOverlay';
@@ -66,73 +66,18 @@ const MEMORY_STORAGE_KEY = 'lira_memories';
 const COOKIE_CONSENT_KEY = 'lira_cookie_consent';
 
 const LiraAppContent = () => {
-    // State for Desktop Widget Mode
-    const [isWidgetMode, setIsWidgetMode] = useState(false);
-    const [isSpeaking, setIsSpeaking] = useState(false);
-    const [isOverlayMode, setIsOverlayMode] = useState(false);
-
-    // Subscribe to Voice State and sync to overlay
-    useEffect(() => {
-        const unsub = liraVoice.subscribe({
-            onStart: () => {
-                setIsSpeaking(true);
-                if (IS_DESKTOP) syncVoiceState(true);
-            },
-            onEnd: () => {
-                setIsSpeaking(false);
-                if (IS_DESKTOP) syncVoiceState(false);
-            }
-        });
-        return unsub;
-    }, []);
-
-    const handleToggleWidgetMode = async () => {
-        if (!IS_DESKTOP) return;
-        
-        const newState = !isWidgetMode;
-        setIsWidgetMode(newState);
-        
-        if (newState) {
-            await enterWidgetMode();
-            addToast('Modo Widget Ativado! 🧩', 'success');
-        } else {
-            await exitWidgetMode();
-        }
-    };
-
-    const handleToggleOverlay = async () => {
-        if (!IS_DESKTOP) return;
-        
-        const { toggleOverlayMode } = await import('./services/overlayService');
-        const isActive = await toggleOverlayMode();
-        setIsOverlayMode(isActive);
-        
-        if (isActive) {
-            addToast('🎭 Modo VTuber Overlay Ativado!', 'success');
-        } else {
-            addToast('Overlay Desativado', 'info');
-        }
-    };
+    // Force exit Widget Mode on Logout (Moved down)
 
     // Force exit Widget Mode on Logout (Moved down)
 
   const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
   
-  // 🎭 OVERLAY MODE: Separate window for VTuber overlay
-  if (pathname === '/overlay') {
-    const LiraOverlayMode = React.lazy(() => import('./components/LiraOverlayMode').then(m => ({ default: m.LiraOverlayMode })));
-    return (
-      <Suspense fallback={<div className="w-screen h-screen bg-transparent" />}>
-        <LiraOverlayMode />
-      </Suspense>
-    );
-  }
   
   if (pathname === '/reset') {
     return (
       <>
         <div data-tauri-drag-region className="fixed top-0 left-0 right-0 h-8 z-[99999] cursor-move" />
-        <WindowControls onToggleWidget={handleToggleWidgetMode} isWidgetMode={isWidgetMode} />
+        <WindowControls />
         <ResetPassword backendUrl={API_BASE_URL} />
       </>
     );
@@ -142,15 +87,7 @@ const LiraAppContent = () => {
   const [showLoadingScreen, setShowLoadingScreen] = useState(true); // Default to showing loading screen
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isGodMode, setIsGodMode] = useState(false);
-  const { isActive: isCopilotActive, toggle: toggleCopilot } = useCopilot(isLoggedIn);
 
-  // Force exit Widget Mode on Logout
-  useEffect(() => {
-      if (!isLoggedIn && isWidgetMode) {
-          setIsWidgetMode(false);
-          exitWidgetMode();
-      }
-  }, [isLoggedIn, isWidgetMode]);
 
   // Initial Boot Sequence
   useEffect(() => {
@@ -179,6 +116,9 @@ const LiraAppContent = () => {
     checkOAuth();
   }, []);
 
+  // --- UNIFIED MODAL MANAGEMENT ---
+  const [activeModal, setActiveModal] = useState<string | null>(null);
+  const closeModal = () => setActiveModal(null);
 
 
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -187,21 +127,6 @@ const LiraAppContent = () => {
 
 
   const {
-    isSettingsOpen, setSettingsOpen,
-    isDashboardOpen, setDashboardOpen,
-    isStoreOpen, setStoreOpen,
-    isPricingOpen, setPricingOpen,
-    isWhatsNewOpen, setWhatsNewOpen,
-    isShortcutsOpen, setShortcutsOpen,
-    isCookieModalOpen, setCookieModalOpen,
-    isGamerOpen, setGamerOpen,
-    isDailyQuestsOpen, setDailyQuestsOpen,
-    isJarvisDashboardOpen, setJarvisDashboardOpen,
-    isAdminPanelOpen, setAdminPanelOpen,
-    isTodoPanelOpen, setTodoPanelOpen,
-    isCalendarOpen, setCalendarOpen,
-    isSupportersOpen, setSupportersOpen,
-    isTraePanelOpen, setTraePanelOpen,
     isVoiceActive, setVoiceActive,
     isSidebarOpen, setSidebarOpen,
     closeAllModals
@@ -211,7 +136,6 @@ const LiraAppContent = () => {
   const [showWelcome, setShowWelcome] = useState(false);
   const [isReturningUser, setIsReturningUser] = useState(false);
   const [dynamicPersona, setDynamicPersona] = useState(false);
-  const [showCompanion, setShowCompanion] = useState(false);
 
   const [streamingText, setStreamingText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -233,7 +157,7 @@ const LiraAppContent = () => {
     addToast(newVal ? 'Read Aloud Enabled 🔊' : 'Read Aloud Disabled 🔇', 'info');
   };
 
-  const { stats, addXp, increaseBond, setUsername, activePersonaId, setActivePersonaId, unlockedPersonas, personas, addCoins } = useGamification();
+  const { stats, addXp, increaseBond, setUsername, activePersonaId, setActivePersonaId, unlockedPersonas, personas, addCoins, award } = useGamification();
   const { addToast } = useToast();
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastSpokenMsgId = useRef<string | null>(null);
@@ -270,9 +194,9 @@ const LiraAppContent = () => {
       addToast('New conversation created', 'info');
     },
 onToggleSidebar: () => setSidebarOpen(prev => !prev),
-    onOpenSettings: () => setSettingsOpen(true),
-    onOpenShortcuts: () => setShortcutsOpen(true),
-    onCloseModals: closeAllModals,
+    onOpenSettings: () => setActiveModal('settings'),
+    onOpenShortcuts: () => setActiveModal('shortcuts'),
+    onCloseModals: closeModal,
     onGodMode: handleGodMode
   });
   
@@ -339,7 +263,7 @@ const [connectionError, setConnectionError] = useState('');
     return (
       <>
         <div data-tauri-drag-region className="fixed top-0 left-0 right-0 h-8 z-[99999] cursor-move" />
-        <WindowControls onToggleWidget={handleToggleWidgetMode} isWidgetMode={isWidgetMode} />
+        <WindowControls />
         <MaintenanceScreen 
             onRetry={() => {
                 setIsOffline(false); // Optimistically reset
@@ -399,7 +323,6 @@ setSidebarOpen(s.isSidebarOpen);
 
     // Auto-Show Companion if Voice Call starts
     if (isVoiceActive) {
-      setShowCompanion(true);
       // Force layout refresh to wake up Lira
       setTimeout(() => window.dispatchEvent(new Event('resize')), 500);
     }
@@ -629,7 +552,7 @@ setSidebarOpen(s.isSidebarOpen);
 
   const handleCookieSave = (preferences: CookiePreferences) => {
     localStorage.setItem(COOKIE_CONSENT_KEY, JSON.stringify(preferences));
-setCookieModalOpen(false);
+setActiveModal(null);
     addToast('Preferences saved', 'success');
   };
 
@@ -838,6 +761,7 @@ if (window.innerWidth < 768) setSidebarOpen(false);
 
       const hadImage = (attachments || []).some(att => att.type === 'image');
       if (hadImage) {
+        if (userId) award('image', userId);
         if (accumulatedResponse.includes('Limite de uso da API do Gemini')) {
           addToast('Limite do Gemini atingido. Tente novamente em alguns minutos.', 'error');
         } else if (
@@ -846,6 +770,10 @@ if (window.innerWidth < 768) setSidebarOpen(false);
         ) {
           addToast('Serviço de visão indisponível. Tente novamente em breve.', 'error');
         }
+      }
+
+      if (isDeepMode && userId) {
+        award('pro', userId);
       }
 
 
@@ -968,6 +896,8 @@ if (window.innerWidth < 768) setSidebarOpen(false);
     let activeSessionId = currentSessionId;
     addXp(10);
     increaseBond(1);
+    const u = getCurrentUser();
+    if (u?.id) award('messages', u.id);
     if (!activeSessionId) {
       const currentUser = getCurrentUser();
       const userId = currentUser?.id;
@@ -1141,7 +1071,7 @@ if (window.innerWidth < 768) setSidebarOpen(false);
       <>
         {/* Tauri Drag Region - Invisible Titlebar */}
         <div data-tauri-drag-region className="fixed top-0 left-0 right-0 h-8 z-[99999] cursor-move" />
-        <WindowControls onToggleWidget={handleToggleWidgetMode} isWidgetMode={isWidgetMode} />
+        <WindowControls />
         <div className={`fixed inset-0 bg-black text-white ${isBarrelRoll ? 'do-a-barrel-roll' : ''} ${isMatrixMode ? 'matrix-mode' : ''} z-0`}>
           <LandingChat onLoginReq={() => setIsLoginOpen(true)} />
           <LoginModal
@@ -1172,140 +1102,119 @@ if (window.innerWidth < 768) setSidebarOpen(false);
     );
   }
 
+  const handleLogout = () => {
+    const sessionStr = localStorage.getItem('lira_session');
+    try {
+      const sess = sessionStr ? JSON.parse(sessionStr) : null;
+      if (sess?.refreshToken) {
+        fetch(`${API_BASE_URL}/api/auth/logout`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+          body: JSON.stringify({ refreshToken: sess.refreshToken })
+        }).catch(() => { });
+      }
+    } catch { }
+    userLogout();
+    setSessions([]);
+    setCurrentSessionId(null);
+    setMemories([]);
+    setIsLoggedIn(false);
+    setIsLoginOpen(false);
+  };
+
   return (
     <>
-      {/* --- DESKTOP WIDGET MODE OVERLAY --- */}
-      {isWidgetMode && IS_DESKTOP && (
-          <div className="fixed inset-0 z-[999999] bg-transparent">
-             <div data-tauri-drag-region className="absolute inset-0 z-0 cursor-move" />
-             <WindowControls onToggleWidget={handleToggleWidgetMode} isWidgetMode={true} />
-             <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-                 <div className="pointer-events-auto w-full h-full">
-                    <Suspense fallback={null}>
-                       <LiraCompanionWidget 
-                           onClose={handleToggleWidgetMode} 
-                           isSpeaking={isSpeaking} 
-                           currentEmotion={moodState && moodState.mood}
-                       />
-                    </Suspense>
-                 </div>
-             </div>
-          </div>
-      )}
-
-      {/* --- MAIN APP INTERFACE --- */}
-      <div className={`
-        ${isWidgetMode ? 'hidden' : 'flex'} h-[100dvh] w-full relative bg-lira-bg text-white overflow-hidden font-sans selection:bg-lira-pink/30 transition-colors duration-500
+      <div className="flex h-[100dvh] w-full relative bg-lira-bg text-white overflow-hidden font-sans selection:bg-lira-pink/30 transition-colors duration-500
         ${isBarrelRoll ? 'do-a-barrel-roll' : ''}
         ${isMatrixMode ? 'matrix-mode' : ''}
         ${isGodMode ? 'god-mode' : ''}
-    `}>
-      {/* ... backgrounds ... */}
-      <div className="bg-noise" />
-      <ParticleBackground isHyperSpeed={isBarrelRoll || isGodMode} />
-      <div className={`absolute inset-0 bg-gradient-to-b ${glowClassName} blur-[120px] pointer-events-none z-0 transition-all duration-1000`} />
-
-      {/* Tauri Drag Region - Invisible Titlebar */}
-      <div data-tauri-drag-region className="fixed top-0 left-0 right-0 h-8 z-[99999] cursor-move" />
-      <WindowControls onToggleWidget={handleToggleWidgetMode} isWidgetMode={isWidgetMode} />
-      
-      {/* Background Layer */}
-      {showOnboarding && <OnboardingTour onComplete={handleOnboardingComplete} />}
-      <LegalModal isOpen={isLegalModalOpen} onClose={() => setIsLegalModalOpen(false)} initialSection={legalSection} />
-      <DiscordModal isOpen={isDiscordOpen} onClose={() => setIsDiscordOpen(false)} />
-
-      <Sidebar
-        sessions={sessions}
-        currentSessionId={currentSessionId}
-        onSelectSession={setCurrentSessionId}
-        onNewChat={createNewChat}
-        onDeleteSession={handleDeleteSession}
-        onOpenSettings={() => setSettingsOpen(true)}
-        onOpenDashboard={() => setJarvisDashboardOpen(true)}
-        onOpenStore={() => setStoreOpen(true)}
-        onOpenShortcuts={() => setShortcutsOpen(true)}
-        onOpenLegal={() => setIsLegalModalOpen(true)}
-        onOpenDiscord={() => setIsDiscordOpen(true)}
-        onOpenGamer={() => window.location.href = '/gamer/'}
-        onOpenDailyQuests={() => setDailyQuestsOpen(true)}
-        onOpenSupporters={() => setSupportersOpen(true)}
-        onOpenAdminPanel={() => setAdminPanelOpen(true)}
-        onOpenTodoPanel={() => setTodoPanelOpen(true)}
-        onOpenCalendar={() => setCalendarOpen(true)}
-        onOpenTraePanel={() => setTraePanelOpen(true)}
-        onOpenPricing={() => setPricingOpen(true)}
-        onOpenWhatsNew={() => setWhatsNewOpen(true)}
-      />
-
-      <div className="flex-1 flex flex-col min-w-0">
-        <ChatHeader
-          title={currentSession?.title || 'New Conversation'}
-          isMobile={typeof window !== 'undefined' ? window.innerWidth < 768 : false}
-          onToggleSidebar={toggleSidebar}
-          isSidebarOpen={isSidebarOpen}
-          status={isGenerating ? 'generating' : 'idle'}
-          backendStatus={backendStatus}
-          selectedModel={selectedModel}
-          onModelChange={setSelectedModel}
-          onStop={handleStop}
-          isGenerating={isGenerating}
-          onToggleDeepMode={handleToggleDeepMode}
-          isDeepMode={isDeepMode}
-          onToggleCopilot={toggleCopilot}
-          isCopilotActive={isCopilotActive}
-          displayName={stats.username}
-          avatarUrl={LIRA_AVATAR}
-          onToggleCompanion={() => setShowCompanion(!showCompanion)}
-          onLogout={() => {
-            const sessionStr = localStorage.getItem('lira_session');
-            try {
-              const sess = sessionStr ? JSON.parse(sessionStr) : null;
-              if (sess?.refreshToken) {
-                const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
-                fetch(`${API_BASE_URL}/api/auth/logout`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...getAuthHeaders() }, body: JSON.stringify({ refreshToken: sess.refreshToken }) }).catch(() => { });
-              }
-            } catch { }
-            userLogout();
-            setSessions([]);
-            setCurrentSessionId(null);
-            setMemories([]);
-            setIsLoggedIn(false);
-            setIsLoginOpen(false);
-          }}
-          onStartVoiceCall={() => setVoiceActive(true)}
-          voiceEnabled={isVoiceEnabled}
-          onToggleVoice={handleToggleVoice}
-          isExhausted={moodState.mood === 'exausta'}
-          fatigue={moodState.fatigue}
-          onToggleOverlay={handleToggleOverlay}
-          isOverlayActive={isOverlayMode}
+      ">
+        <Sidebar
+          sessions={sessions}
+          currentSessionId={currentSessionId}
+          onSelectSession={setCurrentSessionId}
+          onNewChat={createNewChat}
+          onDeleteSession={handleDeleteSession}
+          onOpenSettings={() => setActiveModal('settings')}
+          onOpenDashboard={() => setActiveModal('dashboard')}
+          onOpenStore={() => setActiveModal('store')}
+          onOpenShortcuts={() => setActiveModal('shortcuts')}
+          onOpenLegal={() => { setLegalSection('terms'); setActiveModal('legal'); }}
+          onOpenDiscord={() => setActiveModal('discord')}
+          onOpenGamer={() => setActiveModal('gamer')}
+          onOpenDailyQuests={() => setActiveModal('dailyquests')}
+          onOpenSupporters={() => setActiveModal('supporters')}
+          onOpenAdminPanel={() => setActiveModal('admin')}
+          onOpenTodoPanel={() => setActiveModal('todo')}
+          onOpenCalendar={() => setActiveModal('calendar')}
+          onOpenTraePanel={() => setActiveModal('trae')}
+          onOpenPricing={() => setActiveModal('pricing')}
+          onOpenWhatsNew={() => setActiveModal('whatsnew')}
         />
 
-        <div className="flex-1 flex flex-col min-h-0">
-          <MessageList
-            messages={currentSession?.messages || []}
-            isLoading={isGenerating}
-            onRegenerate={handleRegenerateMessage}
-            onEdit={handleEditMessage}
-            onTTS={handleTTS}
-            onSuggestionClick={(text) => handleSendMessage(text, [])}
-            onSaveMemory={(messageId) => {
-              const session = currentSession;
-              if (!session) return;
-              const msg = session.messages.find(m => m.id === messageId);
-              if (!msg) return;
-              const currentUser = getCurrentUser();
-              const userId = currentUser?.id;
-              addMemoryServer(msg.content, ['manual', activePersonaId], 'note', 'medium', userId).then(saved => {
-                if (saved) {
-                  setMemories(prev => [...prev, saved]);
-                  addToast('Saved to Memory', 'success');
-                } else {
-                  addToast('Failed to save memory', 'error');
-                }
-              });
-            }}
+        <div className="flex-1 flex flex-col min-w-0">
+          <ChatHeader
+            title={currentSession?.title || 'Lira Chat'}
+            isMobile={window.innerWidth < 768}
+            onToggleSidebar={toggleSidebar}
+            isSidebarOpen={isSidebarOpen}
+            status={isGenerating ? 'generating' : 'idle'}
+            backendStatus={backendStatus}
+            onStop={handleStop}
+            onToggleVoice={handleToggleVoice}
+            voiceEnabled={isVoiceEnabled}
+            isExhausted={moodState.mood === 'exausta'}
+            fatigue={moodState.fatigue}
+            onLogout={handleLogout}
           />
+
+          <main className="flex-1 flex flex-col relative overflow-hidden">
+            <AnimatePresence mode="wait">
+              {sessions.length === 0 ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="flex-1 flex items-center justify-center p-4"
+                >
+                  <div className="text-center space-y-4 max-w-md">
+                     <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-lira-pink to-purple-500">LiraOS</h1>
+                     <p className="text-gray-400">Comece uma nova conversa para interagir com a Lira. ✨</p>
+                     <button onClick={createNewChat} className="bg-lira-pink text-white px-6 py-2 rounded-full font-bold hover:scale-105 transition-transform shadow-lg shadow-lira-pink/20">
+                        Nova Conversa
+                     </button>
+                  </div>
+                </motion.div>
+              ) : (
+                <div className="flex-1 flex flex-col min-h-0">
+                  <MessageList
+                    messages={currentSession?.messages || []}
+                    isLoading={isGenerating}
+                    onRegenerate={handleRegenerateMessage}
+                    onEdit={handleEditMessage}
+                    onTTS={handleTTS}
+                    onSuggestionClick={(text) => handleSendMessage(text, [])}
+                    onSaveMemory={(messageId) => {
+                      const session = currentSession;
+                      if (!session) return;
+                      const msg = session.messages.find(m => m.id === messageId);
+                      if (!msg) return;
+                      const currentUser = getCurrentUser();
+                      const userId = currentUser?.id;
+                      addMemoryServer(msg.content, ['manual', activePersonaId], 'note', 'medium', userId).then(saved => {
+                        if (saved) {
+                          setMemories(prev => [...prev, saved]);
+                          addToast('Saved to Memory', 'success');
+                        } else {
+                          addToast('Failed to save memory', 'error');
+                        }
+                      });
+                    }}
+                  />
+                </div>
+              )}
+            </AnimatePresence>
+
           <ChatInput
             onSendMessage={handleSendMessage}
             isLoading={isGenerating}
@@ -1320,248 +1229,102 @@ if (window.innerWidth < 768) setSidebarOpen(false);
             onModelChange={setSelectedModel}
             isDeepMode={isDeepMode}
             onToggleDeepMode={handleToggleDeepMode}
-            onOpenLegal={() => setIsLegalModalOpen(true)}
-            onOpenCookies={() => setIsLegalModalOpen(true)}
+            onOpenLegal={() => { setLegalSection('terms'); setActiveModal('legal'); }}
+            onOpenCookies={() => { setLegalSection('cookies'); setActiveModal('legal'); }}
             voiceEnabled={isVoiceEnabled}
             onToggleVoice={handleToggleVoice}
           />
-        </div>
+        </main>
       </div>
 
-      <Suspense fallback={<LoadingScreen />}>
-        <SettingsModal
-          isOpen={isSettingsOpen}
-          onClose={() => setSettingsOpen(false)}
-          memories={memories}
-          onDeleteMemory={handleDeleteMemory}
-          onClearUserData={async () => {
-            const currentUser = getCurrentUser();
-            const userId = currentUser?.id;
-            if (!userId) return;
-            const sessionsKey = `${LOCAL_STORAGE_KEY}_${userId}`;
-            const memKey = `${MEMORY_STORAGE_KEY}_${userId}`;
-            localStorage.removeItem(sessionsKey);
-            localStorage.removeItem(memKey);
-            setSessions([]);
-            setCurrentSessionId(null);
-            setMemories([]);
-            const okMem = await deleteAllMemoriesForUser(userId);
-            let okSess = false;
-            try {
-              const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
-              const r = await fetch(`${API_BASE_URL}/api/sessions?userId=${encodeURIComponent(userId)}`, { method: 'DELETE', headers: getAuthHeaders() });
-              okSess = r.ok;
-            } catch { }
-            addToast(okMem && okSess ? 'Your data has been cleared' : 'Failed to clear some server data (local cleared)', okMem && okSess ? 'success' : 'error');
-          }}
-          onLogout={() => {
-            const currentUser = getCurrentUser();
-            const userId = currentUser?.id;
-            if (userId) {
-              // Optional: persist any unsaved local state under user keys (already handled by effects)
-            }
-            userLogout();
-            setSessions([]);
-            setCurrentSessionId(null);
-            setMemories([]);
-            setIsLoggedIn(false);
-            setSettingsOpen(false);
-            addToast('Logged out', 'success');
-          }}
-          onOpenLegal={(section) => {
-            setLegalSection(section);
-            setIsLegalModalOpen(true);
-          }}
-          onExportUserData={() => {
-            const currentUser = getCurrentUser();
-            const userId = currentUser?.id;
-            (async () => {
-              try {
-                const payload: any = { users: [], userId, sessions: [], memories: [] }; // getAllUsers() removed - function doesn't exist
-                if (userId) {
-                  const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
-                  const sr = await fetch(`${API_BASE_URL}/api/sessions?userId=${encodeURIComponent(userId)}`, { headers: getAuthHeaders() });
-                  if (sr.ok) payload.sessions = await sr.json();
-                  const mems = await fetchMemories(userId);
-                  payload.memories = mems;
-                }
-                const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `lira-export-${userId || 'anon'}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                addToast('Exported data', 'success');
-              } catch {
-                addToast('Export failed', 'error');
-              }
-            })();
-          }}
-          onImportUserData={(data) => {
-            try {
-              const currentUser = getCurrentUser();
-              const userId = currentUser?.id;
-              // importUsers removed - function doesn't exist
-              // if (Array.isArray(data.users)) {
-              //   const { added, updated } = importUsers(data.users);
-              //   addToast(`Users merged (${added} added, ${updated} updated)`, 'info');
-              // }
-              const sessionsKey = userId ? `${LOCAL_STORAGE_KEY}_${userId}` : LOCAL_STORAGE_KEY;
-              const memKey = userId ? `${MEMORY_STORAGE_KEY}_${userId}` : MEMORY_STORAGE_KEY;
-              if (Array.isArray(data.sessions)) {
-                localStorage.setItem(sessionsKey, JSON.stringify(data.sessions));
-                setSessions(data.sessions);
-                setCurrentSessionId(data.sessions[0]?.id || null);
-              }
-              if (Array.isArray(data.memories)) {
-                localStorage.setItem(memKey, JSON.stringify(data.memories));
-                setMemories(data.memories);
-              }
-              addToast('Imported data', 'success');
-            } catch {
-              addToast('Invalid import file', 'error');
-            }
-          }}
-        />
-        <DashboardModal
-          isOpen={isDashboardOpen}
-          onClose={() => setDashboardOpen(false)}
-        />
-        <StoreModal
-          isOpen={isStoreOpen}
-          onClose={() => setStoreOpen(false)}
-        />
-        <PricingModal
-          isOpen={isPricingOpen}
-          onClose={() => setPricingOpen(false)}
-          currentPlan={stats.plan || 'free'}
-        />
-        <WhatsNewModal
-          isOpen={isWhatsNewOpen}
-          onClose={() => setWhatsNewOpen(false)}
-        />
-        <ShortcutsModal
-          isOpen={isShortcutsOpen}
-          onClose={() => setShortcutsOpen(false)}
-        />
-        {/* <GamerModal
-          isOpen={isGamerOpen}
-          onClose={() => setGamerOpen(false)}
-        /> */}
-        <DailyQuestsModal
-          isOpen={isDailyQuestsOpen}
-          onClose={() => setDailyQuestsOpen(false)}
-        />
-        <CookieConsentModal
-          isOpen={isCookieModalOpen}
-          onSave={handleCookieSave}
-          onClose={() => setCookieModalOpen(false)}
-        />
-        <VoiceCallOverlay
-          isOpen={isVoiceActive}
-          onClose={() => setVoiceActive(false)}
-          onSendMessage={(text) => handleSendMessage(text, [])}
-          userName={stats.username || 'User'}
-          avatarUrl={LIRA_AVATAR}
-          currentResponse={streamingText}
-          messages={currentSession?.messages || []}
-          onToggleCompanion={() => setShowCompanion(prev => !prev)}
-        />
-
-        {/* Background Studio for Selfies (Disabled when Voice Call is active to avoid conflicts) */}
-        {!isVoiceActive && (
-          <PhotoBooth messages={currentSession?.messages || []} />
+      <ParticleBackground isHyperSpeed={isBarrelRoll || isGodMode} />
+      <div className={`absolute inset-0 bg-gradient-to-b ${glowClassName} blur-[120px] pointer-events-none z-0 transition-all duration-1000`} />
+      <div className="bg-noise" />
+      <WindowControls />
+      <div data-tauri-drag-region className="fixed top-0 left-0 right-0 h-8 z-[99999] cursor-move" />
+      <Suspense fallback={null}>
+        {activeModal === 'settings' && (
+          <SettingsModal
+            isOpen={true}
+            onClose={closeModal}
+            memories={memories}
+            onDeleteMemory={handleDeleteMemory}
+            onClearUserData={async () => {
+               const u = getCurrentUser();
+               if (!u?.id) return;
+               localStorage.removeItem(`${LOCAL_STORAGE_KEY}_${u.id}`);
+               localStorage.removeItem(`${MEMORY_STORAGE_KEY}_${u.id}`);
+               setSessions([]);
+               setMemories([]);
+               addToast('Local data cleared', 'success');
+            }}
+            onLogout={handleLogout}
+            onOpenLegal={(section) => { setLegalSection(section); setActiveModal('legal'); }}
+            onOpenFeedback={() => setActiveModal('feedback')}
+          />
         )}
-
-        {showCompanion && (
-          <LiraCompanionWidget
-            onClose={() => setShowCompanion(false)}
-            isSpeaking={Boolean(streamingText || isVoiceActive)}
+        {activeModal === 'dashboard' && <DashboardModal isOpen={true} onClose={closeModal} />}
+        {activeModal === 'store' && <StoreModal isOpen={true} onClose={closeModal} />}
+        {activeModal === 'pricing' && <PricingModal isOpen={true} onClose={closeModal} currentPlan={stats.plan || 'free'} />}
+        {activeModal === 'whatsnew' && <WhatsNewModal isOpen={true} onClose={closeModal} />}
+        {activeModal === 'shortcuts' && <ShortcutsModal isOpen={true} onClose={closeModal} />}
+        {activeModal === 'legal' && <LegalModal isOpen={true} onClose={closeModal} initialSection={legalSection} />}
+        {activeModal === 'feedback' && <FeedbackModal isOpen={true} onClose={closeModal} userId={getCurrentUser()?.id} />}
+        {activeModal === 'dailyquests' && <DailyQuestsModal isOpen={true} onClose={closeModal} />}
+        {activeModal === 'admin' && <AdminPanel isOpen={true} onClose={closeModal} />}
+        {activeModal === 'todo' && <TodoPanel isOpen={true} onClose={closeModal} userTier={
+          (() => {
+            const u = getCurrentUser() as any;
+            if (!u) return 'Observer';
+            if (u.id === 'user_1734661833589' || u.username?.toLowerCase().includes('admin')) return 'Singularity';
+            return u.plan ? u.plan.charAt(0).toUpperCase() + u.plan.slice(1) : 'Observer';
+          })()
+        } />}
+        {activeModal === 'calendar' && <CalendarApp onClose={closeModal} />}
+        {activeModal === 'supporters' && <SupportersModal isOpen={true} onClose={closeModal} />}
+        {activeModal === 'trae' && <TraePanel onClose={closeModal} />}
+        {activeModal === 'gamer' && <GamerModal isOpen={true} onClose={closeModal} />}
+        {activeModal === 'discord' && <DiscordModal isOpen={true} onClose={closeModal} />}
+        {activeModal === 'welcome' && (
+          <WelcomeModal
+            isOpen={true}
+            username={(() => {
+              const u = getCurrentUser();
+              const rawName = stats.username && stats.username !== 'Guest' ? stats.username : (u?.username || 'Guest');
+              if (u?.id === 'user_1734661833589' || rawName.toLowerCase().includes('admin')) return 'Pai';
+              return rawName;
+            })()}
+            isReturning={isReturningUser}
+            onClose={closeModal}
+            onNewChat={createNewChat}
+          />
+        )}
+        {activeModal === 'jarvis' && (
+          <div className="fixed inset-0 z-[100] bg-black">
+            <button onClick={closeModal} className="absolute top-4 right-4 z-[110] text-cyan-500 hover:text-white">✕ CLOSE SYSTEM</button>
+            <JarvisDashboard />
+          </div>
+        )}
+        
+        {isVoiceActive && (
+          <VoiceCallOverlay
+            isOpen={true}
+            onClose={() => setVoiceActive(false)}
+            onSendMessage={(text) => handleSendMessage(text, [])}
+            userName={stats.username || 'User'}
+            avatarUrl={LIRA_AVATAR}
+            currentResponse={streamingText}
+            messages={currentSession?.messages || []}
           />
         )}
 
-        <WelcomeModal
-          isOpen={showWelcome}
-          username={(() => {
-            const u = getCurrentUser();
-            const rawName = stats.username && stats.username !== 'Guest' ? stats.username : (u?.username || 'Guest');
-            // Admin Override
-            if (u?.id === 'user_1734661833589' || rawName.toLowerCase().includes('admin')) {
-              return 'Pai';
-            }
-            return rawName;
-          })()}
-          isReturning={isReturningUser}
-          onClose={() => setShowWelcome(false)}
-          onNewChat={createNewChat}
-        />
-
-        <AdminPanel
-          isOpen={isAdminPanelOpen}
-          onClose={() => setAdminPanelOpen(false)}
-        />
-
-        <TodoPanel
-          isOpen={isTodoPanelOpen}
-          onClose={() => setTodoPanelOpen(false)}
-          userTier={(() => {
-            const currentUser = getCurrentUser();
-            if (!currentUser) return 'Observer';
-
-            // Check if admin first
-            if (currentUser.id === 'user_1734661833589' || currentUser.username?.toLowerCase().includes('admin')) {
-              return 'Singularity';
-            }
-
-            // Then check plan
-            if ((currentUser as any).plan && (currentUser as any).plan !== 'free') {
-              return (currentUser as any).plan.charAt(0).toUpperCase() + (currentUser as any).plan.slice(1);
-            }
-
-            return 'Observer';
-          })()}
-        />
-
-        {isCalendarOpen && (
-          <CalendarApp
-            onClose={() => setCalendarOpen(false)}
-          />
-        )}
-
-        <SupportersModal
-          isOpen={isSupportersOpen}
-          onClose={() => setSupportersOpen(false)}
-        />
-
-        {isTraePanelOpen && (
-          <TraePanel onClose={() => setTraePanelOpen(false)} />
-        )}
-        
-        {isJarvisDashboardOpen && (
-            <div className="fixed inset-0 z-[100] bg-black">
-                <button 
-                    onClick={() => setJarvisDashboardOpen(false)}
-                    className="absolute top-4 right-4 z-[110] text-cyan-500 hover:text-white"
-                >
-                    ✕ CLOSE SYSTEM
-                </button>
-                <JarvisDashboard />
-            </div>
-        )}
-        
-        {/* Loading Overlay */}
         <AnimatePresence>
           {showLoadingScreen && (
              <motion.div 
                initial={{ opacity: 1 }}
                exit={{ opacity: 0 }}
-               transition={{ duration: 0.5 }}
                className="fixed inset-0 z-[99999]"
              >
-                <div data-tauri-drag-region className="absolute top-0 left-0 right-0 h-8 z-[100000] cursor-move" />
                 <div className="absolute top-0 right-0 z-[100001]">
                    <WindowControls />
                 </div>
@@ -1570,6 +1333,8 @@ if (window.innerWidth < 768) setSidebarOpen(false);
           )}
         </AnimatePresence>
       </Suspense>
+
+      {!isVoiceActive && <PhotoBooth messages={currentSession?.messages || []} />}
     </div>
     </>
   );
