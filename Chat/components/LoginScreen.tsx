@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, User, ScanLine, Eye, EyeOff, Github, Globe, AlertCircle, X } from 'lucide-react';
+import { Mail, Lock, User, ScanLine, Eye, EyeOff, Github, Globe, CircleAlert, X } from 'lucide-react';
 import { LIRA_AVATAR } from '../constants';
 import { register, login } from '../services/userService';
 
@@ -230,7 +230,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
               animate={{ opacity: 1, y: 0 }}
               className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center gap-2"
             >
-              <AlertCircle size={16} className="text-red-400 flex-shrink-0" />
+              <CircleAlert size={16} className="text-red-400 flex-shrink-0" />
               <p className="text-xs text-red-300">{error}</p>
             </motion.div>
           )}

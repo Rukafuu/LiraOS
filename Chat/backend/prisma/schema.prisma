@@ -28,6 +28,7 @@ model User {
   githubOwner        String?       @map("github_owner")
   githubRepo         String?       @map("github_repo")
   stripeCustomerId   String?       @unique @map("stripe_customer_id")
+  lastProToolUsage   BigInt?       @default(0) @map("last_pro_tool_usage")
 
   @@map("users")
 }

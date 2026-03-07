@@ -5,6 +5,9 @@ import { generateSpeechEdgeTTS } from '../services/ttsService.js';
 import { createShortVideo } from '../services/videoCreatorService.js';
 import { postToInstagramReel } from '../services/instagramService.js';
 import dotenv from 'dotenv';
+import { requireAuth } from '../middlewares/authMiddleware.js';
+import { getUserById } from '../user_store.js';
+import { canUseFeature } from '../services/tierLimits.js';
 import { v4 as uuidv4 } from 'uuid';
 import fs from 'fs';
 import path from 'path';
@@ -17,8 +20,20 @@ const geminiClient = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process
 // Store recent context to avoid repetition
 let lastComment = "";
 
-router.post('/tick', async (req, res) => {
+router.post('/tick', requireAuth, async (req, res) => {
     try {
+        const userId = req.userId;
+        const user = await getUserById(userId);
+        const userTier = user?.plan || 'free';
+
+        // Check if user has access to Copilot
+        if (!await canUseFeature(userTier, 'copilot')) {
+            return res.status(403).json({ 
+                error: 'TIER_RESTRICTED', 
+                message: "O Copilot (Visão de Mundo) é um recurso Vega Nebula+. Faça o upgrade para a Lira poder te ver! ✨" 
+            });
+        }
+
         const { mode = 'fun', forceVideo = false } = req.body;
         
         // 1. Get Screen

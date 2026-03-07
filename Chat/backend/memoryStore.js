@@ -88,3 +88,11 @@ export async function deleteMemoriesByUser(userId) {
     return false;
   }
 }
+
+export async function getMemoryCount(userId) {
+  try {
+    return await prisma.memory.count({ where: { userId } });
+  } catch (e) {
+    return 0;
+  }
+}

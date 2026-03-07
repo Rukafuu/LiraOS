@@ -23,7 +23,8 @@ function mapUser(user) {
     githubToken: user.githubToken,
     githubOwner: user.githubOwner,
     githubRepo: user.githubRepo,
-    stripeCustomerId: user.stripeCustomerId
+    stripeCustomerId: user.stripeCustomerId,
+    lastProToolUsage: toInt(user.lastProToolUsage)
   };
 }
 
@@ -148,6 +149,7 @@ export async function updateUser(userId, updates) {
     if (updates.warnings !== undefined) prismaData.warnings = updates.warnings;
     if (updates.isBanned !== undefined) prismaData.isBanned = updates.isBanned;
     if (updates.stripeCustomerId !== undefined) prismaData.stripeCustomerId = updates.stripeCustomerId;
+    if (updates.lastProToolUsage !== undefined) prismaData.lastProToolUsage = BigInt(updates.lastProToolUsage);
     if (updates.preferences !== undefined) prismaData.preferencesStr = typeof updates.preferences === 'string' ? updates.preferences : JSON.stringify(updates.preferences);
 
     const updated = await prisma.user.update({

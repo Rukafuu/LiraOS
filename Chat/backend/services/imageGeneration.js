@@ -2,6 +2,8 @@ import fetch from 'node-fetch';
 import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { uploadBase64ToS3, isStorageEnabled } from './storageService.js';
+import { jobStore } from './jobStore.js';
+import { getTierLimit } from './tierLimits.js';
 
 dotenv.config();
 
@@ -193,11 +195,25 @@ async function generateHuggingFaceImage(prompt, apiKey) {
 /**
  * Generate image based on user tier
  * @param {string} prompt - Image description
+ * @param {string} userId - User ID for limit checking
  * @param {string} userTier - User's subscription tier
  * @param {string} hfApiKey - Hugging Face API key (optional)
  * @returns {Promise<Object>} Generation result with URL and metadata
  */
-export async function generateImage(prompt, userTier = 'free', hfApiKey = null) {
+export async function generateImage(prompt, userId = null, userTier = 'free', hfApiKey = null) {
+    // 1. Check Tier Limits
+    if (userId) {
+        const limit = getTierLimit(userTier, 'imagesPerDay');
+        const usageToday = await jobStore.countTodayJobs(userId);
+        if (usageToday >= limit) {
+            console.warn(`[IMAGE_GEN] Limit reached for ${userId} (${usageToday}/${limit})`);
+            return {
+                success: false,
+                error: `Você atingiu o limite diário de ${limit} imagens para seu plano.`
+            };
+        }
+    }
+
     const provider = getProviderForTier(userTier);
     const seed = Date.now();
     

@@ -1,12 +1,20 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import { generateSpeechMinimax, generateSpeechElevenLabs, generateSpeechGoogle, generateSpeechEdgeTTS } from '../services/ttsService.js';
+import { requireAuth } from '../middlewares/authMiddleware.js';
+import { getUserById } from '../user_store.js';
+import { canUseFeature } from '../services/tierLimits.js';
 
 dotenv.config();
 const router = express.Router();
 
-router.post('/tts', async (req, res) => {
+router.post('/tts', requireAuth, async (req, res) => {
   try {
+    const userId = req.userId;
+    const user = await getUserById(userId);
+    const userTier = user?.plan || 'free';
+    const hasPremiumVoice = await canUseFeature(userTier, 'voice_hd');
+
     const { text, voiceId } = req.body;
     if (!text) return res.status(400).json({ error: 'text required' });
 
@@ -26,8 +34,8 @@ router.post('/tts', async (req, res) => {
 
     // 🎯 SMART TTS ROUTING: ElevenLabs (1st) → Minimax (2nd) → Google (3rd)
     
-    // Priority 1: ElevenLabs (Best Quality)
-    if (process.env.ELEVENLABS_API_KEY) {
+    // Priority 1: ElevenLabs (Best Quality) - Premium Only
+    if (process.env.ELEVENLABS_API_KEY && hasPremiumVoice) {
         try {
             console.log(`[TTS] ✨ Attempting ElevenLabs (Premium)...`);
             const elevenVoiceId = voiceId?.startsWith('eleven-') 
@@ -46,8 +54,8 @@ router.post('/tts', async (req, res) => {
         }
     }
 
-    // Priority 2: Minimax (Good Quality Backup)
-    if (process.env.MINIMAX_API_KEY) {
+    // Priority 2: Minimax (Good Quality Backup) - Premium Only
+    if (process.env.MINIMAX_API_KEY && hasPremiumVoice) {
         try {
             console.log(`[TTS] 🎭 Attempting Minimax (Backup)...`);
             const minimaxVoiceId = voiceId === 'lira-local' || voiceId === 'xtts-local' 

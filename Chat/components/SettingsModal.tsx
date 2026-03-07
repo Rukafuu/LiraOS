@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, User, Brain, Palette, RefreshCw, Zap, Check, Trash2, Database, Camera, Activity, Cpu, Sliders, Star, Lock, Key, ShieldCheck, AlertCircle, Shield, Bell, LayoutGrid, Network, Keyboard, LifeBuoy, Heart, MessageSquare, ExternalLink, Settings } from 'lucide-react';
+import { X, User, Brain, Palette, RefreshCw, Zap, Check, Trash2, Database, Camera, Activity, Cpu, Sliders, Star, Lock, Key, ShieldCheck, CircleAlert, Shield, Bell, LayoutGrid, Network, Keyboard, LifeBuoy, Heart, MessageSquare, ExternalLink, Settings } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
 import { useGamification } from '../contexts/GamificationContext';
@@ -449,7 +449,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
 
                             <div className="pt-4 flex items-center justify-between">
                                 <div className="text-xs">
-                                    {passwordStatus === 'error' && <span className="text-red-400 flex items-center gap-1"><AlertCircle size={14} /> {t('settings.security.status_mismatch')}</span>}
+                                    {passwordStatus === 'error' && <span className="text-red-400 flex items-center gap-1"><CircleAlert size={14} /> {t('settings.security.status_mismatch')}</span>}
                                     {passwordStatus === 'success' && <span className="text-green-400 flex items-center gap-1"><ShieldCheck size={14} /> {t('settings.security.status_saved')}</span>}
                                 </div>
                                 <button 
@@ -462,7 +462,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                          </form>
 
                          <div className="mt-8 p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-xl flex items-start gap-3">
-                            <AlertCircle size={18} className="text-yellow-600 shrink-0 mt-0.5" />
+                            <CircleAlert size={18} className="text-yellow-600 shrink-0 mt-0.5" />
                             <div>
                                 <h4 className="text-sm font-semibold text-yellow-500 mb-1">{t('settings.security.two_fa_title')}</h4>
                                 <p className="text-xs text-yellow-600/70">{t('settings.security.two_fa_desc')}</p>

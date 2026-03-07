@@ -49,10 +49,10 @@ export const SystemStatus: React.FC = () => {
 
     if (!stats) return null;
 
-    const parsePercent = (val: string) => parseFloat(val.replace('%', '')) || 0;
+    const parsePercent = (val?: string) => val ? parseFloat(val.replace('%', '')) || 0 : 0;
     const cpuVal = parsePercent(stats.cpu_load);
     
-    const ramParts = stats.ram_usage.split('/');
+    const ramParts = (stats.ram_usage || '0 / 1').split('/');
     const ramUsed = parseFloat(ramParts[0]) || 0;
     const ramTotal = parseFloat((ramParts[1] || '1').split(' ')[0]) || 1;
     const ramPercent = (ramUsed / ramTotal) * 100;

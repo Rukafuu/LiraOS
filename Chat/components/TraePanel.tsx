@@ -5,9 +5,9 @@ import {
     Code, 
     Play, 
     Pause, 
-    CheckCircle, 
-    XCircle, 
-    AlertCircle,
+    CircleCheck, 
+    CircleX, 
+    CircleAlert,
     FileCode,
     GitBranch,
     Loader2,
@@ -255,7 +255,7 @@ export const TraePanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                         onClick={onClose}
                         className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white"
                     >
-                        <XCircle className="w-5 h-5" />
+                        <CircleX className="w-5 h-5" />
                     </button>
                 </div>
             </div>
@@ -417,8 +417,8 @@ export const TraePanel: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                                 >
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">
-                                            {task.status === 'success' && <CheckCircle className="w-4 h-4 text-green-400" />}
-                                            {task.status === 'error' && <XCircle className="w-4 h-4 text-red-400" />}
+                                            {task.status === 'success' && <CircleCheck className="w-4 h-4 text-green-400" />}
+                                            {task.status === 'error' && <CircleX className="w-4 h-4 text-red-400" />}
                                             <span className="text-sm text-white">{task.description}</span>
                                         </div>
                                     </div>

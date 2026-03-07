@@ -1,6 +1,8 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { getUserById } from '../user_store.js';
+import { getTierLimit } from './tierLimits.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,7 +43,16 @@ export const todoService = {
   },
 
   createList: async (userId, title) => {
+    const user = await getUserById(userId);
+    const tier = user?.plan || 'free';
+    const limit = getTierLimit(tier, 'maxTodoLists');
+
     const lists = await loadLists(userId);
+    
+    if (lists.length >= limit) {
+      throw new Error(`Limite de ${limit} listas atingido para seu plano.`);
+    }
+
     const newList = {
       id: `list_${Date.now()}`,
       title,

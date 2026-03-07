@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Lock, Mail, CheckCircle, Key, ArrowRight, Sparkles } from 'lucide-react';
+import { Lock, Mail, CircleCheck, Key, ArrowRight, Sparkles } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { ParticleBackground } from './ui/ParticleBackground';
 
@@ -110,7 +110,7 @@ export const ResetPassword: React.FC<{ backendUrl?: string }> = ({ backendUrl = 
             {done ? (
               <div className="text-center py-8 animate-fade-in">
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 mb-4 animate-bounce">
-                  <CheckCircle className="w-8 h-8 text-white" />
+                  <CircleCheck className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-2">Password Updated!</h3>
                 <p className="text-gray-400 text-sm mb-4">Redirecting you to LiraOS...</p>

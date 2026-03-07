@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Plus, Square, ArrowUp, X, FileText, Mic, AlertCircle, Brain, Zap, Volume2, VolumeX, ChevronDown, Check } from 'lucide-react';
+import { Send, Plus, Square, ArrowUp, X, FileText, Mic, CircleAlert, Brain, Zap, Volume2, VolumeX, ChevronDown, Check } from 'lucide-react';
 import { VoiceButton } from './ui/VoiceButton';
 import { PREMIUM_VOICES } from '../services/lira_voice';
 import { Attachment } from '../types';

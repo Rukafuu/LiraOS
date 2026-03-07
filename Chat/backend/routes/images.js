@@ -43,7 +43,7 @@ router.post('/generate', requireAuth, async (req, res) => {
                 }, 1000);
 
                 const HF_KEY = process.env.HUGGINNGFACE_ACCESS_TOKEN;
-                const result = await generateImage(prompt, tier, HF_KEY);
+                const result = await generateImage(prompt, req.user?.id || null, tier, HF_KEY);
                 
                 clearInterval(progressInterval);
 

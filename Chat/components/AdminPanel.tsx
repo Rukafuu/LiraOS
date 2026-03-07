@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  X, Code, CheckCircle, XCircle, Zap, Image, MessageSquare, 
-  Calendar, CheckSquare, Activity, AlertCircle, Sparkles 
+  X, Code, CircleCheck, CircleX, Zap, Image, MessageSquare, 
+  Calendar, CheckSquare, Activity, CircleAlert, Sparkles 
 } from 'lucide-react';
 
 interface AdminPanelProps {
@@ -37,7 +37,7 @@ const LIRA_CAPABILITIES: FunctionCapability[] = [
     description: 'Cria diálogos de confirmação com botões Sim/Não',
     category: 'widgets',
     status: 'working',
-    icon: AlertCircle,
+    icon: CircleAlert,
     example: '[[WIDGET:confirm|{"message":"Tem certeza?"}]]'
   },
   {
@@ -133,9 +133,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'working': return <CheckCircle size={14} />;
-      case 'broken': return <XCircle size={14} />;
-      case 'untested': return <AlertCircle size={14} />;
+      case 'working': return <CircleCheck size={14} />;
+      case 'broken': return <CircleX size={14} />;
+      case 'untested': return <CircleAlert size={14} />;
       default: return null;
     }
   };
@@ -261,7 +261,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
 
           {filteredCapabilities.length === 0 && (
             <div className="text-center py-12">
-              <AlertCircle size={48} className="text-gray-600 mx-auto mb-4" />
+              <CircleAlert size={48} className="text-gray-600 mx-auto mb-4" />
               <p className="text-gray-500">Nenhuma função encontrada com esses filtros</p>
             </div>
           )}

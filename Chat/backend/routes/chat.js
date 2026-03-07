@@ -18,6 +18,11 @@ import { getTemporalContext } from '../utils/timeUtils.js';
 import { getCalendarClient } from '../services/googleAuthService.js';
 import { globalContext } from '../utils/globalContext.js';
 import { agentBrain } from '../services/agentBrain.js';
+import { TIER_LIMITS, PRO_TOOLS, getTierLimit } from '../services/tierLimits.js';
+import { generateImage } from '../services/imageGeneration.js';
+import { jobStore } from '../services/jobStore.js';
+import { v4 as uuidv4 } from 'uuid';
+import { updateUser } from '../user_store.js';
 
 dotenv.config();
 
@@ -229,11 +234,15 @@ router.post('/stream', async (req, res) => {
     const userId = req.userId; // Use authenticated user ID if needed for logging/limits
 
     // 0. Security Check: Is User Banned?
+    const user = await getUserById(userId);
     const userStatus = await getUserStatus(userId);
     if (!userStatus.allowed) {
       console.log(`[SECURITY] 🚫 Blocked request from banned user: ${userId}`);
       return res.status(403).json({ error: 'account_banned', message: userStatus.message, until: userStatus.until });
     }
+
+    const userTier = user?.plan || 'free';
+    const limits = TIER_LIMITS[userTier] || TIER_LIMITS.free;
 
     // 1. Content Moderation Check
     const lastUserMsgFull = messages[messages.length - 1];
@@ -301,24 +310,26 @@ router.post('/stream', async (req, res) => {
     // Check for file/code intent OR Stats intent OR System intent
     const lastUserMsg = messages[messages.length - 1].content.toLowerCase();
 
-    // ===  ADMIN MODE AGENT (Full Autonomy): Use Gemini 2.0 Flash Agent ===
-    if (isAdmin(userId) && GEMINI_API_KEY) {
-      // Removed isAdminIntent check to enable Agent Lira for ALL admin interactions
-      console.log('[ADMIN] 🔐 Agentic Lira Activated (Gemini 2.0 Flash Agent)');
+    // ===  MODE & AGENT (Full Autonomy): Use Gemini 2.0 Flash Agent ===
+    if (GEMINI_API_KEY) {
+      console.log(`[LIRA] 🔐 Agentic Lira Activated (Tier: ${userTier})`);
 
       try {
-        const isDeepMode = req.body.deepMode || false;
-        const isPremiumMode = req.body.isPremium || false;
+        let isDeepMode = req.body.deepMode || false;
+        
+        // Restriction: No Deep Mode for Free Tier
+        if (userTier === 'free') {
+          isDeepMode = false;
+        }
 
         const visionCtx = globalContext.getVisionContext();
         const visionText = visionCtx ? `\n\n### 👁️ VISÃO DE TELA (ATIVO AGORA):\nEu estou vendo a tela do usuário: "${visionCtx}"\nUse isso para responder perguntas sobre o que está na tela.` : "";
 
-        // Choose models based on requested quality
-        let GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash'];
-        if (isDeepMode) {
+        // Choose models based on tier limits
+        let GEMINI_MODELS = limits.models;
+
+        if (isDeepMode && limits.deepMode) {
           GEMINI_MODELS = ['gemini-2.0-flash-thinking-exp-01-21', 'gemini-2.0-flash', 'gemini-1.5-pro'];
-        } else if (isPremiumMode) {
-          GEMINI_MODELS = ['gemini-1.5-pro', 'gemini-2.0-flash', 'gemini-1.5-flash'];
         }
 
         const adminSystemPrompt = (systemInstruction || `Você é LIRA Agent, uma IA autônoma e inteligente no controle deste PC.`) +
@@ -679,7 +690,28 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
           }
 
           let functionResult;
-          switch (functionCall.name) {
+
+          // --- PRO TOOLS COOLDOWN CHECK ---
+          if (PRO_TOOLS.includes(functionCall.name) && userTier === 'free') {
+            const lastUsage = user.lastProToolUsage ? Number(user.lastProToolUsage) : 0;
+            const cooldownMs = limits.proToolsCooldownHours * 3600000;
+            const now = Date.now();
+            
+            if (now - lastUsage < cooldownMs) {
+                const remainingHours = Math.ceil((cooldownMs - (now - lastUsage)) / 3600000);
+                functionResult = { 
+                    success: false, 
+                    error: `RECURSO_PRO_BLOQUEADO`, 
+                    message: `Opa! 😅 Essa ferramenta é exclusiva para usuários Pro. No plano grátis você pode usar ela a cada 24h. Volte em ${remainingHours}h ou faça o upgrade para Vega Nebula! ✨` 
+                };
+            } else {
+                // Update usage time (Sync in background)
+                updateUser(userId, { lastProToolUsage: now }).catch(e => console.error("Update usage failed", e));
+            }
+          }
+
+          if (!functionResult) {
+            switch (functionCall.name) {
             case 'read_project_file':
               functionResult = await projectTools.readProjectFile(functionCall.args.path);
               break;
@@ -700,10 +732,6 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
               functionResult = stats ? { xp: stats.xp, coins: stats.coins, level: stats.level } : { error: "Stats not found" };
               break;
             case 'generate_image':
-              const { generateImage } = await import('../services/imageGeneration.js');
-              const { jobStore } = await import('../services/jobStore.js');
-              const { v4: uuidv4 } = await import('uuid');
-
               const prompt = functionCall.args.prompt;
               const jobId = uuidv4();
 
@@ -737,11 +765,10 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
 
                   const HF_KEY = process.env.HUGGINNGFACE_ACCESS_TOKEN;
 
-                  // Add 120s Global Timeout
                   const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Global Generation Timeout (120s)")), 120000));
 
                   const imgResult = await Promise.race([
-                    generateImage(prompt, 'singularity', HF_KEY),
+                    generateImage(prompt, userId, userTier, HF_KEY),
                     timeoutPromise
                   ]);
 
@@ -774,11 +801,8 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
               };
               break;
             case 'generate_video':
-              const { jobStore: videoJobStore } = await import('../services/jobStore.js');
-              const { v4: uuidv4Video } = await import('uuid');
-
               const videoPrompt = functionCall.args.prompt || 'Animation';
-              const videoJobId = uuidv4Video();
+              const videoJobId = uuidv4();
 
               if (!functionCall.args.prompt) {
                  functionResult = { success: false, error: 'Prompt is required for video generation' };
@@ -786,7 +810,7 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
               }
 
               try {
-                await videoJobStore.create(videoJobId, {
+                await jobStore.create(videoJobId, {
                   prompt: videoPrompt,
                   status: 'generating',
                   progress: 5,
@@ -798,9 +822,9 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                 
                 res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_video|{"jobId": "${videoJobId}", "prompt": "${videoPrompt.replace(/"/g, '\\"')}"}]]\n\n` })}\n\n`);
                 
-                // Simulate video generation (Real integration would call a video API here)
+                // Simulate video generation
                 setTimeout(async () => {
-                   await videoJobStore.update(videoJobId, { status: 'failed', error: 'Video generation is currently in experimental early-access for your API key.' });
+                   await jobStore.update(videoJobId, { status: 'failed', error: 'Video generation is currently in experimental early-access for your API key.' });
                 }, 10000);
 
                 functionResult = { 
@@ -1004,6 +1028,7 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
             default:
               functionResult = { error: `Unknown function: ${functionCall.name}` };
           }
+        }
 
           console.log(`[ADMIN] ✅ Function result success: ${!!functionResult}`);
 
@@ -1102,8 +1127,7 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
     }
 
     // Calculate Tier dynamically (Moved up for XP Calculation)
-    const user = await getUserById(userId);
-    const userPlan = user?.plan || 'free';
+    const userPlan = userTier;
 
     try {
       await award(userId, { xp: 5, coins: 1 }, userPlan);
@@ -1115,20 +1139,17 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
     const temporalContext = getTemporalContext(localDateTime);
 
     // Determine precise Tier
-    let userTier = 'Observer';
-    const isUserAdmin = await isAdmin(userId);
-    if (isUserAdmin) {
-      userTier = 'Singularity';
-    } else if (user && user.plan && user.plan !== 'free') {
-      userTier = user.plan.charAt(0).toUpperCase() + user.plan.slice(1);
+    let displayTier = 'Observer';
+    if (userTier !== 'free') {
+      displayTier = userTier.charAt(0).toUpperCase() + userTier.slice(1);
     }
 
     let longTermMemoryContext = "";
 
-    if (userTier !== 'Observer') {
+    if (displayTier !== 'Observer') {
       // Placeholder for Episodic Memory System
       // const longTermMemories = await memoryStore.getEpisodicMemory(userId);
-      longTermMemoryContext = `\n\n[MEMÓRIA DE LONGO PRAZO]\n(Apenas se Tier Sirius+)\n- O sistema de memória episódica está pronto para ser conectado.\n- O usuário possui Tier: ${userTier}.`;
+      longTermMemoryContext = `\n\n[MEMÓRIA DE LONGO PRAZO]\n(Apenas se Tier Sirius+)\n- O sistema de memória episódica está pronto para ser conectado.\n- O usuário possui Tier: ${displayTier}.`;
     }
 
     let baseSystem = systemInstruction || "You are Lira, a helpful AI assistant.";

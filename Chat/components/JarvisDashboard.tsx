@@ -22,10 +22,13 @@ export const JarvisDashboard: React.FC = () => {
             });
             if (res.ok) {
                 const data = await res.json();
+                const cpu_load = data.cpu_load || '0%';
+                const ram_usage = data.ram_usage || '0 / 1';
+                
                 // Parse "12.5%" -> 12.5
-                const cpu = parseFloat(data.cpu_load.replace('%', '')) || 0;
+                const cpu = parseFloat(cpu_load.replace('%', '')) || 0;
                 // Parse "4.2GB / 16GB" -> calculate %
-                const ramParts = data.ram_usage.split('/');
+                const ramParts = ram_usage.split('/');
                 const used = parseFloat(ramParts[0]) || 0;
                 const total = parseFloat((ramParts[1] || '1').split(' ')[0]) || 1;
                 const ram = (used / total) * 100;

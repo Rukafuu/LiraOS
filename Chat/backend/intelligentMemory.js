@@ -1,4 +1,6 @@
-import { getMemories, addMemory } from './memoryStore.js';
+import { getMemories, addMemory, getMemoryCount } from './memoryStore.js';
+import { getUserById } from './user_store.js';
+import { getTierLimit } from './services/tierLimits.js';
 
 /**
  * Sistema de Memória Inteligente - Extração e Relevância Automática
@@ -223,6 +225,17 @@ export async function processMessageForMemory(message, userId = 'default') {
     
     // Só salvar se tiver relevância mínima
     if (extracted.importanceScore >= 30 && extracted.categories.length > 0) {
+      // Check tier limits
+      const user = await getUserById(userId);
+      const tier = user?.plan || 'free';
+      const limit = getTierLimit(tier, 'maxMemories');
+      const currentCount = await getMemoryCount(userId);
+
+      if (currentCount >= limit) {
+        console.warn(`[Memory] Limit reached for Tier ${tier} (User: ${userId})`);
+        return null;
+      }
+
       const memoryContent = formatMemoryContent(message, extracted);
       
       const memory = await addMemory(

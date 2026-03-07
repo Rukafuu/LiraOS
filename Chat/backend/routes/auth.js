@@ -117,6 +117,8 @@ router.get('/me', async (req, res) => {
     avatar: u.avatar, 
     loginCount: u.loginCount, 
     lastLogin: u.lastLogin,
+    plan: u.plan,
+    lastProToolUsage: u.lastProToolUsage,
     hasGoogleCalendar: !!u.googleRefreshToken 
   });
 });
@@ -134,7 +136,16 @@ router.put('/me', async (req, res) => {
   // Return updated user
   const u = await getUserById(payload.sub);
   if (!u) return res.status(404).json({ error: 'user_not_found' });
-  res.json({ id: u.id, email: u.email, username: u.username, avatar: u.avatar, loginCount: u.loginCount, lastLogin: u.lastLogin });
+  res.json({ 
+    id: u.id, 
+    email: u.email, 
+    username: u.username, 
+    avatar: u.avatar, 
+    loginCount: u.loginCount, 
+    lastLogin: u.lastLogin,
+    plan: u.plan,
+    lastProToolUsage: u.lastProToolUsage
+  });
 });
 
 // --- OAuth: Google ---
