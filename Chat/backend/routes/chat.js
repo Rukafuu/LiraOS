@@ -1159,7 +1159,8 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
               } else {
                   functionResult = { error: `Unknown function: ${functionCall.name}` };
               }
-          }
+              break;
+            }
         }
 
           console.log(`[ADMIN] ✅ Function result success: ${!!functionResult}`);
