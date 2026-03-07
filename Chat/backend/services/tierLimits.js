@@ -64,7 +64,7 @@ export const TIER_LIMITS = {
 export const PRO_TOOLS = [
     'read_project_file',
     'list_directory',
-    'search_code',
+    'search_local_code',
     'analyze_file',
     'get_project_structure',
     'execute_system_command',
