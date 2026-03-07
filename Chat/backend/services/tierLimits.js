@@ -62,11 +62,11 @@ export const TIER_LIMITS = {
  * Pro Tools identification
  */
 export const PRO_TOOLS = [
-    'read_project_file',
-    'list_directory',
+    'read_local_file',
+    'list_local_directory',
     'search_local_code',
-    'analyze_file',
-    'get_project_structure',
+    'analyze_local_file',
+    'get_local_project_structure',
     'execute_system_command',
     'organize_folder',
     'generate_video'

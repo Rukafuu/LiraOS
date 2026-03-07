@@ -384,7 +384,7 @@ Mesmo sendo rigorosa com os dados, mantenha sua personalidade:
 - Exemplo de sucesso: "Achei!! 🎉 Aqui está a lista real dos arquivos:"
 
 FERRAMENTAS DISPONÍVEIS:
-1. read_project_file / list_directory / search_local_code: Olhe o código REAL.
+1. read_local_file / list_local_directory / search_local_code: Olhe o código REAL do sistema local da Lira. APENAS PARA DIRETORIOS LOCAIS (PC). Para ler online/repositórios do Github do usuário, use as ferramentas com do servidor GitHub MCP se disponíveis.
 2. generate_image(prompt): Crie arte (OBRIGATÓRIO PARA PEDIDOS DE IMAGEM).
 3. execute_system_command: Ações reais no Windows.
 4. get_user_stats: Dados reais do usuário.
@@ -438,8 +438,8 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
           tools: [{
             function_declarations: [
               {
-                name: 'read_project_file',
-                description: 'Reads the content of a file. Use this to inspect code.',
+                name: 'read_local_file',
+                description: 'Reads the content of a local project file. Use this to inspect local PC code DO NOT use for GitHub.',
                 parameters: {
                   type: 'object',
                   properties: { path: { type: 'string' } },
@@ -447,8 +447,8 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                 }
               },
               {
-                name: 'list_directory',
-                description: 'Lists files in a directory.',
+                name: 'list_local_directory',
+                description: 'Lists files in a local directory (on PC).',
                 parameters: {
                   type: 'object',
                   properties: { path: { type: 'string' } },
@@ -465,8 +465,8 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                 }
               },
               {
-                name: 'analyze_file',
-                description: 'Analyzes a file.',
+                name: 'analyze_local_file',
+                description: 'Analyzes a local file on the PC.',
                 parameters: {
                   type: 'object',
                   properties: { path: { type: 'string' } },
@@ -474,8 +474,8 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                 }
               },
               {
-                name: 'get_project_structure',
-                description: 'Gets project structure.',
+                name: 'get_local_project_structure',
+                description: 'Gets local PC project file structure.',
                 parameters: {
                   type: 'object',
                   properties: { max_depth: { type: 'number' } }
@@ -794,20 +794,20 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
 
           if (!functionResult) {
             switch (functionCall.name) {
-            case 'read_project_file':
+            case 'read_local_file':
               functionResult = await projectTools.readProjectFile(functionCall.args.path);
               break;
-            case 'list_directory':
+            case 'list_local_directory':
               functionResult = await projectTools.listProjectDirectory(functionCall.args.path || '');
               break;
             case 'search_local_code':
               functionResult = await projectTools.searchInProject(functionCall.args.query, functionCall.args.file_pattern || '*.js');
               break;
-            case 'analyze_file':
+            case 'analyze_local_file':
               functionResult = await projectTools.analyzeFile(functionCall.args.path);
               break;
-            case 'get_project_structure':
-              functionResult = await projectTools.getProjectStructure(functionCall.args.maxDepth || 3);
+            case 'get_local_project_structure':
+              functionResult = await projectTools.getProjectStructure(functionCall.args.max_depth || 3);
               break;
             case 'get_user_stats':
               const stats = await getState(userId);
