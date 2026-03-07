@@ -110,12 +110,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
         return titleMatch || msgMatch;
     }).sort((a, b) => b.updatedAt - a.updatedAt);
 
-    const sidebarVariants = isMobile ? {
-        open: { x: 0, opacity: 1 },
-        closed: { x: '-100%', opacity: 0 }
-    } : {
-        open: { width: 260, opacity: 1 },
-        closed: { width: 0, opacity: 0 }
+    const sidebarVariants = {
+        open: { 
+            x: 0, 
+            width: isMobile ? '85vw' : 260,
+            opacity: 1,
+            transition: { type: 'spring', damping: 25, stiffness: 200 }
+        },
+        closed: { 
+            x: isMobile ? '-100%' : 0, 
+            width: isMobile ? '85vw' : 0,
+            opacity: isMobile ? 1 : 0,
+            transition: { type: 'spring', damping: 25, stiffness: 200 }
+        }
     };
 
     return (
@@ -133,10 +140,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </AnimatePresence>
 
             <motion.aside
-                initial={false}
                 animate={isOpen ? 'open' : 'closed'}
                 variants={sidebarVariants}
-                className={`fixed md:relative z-[100] h-full bg-[#0a0a0a]/98 backdrop-blur-2xl border-r border-white/5 flex flex-col overflow-hidden ${isMobile ? 'top-0 left-0 w-[80%] max-w-[300px]' : ''}`}
+                className={`
+                    fixed md:relative z-[150] h-[100dvh] md:h-full 
+                    bg-[#0a0a0a]/98 backdrop-blur-2xl border-r border-white/5 
+                    flex flex-col overflow-hidden shadow-2xl md:shadow-none
+                    top-0 left-0
+                    ${isMobile ? 'max-w-[320px]' : ''}
+                `}
             >
                 {/* MOBILE CLOSE BUTTON */}
                 {isMobile && (
