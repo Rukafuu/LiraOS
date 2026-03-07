@@ -103,14 +103,39 @@ class MCPService {
 
     /**
      * Returns tools formatted for Google Gemini API
+     * and sanitizes schemas to match Gemini's OpenAPI subset.
      */
     getGeminiTools() {
-        return this.tools.map(tool => ({
-            name: tool.name,
-            description: tool.description,
-            parameters: tool.inputSchema, // Input schema in MCP matches JSON Schema (Gemini compatible)
-            _server: tool._server // Keep server name for tier-based filtering
-        }));
+        return this.tools.map(tool => {
+            // Clone deeply to avoid mutating internal tools state
+            const parameters = tool.inputSchema ? JSON.parse(JSON.stringify(tool.inputSchema)) : { type: 'object', properties: {} };
+            this._sanitizeSchemaForGemini(parameters);
+
+            return {
+                name: tool.name,
+                description: tool.description,
+                parameters,
+                _server: tool._server // Keep server name for tier-based filtering
+            };
+        });
+    }
+
+    /**
+     * Recursively removes JSON schema keys not supported by Google Gemini.
+     */
+    _sanitizeSchemaForGemini(schema) {
+        if (!schema || typeof schema !== 'object') return;
+        
+        if (Array.isArray(schema)) {
+            schema.forEach(item => this._sanitizeSchemaForGemini(item));
+        } else {
+            delete schema['$schema'];
+            delete schema['additionalProperties'];
+            
+            for (const key of Object.keys(schema)) {
+                this._sanitizeSchemaForGemini(schema[key]);
+            }
+        }
     }
 
     _refreshToolList() {
