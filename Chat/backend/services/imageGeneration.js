@@ -202,8 +202,18 @@ async function generateHuggingFaceImage(prompt, apiKey) {
  * @returns {Promise<Object>} Generation result with URL and metadata
  */
 export async function generateImage(prompt, userId = null, userTier = 'free', hfApiKey = null) {
-    // 1. Check Tier Limits
+    // 1. Check Tier Limits & Content Moderation
     if (userId) {
+        const { checkModeration } = await import('../utils/moderation.js');
+        const modResult = checkModeration(prompt);
+        if (modResult.flagged) {
+            console.warn(`[IMAGE_GEN] 🚫 Prompt blocked by moderation: "${prompt}" (Category: ${modResult.category})`);
+            return {
+                success: false,
+                error: `Desculpe, não posso gerar imagens desse tipo devido às nossas diretrizes de segurança.`
+            };
+        }
+
         const limit = getTierLimit(userTier, 'imagesPerDay');
         const usageToday = await jobStore.countTodayJobs(userId);
         if (usageToday >= limit) {

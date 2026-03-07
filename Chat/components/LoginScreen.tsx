@@ -15,9 +15,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     email: '',
     username: '',
     password: '',
+    confirmPassword: '',
     code: '',
     newPassword: ''
   });
+  const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [isScanning, setIsScanning] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const BACKEND_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -163,14 +170,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     } 
     // Register flow
     else {
-      if (!formData.email || !formData.username || !formData.password) {
+      if (!formData.email || !formData.username || !formData.password || !formData.confirmPassword) {
         setError('Please fill in all fields');
+        return;
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        setError('Passwords do not match');
         return;
       }
       
       setIsScanning(true);
       (async () => {
-        const result = await register(formData.email, formData.username, formData.password);
+        const result = await register(formData.email, formData.username, formData.password, formData.confirmPassword);
         setIsScanning(false);
         if (result.success && result.user) {
           setSuccessMessage(result.message);
@@ -267,7 +279,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                                 placeholder="123456" 
                                 value={formData.code}
                                 onChange={handleChange}
-                                className="w-full bg-[#15151a] border border-white/5 rounded-xl py-2.5 px-4 text-white text-sm placeholder-gray-600 outline-none focus:border-white/20 focus:bg-[#1a1a20] transition-all text-center tracking-widest font-mono text-lg" 
+                                className="w-full bg-[#15151a] border border-white/5 rounded-xl py-2.5 px-4 text-white placeholder-gray-600 outline-none focus:border-white/20 focus:bg-[#1a1a20] transition-all text-center tracking-widest font-mono text-lg" 
                             />
                         </div>
 
@@ -366,7 +378,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                              <div className="mt-2 text-right">
                                 <button
                                   type="button"
-                                  onClick={() => { setIsForgotPassword(true); setIsLogin(true); setFormData({ email: formData.email, username: '', password: '', code: '', newPassword: '' }); setError(''); setSuccessMessage(''); }}
+                                  onClick={() => { setIsForgotPassword(true); setIsLogin(true); setFormData({ email: formData.email, username: '', password: '', confirmPassword: '', code: '', newPassword: '' }); setError(''); setSuccessMessage(''); }}
                                   className="text-xs text-gray-500 hover:text-white transition-colors"
                                 >
                                   Forgot password?
@@ -374,6 +386,25 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                             </div>
                         )}
                     </div>
+                    )}
+
+                    {/* Confirm Password Field (Signup Only) */}
+                    {!isLogin && !isForgotPassword && (
+                        <div className="mb-4">
+                            <label htmlFor="confirmPassword" className="block text-xs font-medium text-gray-400 mb-1.5 ml-1">Confirm Password</label>
+                            <div className="relative group">
+                                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-white transition-colors" />
+                                <input 
+                                    type={showPassword ? "text" : "password"} 
+                                    id="confirmPassword" 
+                                    placeholder="••••••••" 
+                                    autoComplete="new-password"
+                                    value={formData.confirmPassword}
+                                    onChange={handleChange}
+                                    className="w-full bg-[#15151a] border border-white/5 rounded-xl py-2.5 pl-10 pr-10 text-white text-sm placeholder-gray-600 outline-none focus:border-white/20 focus:bg-[#1a1a20] transition-all" 
+                                />
+                            </div>
+                        </div>
                     )}
                 </motion.div>
                 )}

@@ -113,15 +113,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             x: 0, 
             width: isMobile ? '85vw' : 260,
             opacity: 1,
-            transition: { type: 'spring', damping: 25, stiffness: 200 }
+            transition: { type: 'spring', damping: 25, stiffness: 200 } as const
         },
         closed: { 
             x: isMobile ? '-100%' : 0, 
             width: isMobile ? '85vw' : 0,
             opacity: isMobile ? 1 : 0,
-            transition: { type: 'spring', damping: 25, stiffness: 200 }
+            transition: { type: 'spring', damping: 25, stiffness: 200 } as const
         }
-    };
+    } as const;
 
     return (
         <>
@@ -168,10 +168,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             <span className="text-[10px] text-purple-400 font-mono">v2.0.0-beta</span>
                         </div>
                     </div>
-                    {/* Lira Core (System Status) moved to top */}
-                    <div className="px-1">
-                        <SystemStatus />
-                    </div>
+                    {/* Lira Core (System Status) removed from sidebar - moved to header toggle */}
 
                     <button
                         onClick={() => {

@@ -38,6 +38,7 @@ import { generateChatTitle, streamResponse, textToSpeech, fetchMemories, addMemo
 import { LIRA_AVATAR } from './constants';
 import { getCurrentUser, isAuthenticated, logout as userLogout, getAuthHeaders, handleOAuthCallback, getSettings } from './services/userService';
 import { liraVoice } from './services/lira_voice';
+import { useTranslation } from 'react-i18next';
 import { initialMoodState, updateMood, MoodState } from './services/moodEngine';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Zap, Sparkles, ChevronRight } from 'lucide-react';
@@ -59,6 +60,8 @@ import { API_BASE_URL, IS_DESKTOP } from './src/config';
 import { apiFetch } from './services/apiClient';
 import { enterWidgetMode, exitWidgetMode } from './services/desktopService';
 import { syncVoiceState, syncEmotionState } from './services/overlayService';
+import { securityService } from './services/securityService';
+import { CaretDown, Check, Pulse, ShieldCheck, WarningCircle, X } from '@phosphor-icons/react';
 
 // const API_BASE_URL = ... (Removed, using import)
 const LOCAL_STORAGE_KEY = 'lira_chat_sessions';
@@ -93,7 +96,7 @@ const LiraAppContent = () => {
   useEffect(() => {
       const timer = setTimeout(() => {
           setShowLoadingScreen(false);
-      }, 4000); // 4 seconds boot time
+      }, 1200); // Fast 1.2s boot time
       return () => clearTimeout(timer);
   }, []);
 
@@ -157,11 +160,29 @@ const LiraAppContent = () => {
     addToast(newVal ? 'Read Aloud Enabled 🔊' : 'Read Aloud Disabled 🔇', 'info');
   };
 
-  const { stats, addXp, increaseBond, setUsername, activePersonaId, setActivePersonaId, unlockedPersonas, personas, addCoins, award } = useGamification();
+  const { stats, addXp, increaseBond, setUsername, activePersonaId, setActivePersonaId, unlockedPersonas, personas, addCoins } = useGamification();
   const { addToast } = useToast();
+  const { t } = useTranslation();
   const abortControllerRef = useRef<AbortController | null>(null);
   const lastSpokenMsgId = useRef<string | null>(null);
   const [moodState, setMoodState] = useState<MoodState>(initialMoodState);
+  const [dismissedBanners, setDismissedBanners] = useState<{ [id: string]: number }>(() => {
+    return JSON.parse(localStorage.getItem('lira_dismissed_banners') || '{}');
+  });
+
+  const dismissBanner = (id: string) => {
+    const updated = { ...dismissedBanners, [id]: Date.now() };
+    setDismissedBanners(updated);
+    localStorage.setItem('lira_dismissed_banners', JSON.stringify(updated));
+  };
+
+  const isBannerDismissed = (id: string) => {
+    const timestamp = dismissedBanners[id];
+    if (!timestamp) return false;
+    // Hide for 24 hours
+    const HIDE_DURATION = 24 * 60 * 60 * 1000;
+    return Date.now() - timestamp < HIDE_DURATION;
+  };
 
   // Mood Ticker
   useEffect(() => {
@@ -656,8 +677,6 @@ if (window.innerWidth < 768) setSidebarOpen(false);
     }));
 
     let accumulatedResponse = "";
-
-    // Declare userId at function scope so it's available in finally block
     const currentUser = getCurrentUser();
     const userId = currentUser?.id;
 
@@ -665,49 +684,41 @@ if (window.innerWidth < 768) setSidebarOpen(false);
       // Search for relevant memories
       const relevantMemories = await getRelevantMemories(promptText, 5, userId);
 
-      // 🧠 process user message
-      const userMessage = { content: promptText };
-      const { memory: extractedMemory } = await addIntelligentMemory(userMessage, 'default', userId);
+      // 🧠 process user message for memory extraction
+      const { memory: extractedMemory } = await addIntelligentMemory({ content: promptText }, 'default', userId);
       if (extractedMemory) {
         setMemories(prev => [...prev, extractedMemory]);
         addToast('Memória salva 🧠', 'success');
       }
 
-      try {
-        // Dynamic Persona Logic: Inject Instructions
-        let finalPrompt = promptText;
-        const unlockedIds = personas.filter(p => !p.isLocked).map(p => p.id);
+      // Dynamic Persona Logic: Inject Instructions
+      let finalPrompt = promptText;
+      const unlockedIds = personas.filter(p => !p.isLocked).map(p => p.id);
 
-        if (dynamicPersona) {
-          const idsList = unlockedIds.join(', ');
-          finalPrompt += `\n\n[SYSTEM: You have "Dynamic Persona" enabled. Your current persona is "${activePersonaId}". If you detect that the user's tone or intent would be SIGNIFICANTLY better served by one of your other unlocked personas (IDs: ${idsList}), you MUST append the tag "[[SWITCH_PERSONA:target_id]]" at the very end of your response. Example: "[[SWITCH_PERSONA:caring]]". Do not switch if the current persona fits well.]`;
-        }
+      if (dynamicPersona) {
+        const idsList = unlockedIds.join(', ');
+        finalPrompt += `\n\n[SYSTEM: You have "Dynamic Persona" enabled. Your current persona is "${activePersonaId}". If you detect that the user's tone or intent would be SIGNIFICANTLY better served by one of your other unlocked personas (IDs: ${idsList}), you MUST append the tag "[[SWITCH_PERSONA:target_id]]" at the very end of your response. Example: "[[SWITCH_PERSONA:caring]]". Do not switch if the current persona fits well.]`;
+      }
 
-        // EXHAUSTED MODE: Override
-        if (moodState.mood === 'exausta') {
-          finalPrompt += `\n\n[SYSTEM: You are currently EXHAUSTED (Low Battery/Tired). Your responses should be shorter, more direct, maybe with some sighs (*sigh*) or pauses (...). Avoid long explanations. If the user asks complicated things, ask for a break or be brief. DO NOT switch personas while exhausted.]`;
-        }
+      // EXHAUSTED MODE: Override
+      if (moodState.mood === 'exausta') {
+        finalPrompt += `\n\n[SYSTEM: You are currently EXHAUSTED (Low Battery/Tired). Your responses should be shorter, more direct, maybe with some sighs (*sigh*) or pauses (...). Avoid long explanations. If the user asks complicated things, ask for a break or be brief. DO NOT switch personas while exhausted.]`;
+      }
 
-        const latest = await fetchMemories(userId);
-        if (Array.isArray(latest) && latest.length > 0) {
-          setMemories(latest);
-        }
-      } catch { }
-
-      // Pass memories to context - using selected model with relevância
+      // Pass memories to context - using selected model with relevance
       const personaToUse = isDeepMode ? { ...activePersona, systemInstruction: `${activePersona.systemInstruction}\nResponda com raciocínio detalhado, valide suposições, cite fontes quando úteis, e apresente passos claros.` } : activePersona;
       const localDateTime = new Date().toLocaleString();
       const stream = streamResponse(history, promptText, personaToUse, relevantMemories, selectedModel, abortCtrl.signal, attachments, userId, localDateTime);
 
       // Throttled Update Logic
-      const UPDATE_INTERVAL = 80; // Faster updates for smoother UI
+      const UPDATE_INTERVAL = 80; 
       let lastUpdate = 0;
 
       for await (const chunk of stream) {
         if (abortCtrl.signal.aborted) break;
 
         accumulatedResponse += chunk;
-        setStreamingText(accumulatedResponse); // Keep for overlays if needed cheap
+        setStreamingText(accumulatedResponse);
 
         const now = Date.now();
         if (now - lastUpdate > UPDATE_INTERVAL) {
@@ -759,34 +770,13 @@ if (window.innerWidth < 768) setSidebarOpen(false);
         return s;
       }));
 
+      // Post-Generation Logic (XP, Fallback Memory)
       const hadImage = (attachments || []).some(att => att.type === 'image');
-      if (hadImage) {
-        if (userId) award('image', userId);
-        if (accumulatedResponse.includes('Limite de uso da API do Gemini')) {
-          addToast('Limite do Gemini atingido. Tente novamente em alguns minutos.', 'error');
-        } else if (
-          accumulatedResponse.includes('Não foi possível analisar a imagem') ||
-          accumulatedResponse.includes('Infelizmente não consegui processá-la')
-        ) {
-          addToast('Serviço de visão indisponível. Tente novamente em breve.', 'error');
-        }
-      }
+      if (hadImage) addXp(50);
 
-      if (isDeepMode && userId) {
-        award('pro', userId);
-      }
-
-
-      // Fallback heuristic: save if it matches known patterns and none was extracted
-      if (!extractedMemory && (promptText.toLowerCase().includes("remember that") || promptText.toLowerCase().includes("my name is"))) {
-        const created = await addMemoryServer(promptText, ['auto'], 'note', 'medium', userId);
-        if (created) {
-          setMemories(prev => [...prev, created]);
-        } else {
-          const localMem: Memory = { id: uuidv4(), content: promptText, createdAt: Date.now(), tags: ['auto'], category: 'note', priority: 'medium' };
-          setMemories(prev => [...prev, localMem]);
-        }
-        addToast('Memória salva 🧠', 'success');
+      if (!extractedMemory && (promptText.toLowerCase().includes("remember") || promptText.toLowerCase().includes("my name is"))) {
+         const created = await addMemoryServer(promptText, ['auto'], 'note', 'medium', userId);
+         if (created) setMemories(prev => [...prev, created]);
       }
 
     } catch (e) {
@@ -795,10 +785,7 @@ if (window.innerWidth < 768) setSidebarOpen(false);
       setIsGenerating(false);
       abortControllerRef.current = null;
 
-      // Save final session state to backend
-      // Save final session state to backend
       if (userId && accumulatedResponse) {
-        // Update Mood on Response
         setMoodState(prev => updateMood(prev, { type: 'ASSISTANT_RESPONSE', tokens: accumulatedResponse.length / 4 }));
 
         const finalModelMsg: Message = {
@@ -810,70 +797,35 @@ if (window.innerWidth < 768) setSidebarOpen(false);
           status: 'done'
         };
 
-        // 🎭 Dynamic Persona Switch Processing
+        // 🎭 Dynamic Persona Switch
         const switchRegex = /\[\[SWITCH_PERSONA:([a-z-]+)\]\]/i;
         const match = accumulatedResponse.match(switchRegex);
         if (match && match[1]) {
           const targetId = match[1] as any;
-          if (personas.some(p => p.id === targetId)) { // Verify it's valid
+          if (personas.some(p => p.id === targetId)) {
             finalModelMsg.content = finalModelMsg.content.replace(match[0], '').trim();
-            accumulatedResponse = finalModelMsg.content; // Update for TTS and Save
-
-            // 1. Change Persona
-            // We need to access setActivePersonaId from gamification context.
-            // Since we are inside a callback/effect scope, we need to be careful.
-            // But we have 'personas' and 'activePersonaId' in scope? No, we have the hook values.
-            // Wait, triggerAIResponse is inside the component, so it has access to `setActivePersonaId`?
-            // The hook `useGamification` returns `setActivePersonaId`.
-            // Let's verify we destructured it.
-            // We destructured `activePersonaId`, `personas`... need `setActivePersonaId`.
-
-            // Check destructuring in App.tsx (line 88)
-            // const { stats, addXp, increaseBond, setUsername, activePersonaId, personas, addCoins } = useGamification();
-            // I need to add `setActivePersonaId` to the destructuring list in the first chunk or assume it's there.
-            // It seems I missed it in the file view. I'll add it now.
+            accumulatedResponse = finalModelMsg.content;
+            setActivePersonaId(targetId);
+            addToast(`${t('persona_switched') || 'Persona switched to'} ${targetId}`, 'info');
           }
         }
 
-        // We need to reconstruct the session. 
-        // Note: 'history' passed to this function includes the user message.
-        const finalMessages = [...history, finalModelMsg];
-
-        // We need to find the session to get other props (title, personaId, etc)
-        // But we can't access 'sessions' state reliably here if it changed.
-        // We'll trust that sessionId is valid and title/persona haven't changed during generation.
-        // However, to be safe, we might want to fetch it or just patch the messages.
-        // Our backend upsertSession replaces the session. 
-        // Let's try to get it from the functional update in setSessions? No.
-
-        // Best effort: find in current sessions list (closure might be stale but usually fine for title/persona)
         const currentSess = sessions.find(s => s.id === sessionId);
         if (currentSess) {
           const sessionToSave = {
             ...currentSess,
-            messages: finalMessages,
+            messages: [...history, finalModelMsg],
             updatedAt: Date.now()
           };
           saveSessionServer(sessionToSave);
         }
       }
 
-      // Auto TTS Trigger (only if NOT in a voice call, as overlay handles that)
+      // Auto TTS
       if (isVoiceEnabled && accumulatedResponse && !abortCtrl.signal.aborted && !isVoiceActive) {
-        // Determine voice (reuse logic)
-        // Determine voice (reuse logic)
-        let voiceId = localStorage.getItem('lira_premium_voice_id') || 'lira-local';
-        
-        // Auto-Upgrade to Minimax (Playful Girl) if Antares+ (or Pro/HighLevel) and using default
-        const userTier = (stats as any).tier || stats.plan || 'free';
-        if (['antares', 'supernova', 'singularity', 'vega', 'pro', 'architect'].includes(userTier.toLowerCase()) && voiceId === 'lira-local') {
-           voiceId = 'minimax-playful';
-        }
-
-        const isPremium = voiceId !== 'google-pt-BR';
-
+        let voiceId = localStorage.getItem('lira_premium_voice_id') || 'edge-francesca';
         liraVoice.speak(accumulatedResponse, {
-          usePremium: isPremium,
+          usePremium: voiceId !== 'google-pt-BR',
           voiceId: voiceId 
         });
       }
@@ -882,13 +834,12 @@ if (window.innerWidth < 768) setSidebarOpen(false);
         if (s.id === sessionId) {
           return {
             ...s,
-            messages: s.messages.map(m => m.id === modelMessageId ? { ...m, isStreaming: false, status: 'done', content: accumulatedResponse, partial: undefined } : m)
+            messages: s.messages.map(m => m.id === modelMessageId ? { ...m, isStreaming: false, status: 'done', content: accumulatedResponse } : m)
           };
         }
         return s;
       }));
-
-      setStreamingText(''); // Clear streaming text to unblock overlay
+      setStreamingText('');
     }
   };
 
@@ -896,8 +847,7 @@ if (window.innerWidth < 768) setSidebarOpen(false);
     let activeSessionId = currentSessionId;
     addXp(10);
     increaseBond(1);
-    const u = getCurrentUser();
-    if (u?.id) award('messages', u.id);
+    
     if (!activeSessionId) {
       const currentUser = getCurrentUser();
       const userId = currentUser?.id;
@@ -914,6 +864,7 @@ if (window.innerWidth < 768) setSidebarOpen(false);
       activeSessionId = newSession.id;
       setCurrentSessionId(activeSessionId);
     }
+
     const userMessage: Message = {
       id: uuidv4(),
       role: 'user',
@@ -922,10 +873,8 @@ if (window.innerWidth < 768) setSidebarOpen(false);
       attachments: attachments
     };
 
-    // Update Mood on User Message
     setMoodState(prev => updateMood(prev, { type: 'USER_MESSAGE', chars: text.length }));
 
-    // Check for rest commands
     if (/vai descansar|descansa|tá tudo bem|relaxa/i.test(text)) {
       setMoodState(prev => updateMood(prev, { type: 'REST' }));
       addToast('Lira recuperou um pouco de energia 🔋', 'success');
@@ -937,39 +886,31 @@ if (window.innerWidth < 768) setSidebarOpen(false);
       }
       return session;
     }));
-    {
-      const s = sessions.find(s => s.id === activeSessionId);
-      const currentUser = getCurrentUser();
-      const userId = currentUser?.id;
-      const toSave = s ? { ...s, messages: [...s.messages, userMessage], userId } : undefined;
 
-      if (toSave && userId) {
-        saveSessionServer(toSave);
-      }
+    const s = sessions.find(s => s.id === activeSessionId);
+    const userId = getCurrentUser()?.id;
+    if (s && userId) {
+      saveSessionServer({ ...s, messages: [...s.messages, userMessage], userId });
     }
-    const history = sessions.find(s => s.id === activeSessionId)?.messages || [];
-    const updatedHistory = [...history, userMessage];
+
+    const updatedHistory = [...(s?.messages || []), userMessage];
+
+    // 🛡️ SECURITY GUARDRAILS
+    const inputAudit = await securityService.validateMessage(text, 'user');
+    if (!inputAudit.isSafe) {
+        addToast(t('security.blocked_input') || 'Mensagem bloqueada por questões de segurança.', 'error');
+        return;
+    }
+
     await triggerAIResponse(activeSessionId, updatedHistory, text, attachments);
-    if (history.length === 0) {
-      generateChatTitle(text, selectedModel).then(title => {
-        setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, title } : s));
-        const currentUser = getCurrentUser();
-        const userId = currentUser?.id;
-        const saved = sessions.find(ss => ss.id === activeSessionId);
-        const finalSession = saved ? { ...saved, title, userId } : undefined;
-        if (finalSession && userId) {
-          const useFastAuth = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_USE_FASTAPI_AUTH) === '1';
-          const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL) || 'http://localhost:4000';
-          fetch(`${API_BASE_URL}/api/chat/sessions`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-            body: JSON.stringify(finalSession)
-          }).catch(() => { });
-          const key = `${LOCAL_STORAGE_KEY}_${userId}`;
-          try { localStorage.setItem(key, JSON.stringify([finalSession, ...sessions.filter(x => x.id !== activeSessionId)])); } catch { }
-        }
-      });
-    }
+    
+    generateChatTitle(text, selectedModel).then(title => {
+      setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, title } : s));
+      const saved = sessions.find(ss => ss.id === activeSessionId);
+      if (saved && userId) {
+        saveSessionServer({ ...saved, title, userId });
+      }
+    });
   };
 
   const handleRegenerateMessage = async (messageId: string) => {
@@ -997,11 +938,7 @@ if (window.innerWidth < 768) setSidebarOpen(false);
     const messageIndex = session.messages.findIndex(m => m.id === messageId);
     if (messageIndex === -1 || session.messages[messageIndex].role !== 'user') return;
     const updatedMessages = [...session.messages];
-    updatedMessages[messageIndex] = {
-      ...updatedMessages[messageIndex],
-      content: newContent,
-      timestamp: Date.now()
-    };
+    updatedMessages[messageIndex] = { ...updatedMessages[messageIndex], content: newContent, timestamp: Date.now() };
     const messagesUpToEdit = updatedMessages.slice(0, messageIndex + 1);
     setSessions(prev => prev.map(s =>
       s.id === currentSessionId
@@ -1013,43 +950,33 @@ if (window.innerWidth < 768) setSidebarOpen(false);
     await triggerAIResponse(currentSessionId, messagesUpToEdit, newContent, editedMessage.attachments || []);
   };
 
-
   // Broadcast Channel for Companion Sync
   useEffect(() => {
     const channel = new BroadcastChannel('lira_companion_channel');
-
     if (streamingText || isVoiceActive) {
       channel.postMessage({ type: 'SPEAK_START' });
     } else {
       channel.postMessage({ type: 'SPEAK_END' });
     }
-
     return () => channel.close();
   }, [streamingText, isVoiceActive]);
 
   const handleTTS = async (text: string) => {
-    // Determine voice (reuse overlay logic or default)
     const voiceId = localStorage.getItem('lira_premium_voice_id') || 'lira-local';
-    const isPremium = voiceId !== 'google-pt-BR';
-
     liraVoice.speak(text, {
-      usePremium: isPremium,
-      voiceId: isPremium ? voiceId : 'google-pt-BR'
+      usePremium: voiceId !== 'google-pt-BR',
+      voiceId: voiceId 
     });
   };
 
   const handleCompanionInteraction = (type: 'drag' | 'resize') => {
     if (streamingText || isVoiceActive) return;
-    const phrases = type === 'drag'
-      ? ["Ui!", "Opa!", "Me leva!", "Segura!"]
-      : ["Tô crescendo!", "Eita!", "Gostei!"];
-    const text = phrases[Math.floor(Math.random() * phrases.length)];
-    handleTTS(text);
+    const phrases = type === 'drag' ? ["Ui!", "Opa!", "Me leva!", "Segura!"] : ["Tô crescendo!", "Eita!", "Gostei!"];
+    handleTTS(phrases[Math.floor(Math.random() * phrases.length)]);
   };
-  // Persist UI settings
+
   useEffect(() => {
-    const u = getCurrentUser();
-    const userId = u?.id;
+    const userId = getCurrentUser()?.id;
     if (!userId) return;
     const patch = { selectedModel, isDeepMode, isSidebarOpen, themeId: currentTheme.id };
     fetch(`${API_BASE_URL}/api/settings`, {
@@ -1154,32 +1081,49 @@ if (window.innerWidth < 768) setSidebarOpen(false);
 
         <div className="flex-1 flex flex-col min-w-0">
           {/* Temporary Warning Banner */}
-          <motion.div 
-             initial={{ opacity: 0, y: -20 }}
-             animate={{ opacity: 1, y: 0 }}
-             className="bg-red-500/20 border-b border-red-500/50 py-1.5 px-4 flex items-center justify-center gap-2 group cursor-pointer hover:bg-red-500/30 transition-all z-[60]"
-             onClick={() => setActiveModal('pricing')}
-          >
-             <p className="text-[12px] font-bold text-red-200 text-center flex items-center gap-2">
-                [TESTE ANTI-BOT ATIVO]: O sistema da LiraOS está sob stress-test pelas próximas 24h. A plataforma poderá apresentar lentidão.
-             </p>
-             <ChevronRight size={14} className="text-red-400 group-hover:translate-x-0.5 transition-transform" />
-          </motion.div>
-
-          {stats.plan === 'free' && (
+          <AnimatePresence>
+          {!isBannerDismissed('stress-test') && (
             <motion.div 
                initial={{ opacity: 0, y: -20 }}
                animate={{ opacity: 1, y: 0 }}
-               className="bg-gradient-to-r from-purple-600/10 via-pink-600/10 to-purple-600/10 border-b border-white/5 py-1.5 px-4 flex items-center justify-center gap-2 group cursor-pointer hover:bg-white/5 transition-all z-[60]"
-               onClick={() => setActiveModal('pricing')}
+               exit={{ opacity: 0, y: -20 }}
+               className="bg-red-500/20 border-b border-red-500/50 py-1.5 px-4 flex items-center justify-between gap-2 z-[60]"
             >
-                <Sparkles size={14} className="text-yellow-400 animate-pulse" />
-                <p className="text-[11px] font-medium text-gray-300">
-                    Você está no plano <span className="text-white font-bold">Standard</span>. Evolua seu sistema para o <span className="text-lira-pink font-bold">Vega Nebula</span> para IA ilimitada e ultra rápida.
-                </p>
-                <ChevronRight size={12} className="text-gray-500 group-hover:translate-x-0.5 transition-transform" />
+               <div className="flex items-center justify-center flex-1 gap-2 cursor-pointer" onClick={() => setActiveModal('pricing')}>
+                  <WarningCircle size={16} className="text-red-400" />
+                  <p className="text-[12px] font-bold text-red-200 text-center">
+                      [TESTE ANTI-BOT ATIVO]: Sistema em stress-test pelas próximas 24h. Lentidão prevista.
+                  </p>
+                  <ChevronRight size={14} className="text-red-400 group-hover:translate-x-0.5 transition-transform" />
+               </div>
+               <button onClick={() => dismissBanner('stress-test')} className="text-red-400/50 hover:text-red-400 p-1">
+                  <X size={14} weight="bold" />
+               </button>
             </motion.div>
           )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+          {stats.plan === 'free' && !isBannerDismissed('standard-plan') && (
+            <motion.div 
+               initial={{ opacity: 0, y: -20 }}
+               animate={{ opacity: 1, y: 0 }}
+               exit={{ opacity: 0, y: -20 }}
+               className="bg-gradient-to-r from-purple-600/10 via-pink-600/10 to-purple-600/10 border-b border-white/5 py-1.5 px-4 flex items-center justify-between gap-2 z-[60]"
+            >
+                <div className="flex items-center justify-center flex-1 gap-2 cursor-pointer" onClick={() => setActiveModal('pricing')}>
+                  <Sparkles size={14} className="text-yellow-400 animate-pulse" />
+                  <p className="text-[11px] font-medium text-gray-300">
+                      Plano <span className="text-white font-bold">Standard</span>. Evolua para <span className="text-lira-pink font-bold">Vega Nebula</span> para IA ultra rápida.
+                  </p>
+                  <ChevronRight size={12} className="text-gray-500 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+                <button onClick={() => dismissBanner('standard-plan')} className="text-gray-500 hover:text-white p-1">
+                  <X size={14} weight="bold" />
+                </button>
+            </motion.div>
+          )}
+          </AnimatePresence>
           <ChatHeader
             title={currentSession?.title || 'Lira Chat'}
             isMobile={window.innerWidth < 768}
@@ -1256,10 +1200,14 @@ if (window.innerWidth < 768) setSidebarOpen(false);
             onModelChange={setSelectedModel}
             isDeepMode={isDeepMode}
             onToggleDeepMode={handleToggleDeepMode}
-            onOpenLegal={() => { setLegalSection('terms'); setActiveModal('legal'); }}
             onOpenCookies={() => { setLegalSection('cookies'); setActiveModal('legal'); }}
             voiceEnabled={isVoiceEnabled}
             onToggleVoice={handleToggleVoice}
+            onTakeSelfie={() => {
+                if (isGenerating) return;
+                addToast(t('photo.posing') || 'Posing for a photo...', 'info');
+                handleSendMessage(t('photo.command') || 'Take a selfie of yourself!', []);
+            }}
           />
         </main>
       </div>

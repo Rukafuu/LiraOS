@@ -21,7 +21,8 @@ export interface SpeakResult {
 }
 
 export const PREMIUM_VOICES = [
-  { id: 'lira-local', name: 'Lira', description: 'Voz Oficial (Neural)', color: 'from-pink-500 to-rose-500' },
+  { id: 'edge-francesca', name: 'Francisca (Edge)', description: 'Voz Recomendada (Natural)', color: 'from-pink-500 to-rose-500' },
+  { id: 'lira-local', name: 'Lira (RVC)', description: 'Voz Oficial (Neural)', color: 'from-blue-500 to-indigo-500' },
 ];
 
 class LiraVoice {
@@ -79,7 +80,9 @@ class LiraVoice {
   private loadVoice() {
     if (!SYNTHESIS) return;
     const voices = SYNTHESIS.getVoices();
-    this.voice = voices.find(v => v.lang === 'pt-BR' && (v.name.includes('Google') || v.name.includes('Francisca')))
+    // Prefer Francisca (Edge/Microsoft) or Google
+    this.voice = voices.find(v => v.lang === 'pt-BR' && v.name.includes('Francisca'))
+      || voices.find(v => v.lang === 'pt-BR' && v.name.includes('Google'))
       || voices.find(v => v.lang === 'pt-BR')
       || voices[0];
   }
@@ -215,7 +218,7 @@ class LiraVoice {
 
     this.notifyStart();
 
-    let requestedVoice = options.voiceId || (options.usePremium ? 'lira-local' : '');
+    let requestedVoice = options.voiceId || (options.usePremium ? 'edge-francesca' : '');
     let usedVoiceId = requestedVoice;
     let fallbackUsed = false;
 

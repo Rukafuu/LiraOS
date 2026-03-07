@@ -230,8 +230,8 @@ router.post('/generate-title', async (req, res) => {
 
 router.post('/stream', async (req, res) => {
   try {
-    const { messages, model = 'xiaomi', systemInstruction, memories = [], attachments = [], temperature = 0.7, localDateTime } = req.body;
-    const userId = req.userId; // Use authenticated user ID if needed for logging/limits
+    let { messages, model = 'xiaomi', systemInstruction, memories = [], attachments = [], temperature = 0.7, localDateTime } = req.body;
+    const userId = req.userId; 
 
     // 0. Security Check: Is User Banned?
     const user = await getUserById(userId);
@@ -242,6 +242,12 @@ router.post('/stream', async (req, res) => {
     }
 
     const userTier = user?.plan || 'free';
+    
+    // Tiered Temperature Constraint: Only Antares+ can go beyond 0.7 or customize
+    const canTweakTemp = ['antares', 'supernova', 'singularity'].includes(userTier);
+    if (!canTweakTemp) {
+      temperature = 0.7; // Hard lock for lower tiers
+    }
     const limits = TIER_LIMITS[userTier] || TIER_LIMITS.free;
 
     // 1. Content Moderation Check
@@ -316,10 +322,22 @@ router.post('/stream', async (req, res) => {
 
       try {
         let isDeepMode = req.body.deepMode || false;
-        
+        let finalTemperature = parseFloat(req.body.temperature) || 0.7;
+
         // Restriction: No Deep Mode for Free Tier
         if (userTier === 'free') {
           isDeepMode = false;
+        }
+
+        // Restriction: Temperature control only for Antares+ (or whatever the user defined as "Antares para cima")
+        // Plan order: free < vega < sirius < antares < supernova < singularity
+        const TIER_ORDER = ['free', 'vega', 'sirius', 'antares', 'supernova', 'singularity'];
+        const userTierIndex = TIER_ORDER.indexOf(userTier);
+        const antaresIndex = TIER_ORDER.indexOf('antares');
+        
+        if (userTierIndex < antaresIndex) {
+            // Force default temperature for lower tiers
+            finalTemperature = 0.7;
         }
 
         const visionCtx = globalContext.getVisionContext();

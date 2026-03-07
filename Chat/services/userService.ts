@@ -8,6 +8,11 @@ export interface User {
   createdAt?: number;
   lastLogin?: number;
   loginCount?: number;
+  plan?: string;
+  lastProToolUsage?: number;
+  password?: string;
+  confirmPassword?: string;
+  oldPassword?: string;
   profile?: { // Legacy support, mapped to preferences or flat fields
     bio?: string;
     location?: string;
@@ -63,12 +68,12 @@ export function getAuthHeaders() {
 
 
 
-export const register = async (email: string, username: string, password: string): Promise<{ success: boolean; message: string; user?: User }> => {
+export const register = async (email: string, username: string, password: string, confirmPassword?: string): Promise<{ success: boolean; message: string; user?: User }> => {
   try {
     const res = await fetch(`${API_URL}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, username, password })
+      body: JSON.stringify({ email, username, password, confirmPassword })
     });
     
     const data = await res.json();

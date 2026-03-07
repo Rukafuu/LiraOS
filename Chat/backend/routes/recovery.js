@@ -1,36 +1,13 @@
 import express from 'express';
-import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import { getUserByEmail, createRecoverCode, consumeRecoverCode, setPassword } from '../user_store.js';
 import { requireAuth } from '../middlewares/authMiddleware.js';
+import { sendEmail } from '../services/emailService.js';
 
 dotenv.config();
 
 const router = express.Router();
 
-// Email transporter (reuses FEEDBACK_EMAIL_* or SMTP_* config)
-let transporter = null;
-function getTransporter() {
-  if (transporter) return transporter;
-  
-  // Priority: FEEDBACK_EMAIL (Gmail App Password) > SMTP (legacy)
-  const user = process.env.FEEDBACK_EMAIL_USER || process.env.SMTP_USER;
-  const pass = process.env.FEEDBACK_EMAIL_PASS || process.env.SMTP_PASS;
-
-  if (!user || !pass) {
-    console.warn('[Recovery] ⚠️ No email configured — set FEEDBACK_EMAIL_USER + FEEDBACK_EMAIL_PASS');
-    return null;
-  }
-
-  transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: { user, pass },
-    tls: { rejectUnauthorized: false }
-  });
-
-  console.log(`[Recovery] ✉️ Email transporter ready (${user})`);
-  return transporter;
-}
 
 // POST /api/recovery/init
 router.post(['/init', '/init-new'], async (req, res) => {
@@ -72,23 +49,15 @@ router.post(['/init', '/init-new'], async (req, res) => {
   `;
 
   // Try sending email
-  const t = getTransporter();
-  if (t) {
-    try {
-      const fromUser = process.env.FEEDBACK_EMAIL_USER || process.env.SMTP_USER;
-      await t.sendMail({
-        from: `"LiraOS Security" <${fromUser}>`,
-        to: email,
-        subject: '🔐 LiraOS — Password Recovery Code',
-        html: htmlContent,
-        text: `Your LiraOS recovery code is: ${code}\n\nThis code expires in 15 minutes.`
-      });
-      console.log(`[Recovery] ✉️ Email sent to ${email}`);
-      return res.json({ success: true });
-    } catch (e) {
-      console.error('[Recovery] ⚠️ Email failed:', e.message);
-      // Fall through to dev mode
-    }
+  const response = await sendEmail({
+    to: email,
+    subject: '🔐 LiraOS — Password Recovery Code',
+    html: htmlContent,
+    text: `Your LiraOS recovery code is: ${code}\n\nThis code expires in 15 minutes.`
+  });
+
+  if (response.success) {
+      return res.json({ success: true, method: response.method });
   }
 
   // Dev mode fallback: return code in response

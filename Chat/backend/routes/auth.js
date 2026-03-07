@@ -51,6 +51,12 @@ router.post('/register', async (req, res) => {
     console.log(`[Register] Email already exists (masked)`);
     return res.status(409).json({ error: 'email_exists' });
   }
+
+  // Security: Handle Password Confirmation (Backend Validation)
+  const { confirmPassword } = req.body || {};
+  if (confirmPassword && password !== confirmPassword) {
+    return res.status(400).json({ error: 'passwords_do_not_match' });
+  }
   
   const created = await createUser(email, username, password);
   if (!created) {
@@ -130,6 +136,27 @@ router.put('/me', async (req, res) => {
   if (!payload) return res.status(401).json({ error: 'invalid_token' });
   
   const updates = req.body || {};
+
+  // Security: Handle Password Update with confirmation
+  if (updates.password) {
+      const { confirmPassword, oldPassword } = updates;
+      if (password !== confirmPassword) {
+          return res.status(400).json({ error: 'passwords_do_not_match' });
+      }
+      
+      const u = await getUserById(payload.sub);
+      if (oldPassword && !await verifyPassword(u, oldPassword)) {
+          return res.status(401).json({ error: 'invalid_current_password' });
+      }
+      
+      // Hash new password
+      const bcrypt = await import('bcryptjs').then(m => m.default);
+      updates.passwordHash = await bcrypt.hash(updates.password, 10);
+      delete updates.password;
+      delete updates.confirmPassword;
+      delete updates.oldPassword;
+  }
+
   const ok = await updateUser(payload.sub, updates);
   if (!ok) return res.status(500).json({ error: 'update_failed' });
   
@@ -144,7 +171,8 @@ router.put('/me', async (req, res) => {
     loginCount: u.loginCount, 
     lastLogin: u.lastLogin,
     plan: u.plan,
-    lastProToolUsage: u.lastProToolUsage
+    lastProToolUsage: u.lastProToolUsage,
+    preferences: u.preferences
   });
 });
 

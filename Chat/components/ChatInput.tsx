@@ -1,5 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Plus, Square, ArrowUp, X, FileText, Mic, CircleAlert, Brain, Zap, Volume2, VolumeX, ChevronDown, Check } from 'lucide-react';
+import { 
+  PaperPlaneRight, 
+  Plus, 
+  Square, 
+  ArrowUp, 
+  X, 
+  FileText, 
+  Microphone, 
+  WarningCircle, 
+  Brain, 
+  Lightning, 
+  SpeakerHigh, 
+  SpeakerSlash, 
+  CaretDown, 
+  Check, 
+  Pulse,
+  Camera
+} from '@phosphor-icons/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { VoiceButton } from './ui/VoiceButton';
 import { PREMIUM_VOICES } from '../services/lira_voice';
 import { Attachment } from '../types';
@@ -17,10 +35,10 @@ interface ChatInputProps {
   onModelChange?: (model: 'mistral' | 'xiaomi') => void;
   isDeepMode?: boolean;
   onToggleDeepMode?: () => void;
-  onOpenLegal?: () => void;
   onOpenCookies?: () => void;
   voiceEnabled?: boolean;
   onToggleVoice?: () => void;
+  onTakeSelfie?: () => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({ 
@@ -32,10 +50,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onModelChange,
   isDeepMode = false,
   onToggleDeepMode,
-  onOpenLegal,
   onOpenCookies,
   voiceEnabled = false,
-  onToggleVoice
+  onToggleVoice,
+  onTakeSelfie
 }) => {
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -48,16 +66,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const { addToast } = useToast();
   const { t } = useTranslation();
   
-  // Voice Settings
-  // Voice enabled state is now controlled by parent (App.tsx)
-  const [autoSendVoice, setAutoSendVoice] = useState(() => localStorage.getItem('lira_auto_send_voice') !== 'false'); // Default true
-  const [selectedVoiceId, setSelectedVoiceId] = useState(localStorage.getItem('lira_premium_voice_id') || PREMIUM_VOICES[0].id);
-
-  const toggleAutoSend = () => {
-    const newVal = !autoSendVoice;
-    setAutoSendVoice(newVal);
-    localStorage.setItem('lira_auto_send_voice', String(newVal));
-  };
+  // Voice settings managed via parent
 
   const handleSubmit = () => {
     if ((!input.trim() && attachments.length === 0) || isLoading) return;
@@ -91,6 +100,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   const handleVoiceInput = (text: string) => {
+    const autoSendVoice = localStorage.getItem('lira_auto_send_voice') !== 'false';
     if (autoSendVoice) {
       if (!text.trim()) return;
       onSendMessage(text, attachments);
@@ -194,36 +204,27 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <div className="w-full pb-3 md:pb-6 px-1 md:px-4 z-20">
+    <div className="w-full pb-3 md:pb-8 px-1 md:px-6 z-20">
       <div className="max-w-3xl mx-auto relative">
-        <style>{`
-          @keyframes neon-pulse {
-            0% { box-shadow: 0 0 5px rgba(56,189,248,0.2), inset 0 0 10px rgba(0,0,0,0.5); border-color: rgba(56,189,248,0.3); }
-            50% { box-shadow: 0 0 20px rgba(56,189,248,0.4), inset 0 0 10px rgba(0,0,0,0.5); border-color: rgba(56,189,248,0.6); }
-            100% { box-shadow: 0 0 5px rgba(56,189,248,0.2), inset 0 0 10px rgba(0,0,0,0.5); border-color: rgba(56,189,248,0.3); }
-          }
-          .input-glow-active {
-            animation: neon-pulse 3s infinite ease-in-out;
-          }
-        `}</style>
         
         {/* Attachments Preview Area */}
         {attachments.length > 0 && (
-           <div className="flex gap-2 mb-3 overflow-x-auto py-1 pl-1 no-scrollbar">
+           <div className="flex gap-2 mb-3 overflow-x-auto py-2 pl-1 no-scrollbar animate-in slide-in-from-bottom-2 duration-300">
               {attachments.map(att => (
-                 <div key={att.id} className="relative group flex-shrink-0 w-14 h-14 rounded-lg overflow-hidden border border-white/10 bg-black/40 shadow-sm">
+                 <div key={att.id} className="relative group flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden border border-white/10 bg-black/40 shadow-xl ring-1 ring-white/5">
                     <button 
                       onClick={() => removeAttachment(att.id)}
-                      className="absolute top-0.5 right-0.5 bg-black/70 rounded-full p-0.5 text-white opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                      aria-label="Remove attachment"
+                      className="absolute top-1 right-1 bg-black/80 rounded-full p-1 text-white opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-red-500"
+                      aria-label={t('common.remove')}
                     >
-                       <X size={10} />
+                       <X size={12} weight="bold" />
                     </button>
                     {att.type === 'image' ? (
-                       <img src={att.previewUrl} alt="preview" className="w-full h-full object-cover" />
+                       <img src={att.previewUrl} alt="preview" className="w-full h-full object-cover transition-transform group-hover:scale-110" />
                     ) : (
-                       <div className="w-full h-full flex items-center justify-center text-gray-400">
-                          <FileText size={16} />
+                       <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 gap-1 bg-white/5">
+                          <FileText size={20} weight="duotone" />
+                          <span className="text-[8px] truncate max-w-full px-1">{att.name}</span>
                        </div>
                     )}
                  </div>
@@ -237,14 +238,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           className={`
-          relative flex items-end gap-1 md:gap-2 p-1 md:p-2 
-          bg-[#18181b] rounded-[22px] md:rounded-[26px] 
-          transition-all duration-300 border
+          relative flex items-end gap-1 md:gap-2 p-1.5 md:p-2.5
+          bg-[#121214]/90 backdrop-blur-xl rounded-[28px] md:rounded-[32px] 
+          transition-all duration-300 border shadow-2xl
           ${isFocused 
-            ? 'input-glow-active' 
-            : 'border-white/10 shadow-premium'
+            ? 'border-white/20 ring-4 ring-white/5' 
+            : 'border-white/10'
           }
-          ${isDragOver ? 'ring-2 ring-lira-blue/40 bg-white/5' : ''}
+          ${isDragOver ? 'ring-2 ring-blue-500/40 bg-blue-500/5' : ''}
         `}>
           <input 
              type="file" 
@@ -254,13 +255,22 @@ export const ChatInput: React.FC<ChatInputProps> = ({
              onChange={handleFileSelect}
           />
           
-          <button 
-            onClick={() => fileInputRef.current?.click()}
-            className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all mb-0.5 ml-0.5 flex-shrink-0"
-            title={t('chat_input.attach_tooltip')}
-          >
-            <Plus size={18} strokeWidth={2} />
-          </button>
+          <div className="flex items-center gap-1 md:gap-2">
+            <button 
+                onClick={() => fileInputRef.current?.click()}
+                className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all flex-shrink-0"
+                title={t('chat_input.attach_tooltip')}
+            >
+                <Plus size={20} weight="bold" />
+            </button>
+            <button 
+                onClick={onTakeSelfie}
+                className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-all flex-shrink-0"
+                title="Take a Selfie with Lira"
+            >
+                <Camera size={20} weight="bold" />
+            </button>
+          </div>
 
           <textarea
             ref={textareaRef}
@@ -275,12 +285,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             autoFocus
             className="
               flex-1 bg-transparent text-white placeholder-gray-500 
-              text-[14px] md:text-[15px] outline-none resize-none py-2 md:py-2.5 max-h-[200px]
+              text-[15px] md:text-[16px] outline-none resize-none py-2.5 md:py-3 max-h-[250px]
               scrollbar-thin leading-relaxed self-center min-w-0
             "
           />
 
-          <div className="flex gap-1 mb-0.5 md:mb-1 mr-0.5 md:mr-1 items-center flex-shrink-0">
+          <div className="flex gap-1 items-center flex-shrink-0 ml-1">
              
              {/* 1. Mic Button */}
              <VoiceButton onTranscript={handleVoiceInput} />
@@ -290,110 +300,131 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 <button
                   onClick={() => setShowMenu(!showMenu)}
                   className={`
-                    h-8 md:h-9 px-1.5 md:px-3 rounded-full flex items-center gap-1 md:gap-2 text-xs font-medium transition-all
-                    ${showMenu ? 'bg-white/10 text-white' : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'}
+                    h-9 md:h-10 px-2 md:px-4 rounded-full flex items-center gap-2 text-xs font-bold transition-all
+                    ${showMenu ? 'bg-white/10 text-white shadow-inner' : 'bg-white/5 text-gray-400 hover:text-white hover:bg-white/10'}
                   `}
                 >
                   {selectedModel === 'mistral' ? (
-                     <Brain size={14} className="text-purple-400" />
+                     <Brain size={16} weight="duotone" className="text-purple-400" />
                   ) : (
-                     <Zap size={14} className="text-green-400" />
+                     <Lightning size={16} weight="duotone" className="text-yellow-400" />
                   )}
-                  <span className="hidden md:inline">{selectedModel === 'mistral' ? t('chat_input.pro') : t('chat_input.premium')}</span>
-                  <ChevronDown size={10} className={`transition-transform duration-200 ${showMenu ? 'rotate-180' : ''}`} />
+                  <span className="hidden md:inline uppercase tracking-widest">{selectedModel === 'mistral' ? t('chat_input.pro') : t('chat_input.premium')}</span>
+                  <CaretDown size={12} weight="bold" className={`transition-transform duration-200 ${showMenu ? 'rotate-180' : ''}`} />
                 </button>
 
                 {/* Dropdown Menu */}
+                <AnimatePresence>
                 {showMenu && (
                   <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowMenu(false)} />
-                    <div className="absolute bottom-full mb-2 right-0 w-64 glass-panel border border-white/10 rounded-xl p-3 z-50 bg-[#121214] shadow-2xl animate-fade-in origin-bottom-right">
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-40" 
+                        onClick={() => setShowMenu(false)} 
+                    />
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                        className="absolute bottom-full mb-3 right-0 w-72 glass-panel border border-white/10 rounded-2xl p-4 z-50 bg-[#0c0c0e]/95 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-3xl animate-in fade-in zoom-in-95 duration-200"
+                    >
                        
                        {/* Model Selection */}
-                       <div className="mb-3">
-                         <div className="text-[10px] uppercase text-gray-500 font-bold px-1 mb-1">{t('chat_input.model')}</div>
-                         <div className="space-y-1">
+                       <div className="mb-4">
+                         <div className="text-[10px] uppercase text-gray-500 font-extrabold px-1 mb-2 tracking-widest">{t('chat_input.model')}</div>
+                         <div className="space-y-1.5">
                            <button
                              onClick={() => { onModelChange?.('mistral'); setShowMenu(false); }}
-                             className={`w-full flex items-center gap-3 p-2 rounded-lg text-sm transition-colors ${selectedModel === 'mistral' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-gray-300'}`}
+                             className={`w-full flex items-center gap-4 p-3 rounded-xl text-sm transition-all ${selectedModel === 'mistral' ? 'bg-white/10 text-white ring-1 ring-white/10' : 'hover:bg-white/5 text-gray-400'}`}
                            >
-                             <Brain size={16} className="text-purple-400" />
-                             <div className="flex-1 text-left">
-                               <div>{t('chat_input.pro')}</div>
-                               <div className="text-[10px] text-gray-500">{t('chat_input.pro_desc')}</div>
+                             <div className={`p-2 rounded-lg ${selectedModel === 'mistral' ? 'bg-purple-500/20 text-purple-400' : 'bg-white/5 text-gray-500'}`}>
+                                <Brain size={20} weight="fill" />
                              </div>
-                             {selectedModel === 'mistral' && <Check size={14} className="text-purple-400" />}
+                             <div className="flex-1 text-left">
+                               <div className="font-bold">{t('chat_input.pro')}</div>
+                               <div className="text-[10px] text-gray-500 line-clamp-1">{t('chat_input.pro_desc')}</div>
+                             </div>
+                             {selectedModel === 'mistral' && <Check size={16} weight="bold" className="text-purple-400" />}
                            </button>
                            
                            <button
                              onClick={() => { onModelChange?.('xiaomi'); setShowMenu(false); }}
-                             className={`w-full flex items-center gap-3 p-2 rounded-lg text-sm transition-colors ${selectedModel === 'xiaomi' ? 'bg-white/10 text-white' : 'hover:bg-white/5 text-gray-300'}`}
+                             className={`w-full flex items-center gap-4 p-3 rounded-xl text-sm transition-all ${selectedModel === 'xiaomi' ? 'bg-white/10 text-white ring-1 ring-white/10' : 'hover:bg-white/5 text-gray-400'}`}
                            >
-                             <Zap size={16} className="text-green-400" />
-                             <div className="flex-1 text-left">
-                               <div>{t('chat_input.premium')}</div>
-                               <div className="text-[10px] text-gray-500">{t('chat_input.premium_desc')}</div>
+                             <div className={`p-2 rounded-lg ${selectedModel === 'xiaomi' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-white/5 text-gray-500'}`}>
+                                <Lightning size={20} weight="fill" />
                              </div>
-                             {selectedModel === 'xiaomi' && <Check size={14} className="text-green-400" />}
+                             <div className="flex-1 text-left">
+                               <div className="font-bold">{t('chat_input.premium')}</div>
+                               <div className="text-[10px] text-gray-500 line-clamp-1">{t('chat_input.premium_desc')}</div>
+                             </div>
+                             {selectedModel === 'xiaomi' && <Check size={16} weight="bold" className="text-yellow-400" />}
                            </button>
                          </div>
                        </div>
-
+ 
                        {/* Options */}
-                       <div className="border-t border-white/5 pt-2">
-                          <div className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-colors cursor-pointer" onClick={onToggleDeepMode}>
-                             <div className="flex items-center gap-2 text-sm text-gray-300">
-                                <Zap size={14} className={isDeepMode ? 'text-lira-blue' : 'text-gray-500'} />
-                                <span>{t('chat_input.deep_mode')}</span>
+                       <div className="border-t border-white/5 pt-3">
+                          <button 
+                            className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-white/5 transition-all text-sm group"
+                            onClick={onToggleDeepMode}
+                          >
+                             <div className="flex items-center gap-3">
+                                <Pulse size={18} weight="bold" className={isDeepMode ? 'text-blue-400' : 'text-gray-500'} />
+                                <span className={`font-semibold ${isDeepMode ? 'text-white' : 'text-gray-400 group-hover:text-gray-300'}`}>{t('chat_input.deep_mode')}</span>
                              </div>
-                             <div className={`w-8 h-4 rounded-full p-0.5 transition-colors ${isDeepMode ? 'bg-lira-blue' : 'bg-white/10'}`}>
-                                <div className={`w-3 h-3 rounded-full bg-white transition-transform ${isDeepMode ? 'translate-x-4' : ''}`} />
+                             <div className={`w-9 h-5 rounded-full p-1 transition-all duration-300 ${isDeepMode ? 'bg-blue-500' : 'bg-white/10'}`}>
+                                <div className={`w-3 h-3 rounded-full bg-white shadow-sm transition-transform duration-300 ${isDeepMode ? 'translate-x-4' : ''}`} />
                              </div>
-                          </div>
+                          </button>
                        </div>
-
-                    </div>
+ 
+                    </motion.div>
                   </>
                 )}
+                </AnimatePresence>
              </div>
-
+ 
              {/* 3. Send Button */}
              {isLoading ? (
                 <button 
                   onClick={onStop}
-                  className="w-8 h-8 md:w-9 md:h-9 flex items-center justify-center rounded-full bg-white text-black hover:bg-red-500 hover:text-white transition-all shadow-lg flex-shrink-0 group"
+                  className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full bg-white text-black hover:bg-red-500 hover:text-white transition-all shadow-xl flex-shrink-0 group"
                   title={t('common.stop')}
                 >
-                  <Square size={14} fill="currentColor" className="group-hover:scale-90 transition-transform" />
+                  <Square size={16} weight="fill" className="group-hover:scale-90 transition-transform" />
                 </button>
              ) : (
                 <button 
                   onClick={handleSubmit}
                   disabled={!input.trim() && attachments.length === 0}
                   className={`
-                    w-8 h-8 md:w-9 md:h-9 flex items-center justify-center rounded-full transition-all duration-200 flex-shrink-0
+                    w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full transition-all duration-300 flex-shrink-0
                     ${(input.trim() || attachments.length > 0) 
-                      ? 'bg-white text-black shadow-[0_0_15px_rgba(255,255,255,0.4)] hover:bg-gray-100 hover:scale-105 active:scale-95' 
-                      : 'bg-white/10 text-gray-500 cursor-not-allowed'}
+                      ? 'bg-white text-black shadow-white/10 hover:bg-gray-100 hover:scale-105 active:scale-95' 
+                      : 'bg-white/5 text-gray-600 cursor-not-allowed'}
                   `}
                 >
-                  <ArrowUp size={18} strokeWidth={2.5} />
+                  <ArrowUp size={22} weight="bold" />
                 </button>
              )}
           </div>
           
           {isDragOver && (
-            <div className="absolute inset-0 rounded-[26px] border border-lira-blue/40 pointer-events-none bg-lira-blue/5">
-              <div className="absolute inset-0 flex items-center justify-center text-sm font-medium text-lira-blue">{t('chat_input.drop_files')}</div>
+            <div className="absolute inset-0 rounded-[32px] border-2 border-dashed border-blue-500/40 pointer-events-none bg-blue-500/5 animate-pulse flex items-center justify-center">
+              <div className="text-sm font-bold text-blue-400 uppercase tracking-widest">{t('chat_input.drop_files')}</div>
             </div>
           )}
         </div>
         
         {/* Footer Disclaimer */}
-        <div className="text-center text-[10px] text-gray-500 mt-2 pb-2">
+        <div className="text-center text-[10px] text-gray-500 mt-3 pb-2 select-none opacity-50 px-4">
             <span>{t('footer.disclaimer_text')}</span>
         </div>
       </div>
     </div>
   );
 };
+

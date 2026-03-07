@@ -100,7 +100,13 @@
           "notifications_desc": "Receber alertas e atualizações",
           "save_prefs": "Salvar Preferências",
           "toast_success": "Perfil atualizado!",
-          "toast_avatar": "Avatar atualizado com sucesso!"
+          "toast_avatar": "Avatar atualizado com sucesso!",
+          "integrations": "Integrações",
+          "google_calendar": "Google Agenda",
+          "google_calendar_desc": "Conecte para gerenciar eventos",
+          "google_calendar_success": "Google Agenda conectado com sucesso!",
+          "google_calendar_error": "Erro ao iniciar conexão com Google",
+          "connect": "Conectar"
       },
       "security": {
           "title": "Segurança e Login",
@@ -112,7 +118,12 @@
           "two_fa_title": "Autenticação de Dois Fatores",
           "two_fa_desc": "Gerenciado pela política da organização.",
           "status_mismatch": "Não coincidem",
-          "status_saved": "Salvo"
+          "status_saved": "Salvo",
+          "toast_success": "Senha atualizada com sucesso!",
+          "toast_error": "Erro ao atualizar senha",
+          "toast_network_error": "Erro de rede ao atualizar senha",
+          "new_pwd_placeholder": "Nova senha",
+          "confirm_pwd_placeholder": "Confirmar senha"
       },
       "intelligence": {
           "title": "Configuração Neural",
@@ -129,8 +140,10 @@
           "flash_desc": "Respostas super rápidas.",
           "pro_desc": "Raciocínio inteligente.",
           "toast_saved": "Configurações salvas",
+          "toast_save_error": "Falha ao salvar configurações",
           "dynamic_persona_title": "Personalidade Dinâmica",
-          "dynamic_persona_desc": "Alternar automaticamente a personalidade com base no contexto da conversa."
+          "dynamic_persona_desc": "Alternar automaticamente a personalidade com base no contexto da conversa.",
+          "restricted_tier": "Disponível no plano Antares ou superior"
       },
       "memories": {
           "title": "Banco de Memória",
