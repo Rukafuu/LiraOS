@@ -62,6 +62,7 @@ import { enterWidgetMode, exitWidgetMode } from './services/desktopService';
 import { syncVoiceState, syncEmotionState } from './services/overlayService';
 import { securityService } from './services/securityService';
 import { CaretDown, Check, Pulse, ShieldCheck, WarningCircle, X } from '@phosphor-icons/react';
+import { ChunkErrorBoundary } from './components/ChunkErrorBoundary';
 
 // const API_BASE_URL = ... (Removed, using import)
 const LOCAL_STORAGE_KEY = 'lira_chat_sessions';
@@ -1134,8 +1135,6 @@ if (window.innerWidth < 768) setSidebarOpen(false);
             onStop={handleStop}
             onToggleVoice={handleToggleVoice}
             voiceEnabled={isVoiceEnabled}
-            isExhausted={moodState.mood === 'exausta'}
-            fatigue={moodState.fatigue}
             onLogout={handleLogout}
           />
 
@@ -1217,97 +1216,99 @@ if (window.innerWidth < 768) setSidebarOpen(false);
       <div className="bg-noise" />
       <WindowControls />
       <div data-tauri-drag-region className="fixed top-0 left-0 right-0 h-8 z-[99999] cursor-move" />
-      <Suspense fallback={null}>
-        {activeModal === 'settings' && (
-          <SettingsModal
-            isOpen={true}
-            onClose={closeModal}
-            memories={memories}
-            onDeleteMemory={handleDeleteMemory}
-            onClearUserData={async () => {
-               const u = getCurrentUser();
-               if (!u?.id) return;
-               localStorage.removeItem(`${LOCAL_STORAGE_KEY}_${u.id}`);
-               localStorage.removeItem(`${MEMORY_STORAGE_KEY}_${u.id}`);
-               setSessions([]);
-               setMemories([]);
-               addToast('Local data cleared', 'success');
-            }}
-            onLogout={handleLogout}
-            onOpenLegal={(section) => { setLegalSection(section); setActiveModal('legal'); }}
-            onOpenFeedback={() => setActiveModal('feedback')}
-          />
-        )}
-        {activeModal === 'dashboard' && <DashboardModal isOpen={true} onClose={closeModal} />}
-        {activeModal === 'store' && <StoreModal isOpen={true} onClose={closeModal} />}
-        {activeModal === 'pricing' && <PricingModal isOpen={true} onClose={closeModal} currentPlan={stats.plan || 'free'} />}
-        {activeModal === 'whatsnew' && <WhatsNewModal isOpen={true} onClose={closeModal} />}
-        {activeModal === 'shortcuts' && <ShortcutsModal isOpen={true} onClose={closeModal} />}
-        {activeModal === 'legal' && <LegalModal isOpen={true} onClose={closeModal} initialSection={legalSection} />}
-        {activeModal === 'feedback' && <FeedbackModal isOpen={true} onClose={closeModal} userId={getCurrentUser()?.id} />}
-        {activeModal === 'dailyquests' && <DailyQuestsModal isOpen={true} onClose={closeModal} />}
-        {activeModal === 'admin' && <AdminPanel isOpen={true} onClose={closeModal} />}
-        {activeModal === 'todo' && <TodoPanel isOpen={true} onClose={closeModal} userTier={
-          (() => {
-            const u = getCurrentUser() as any;
-            if (!u) return 'Observer';
-            if (u.id === 'user_1734661833589' || u.username?.toLowerCase().includes('admin')) return 'Singularity';
-            return u.plan ? u.plan.charAt(0).toUpperCase() + u.plan.slice(1) : 'Observer';
-          })()
-        } />}
-        {activeModal === 'calendar' && <CalendarApp onClose={closeModal} />}
-        {activeModal === 'supporters' && <SupportersModal isOpen={true} onClose={closeModal} />}
-        {activeModal === 'trae' && <TraePanel onClose={closeModal} />}
-        {activeModal === 'gamer' && <GamerModal isOpen={true} onClose={closeModal} />}
-        {activeModal === 'discord' && <DiscordModal isOpen={true} onClose={closeModal} />}
-        {activeModal === 'welcome' && (
-          <WelcomeModal
-            isOpen={true}
-            username={(() => {
-              const u = getCurrentUser();
-              const rawName = stats.username && stats.username !== 'Guest' ? stats.username : (u?.username || 'Guest');
-              if (u?.id === 'user_1734661833589' || rawName.toLowerCase().includes('admin')) return 'Pai';
-              return rawName;
-            })()}
-            isReturning={isReturningUser}
-            onClose={closeModal}
-            onNewChat={createNewChat}
-          />
-        )}
-        {activeModal === 'jarvis' && (
-          <div className="fixed inset-0 z-[100] bg-black">
-            <button onClick={closeModal} className="absolute top-4 right-4 z-[110] text-cyan-500 hover:text-white">✕ CLOSE SYSTEM</button>
-            <JarvisDashboard />
-          </div>
-        )}
-        
-        {isVoiceActive && (
-          <VoiceCallOverlay
-            isOpen={true}
-            onClose={() => setVoiceActive(false)}
-            onSendMessage={(text) => handleSendMessage(text, [])}
-            userName={stats.username || 'User'}
-            avatarUrl={LIRA_AVATAR}
-            currentResponse={streamingText}
-            messages={currentSession?.messages || []}
-          />
-        )}
-
-        <AnimatePresence>
-          {showLoadingScreen && (
-             <motion.div 
-               initial={{ opacity: 1 }}
-               exit={{ opacity: 0 }}
-               className="fixed inset-0 z-[99999]"
-             >
-                <div className="absolute top-0 right-0 z-[100001]">
-                   <WindowControls />
-                </div>
-                <LoadingScreen status="INITIALIZING NEURAL CORE..." />
-             </motion.div>
+      <ChunkErrorBoundary>
+        <Suspense fallback={null}>
+          {activeModal === 'settings' && (
+            <SettingsModal
+              isOpen={true}
+              onClose={closeModal}
+              memories={memories}
+              onDeleteMemory={handleDeleteMemory}
+              onClearUserData={async () => {
+                 const u = getCurrentUser();
+                 if (!u?.id) return;
+                 localStorage.removeItem(`${LOCAL_STORAGE_KEY}_${u.id}`);
+                 localStorage.removeItem(`${MEMORY_STORAGE_KEY}_${u.id}`);
+                 setSessions([]);
+                 setMemories([]);
+                 addToast('Local data cleared', 'success');
+              }}
+              onLogout={handleLogout}
+              onOpenLegal={(section) => { setLegalSection(section); setActiveModal('legal'); }}
+              onOpenFeedback={() => setActiveModal('feedback')}
+            />
           )}
-        </AnimatePresence>
-      </Suspense>
+          {activeModal === 'dashboard' && <DashboardModal isOpen={true} onClose={closeModal} />}
+          {activeModal === 'store' && <StoreModal isOpen={true} onClose={closeModal} />}
+          {activeModal === 'pricing' && <PricingModal isOpen={true} onClose={closeModal} currentPlan={stats.plan || 'free'} />}
+          {activeModal === 'whatsnew' && <WhatsNewModal isOpen={true} onClose={closeModal} />}
+          {activeModal === 'shortcuts' && <ShortcutsModal isOpen={true} onClose={closeModal} />}
+          {activeModal === 'legal' && <LegalModal isOpen={true} onClose={closeModal} initialSection={legalSection} />}
+          {activeModal === 'feedback' && <FeedbackModal isOpen={true} onClose={closeModal} userId={getCurrentUser()?.id} />}
+          {activeModal === 'dailyquests' && <DailyQuestsModal isOpen={true} onClose={closeModal} />}
+          {activeModal === 'admin' && <AdminPanel isOpen={true} onClose={closeModal} />}
+          {activeModal === 'todo' && <TodoPanel isOpen={true} onClose={closeModal} userTier={
+            (() => {
+              const u = getCurrentUser() as any;
+              if (!u) return 'Observer';
+              if (u.id === 'user_1734661833589' || u.username?.toLowerCase().includes('admin')) return 'Singularity';
+              return u.plan ? u.plan.charAt(0).toUpperCase() + u.plan.slice(1) : 'Observer';
+            })()
+          } />}
+          {activeModal === 'calendar' && <CalendarApp onClose={closeModal} />}
+          {activeModal === 'supporters' && <SupportersModal isOpen={true} onClose={closeModal} />}
+          {activeModal === 'trae' && <TraePanel onClose={closeModal} />}
+          {activeModal === 'gamer' && <GamerModal isOpen={true} onClose={closeModal} />}
+          {activeModal === 'discord' && <DiscordModal isOpen={true} onClose={closeModal} />}
+          {activeModal === 'welcome' && (
+            <WelcomeModal
+              isOpen={true}
+              username={(() => {
+                const u = getCurrentUser();
+                const rawName = stats.username && stats.username !== 'Guest' ? stats.username : (u?.username || 'Guest');
+                if (u?.id === 'user_1734661833589' || rawName.toLowerCase().includes('admin')) return 'Pai';
+                return rawName;
+              })()}
+              isReturning={isReturningUser}
+              onClose={closeModal}
+              onNewChat={createNewChat}
+            />
+          )}
+          {activeModal === 'jarvis' && (
+            <div className="fixed inset-0 z-[100] bg-black">
+              <button onClick={closeModal} className="absolute top-4 right-4 z-[110] text-cyan-500 hover:text-white">✕ CLOSE SYSTEM</button>
+              <JarvisDashboard />
+            </div>
+          )}
+          
+          {isVoiceActive && (
+            <VoiceCallOverlay
+              isOpen={true}
+              onClose={() => setVoiceActive(false)}
+              onSendMessage={(text) => handleSendMessage(text, [])}
+              userName={stats.username || 'User'}
+              avatarUrl={LIRA_AVATAR}
+              currentResponse={streamingText}
+              messages={currentSession?.messages || []}
+            />
+          )}
+  
+          <AnimatePresence>
+            {showLoadingScreen && (
+               <motion.div 
+                 initial={{ opacity: 1 }}
+                 exit={{ opacity: 0 }}
+                 className="fixed inset-0 z-[99999]"
+               >
+                  <div className="absolute top-0 right-0 z-[100001]">
+                     <WindowControls />
+                  </div>
+                  <LoadingScreen status="INITIALIZING NEURAL CORE..." />
+               </motion.div>
+            )}
+          </AnimatePresence>
+        </Suspense>
+      </ChunkErrorBoundary>
 
       {!isVoiceActive && <PhotoBooth messages={currentSession?.messages || []} />}
     </div>
