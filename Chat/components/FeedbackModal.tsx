@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Send, Bug, Lightbulb, MessageSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../contexts/ToastContext';
+import { getAuthHeaders } from '../services/userService';
+import { API_BASE_URL } from '../src/config';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -24,18 +26,36 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose, u
     setIsSubmitting(true);
 
     try {
-      // Mock API call for now (replace with actual backend endpoint later)
-      // await fetch('/api/feedback', { ... });
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const context = {
+        currentPath: window.location.href,
+        viewport: `${window.innerWidth}x${window.innerHeight}`,
+        language: navigator.language,
+        platform: navigator.platform,
+        userAgent: navigator.userAgent,
+        timestamp: new Date().toISOString()
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/feedback`, {
+        method: 'POST',
+        headers: {
+          ...getAuthHeaders(),
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          feedback: content,
+          type: category,
+          context
+        })
+      });
       
-      console.log('[Feedback]', { userId, category, content });
-      
-      addToast(t('feedback_modal.success'), 'success');
+      if (!res.ok) throw new Error('Failed to send');
+
+      addToast(t('feedback_modal.success') || 'Feedback sent!', 'success');
       setContent('');
       setCategory('general');
       onClose();
     } catch (error) {
-      addToast(t('feedback_modal.error'), 'error');
+      addToast(t('feedback_modal.error') || 'Failed to send feedback', 'error');
     } finally {
       setIsSubmitting(false);
     }

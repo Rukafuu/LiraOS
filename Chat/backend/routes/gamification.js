@@ -6,11 +6,54 @@ const router = express.Router();
 
 router.use(requireAuth);
 
+async function ensureDailyQuests(userId, state) {
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  
+  const currentQuests = state.stats?.dailyQuests?.quests || [];
+  const lastUpdate = state.stats?.dailyQuests?.lastUpdate || '';
+
+  // Return if already have today's quests
+  if (currentQuests.length > 0 && lastUpdate === today) {
+    return state;
+  }
+
+  // Generate 3 random quests
+  const pool = [
+    { id: 'q_msg_5', title: 'Faladora!', desc: 'Envie 5 mensagens no chat', target: 5, reward: 50, type: 'messages' },
+    { id: 'q_img_1', title: 'Visão Artística', desc: 'Peça para gerar 1 imagem artística', target: 1, reward: 100, type: 'image' },
+    { id: 'q_pro_2', title: 'Busca Profunda', desc: 'Faça 2 perguntas no modo Profundo', target: 2, reward: 80, type: 'pro' },
+    { id: 'q_mood_1', title: 'Status Emocional', desc: 'Pergunte como a Lira está se sentindo', target: 1, reward: 30, type: 'chat' },
+    { id: 'q_style_1', title: 'Estilista', desc: 'Abra a loja e mude seu tema', target: 1, reward: 40, type: 'settings' }
+  ];
+
+  // Shuffle and pick 3
+  const shuffled = pool.sort(() => 0.5 - Math.random());
+  const selected = shuffled.slice(0, 3).map(q => ({ ...q, progress: 0, claimed: false }));
+
+  const newState = {
+    ...state,
+    stats: {
+      ...state.stats,
+      dailyQuests: {
+        quests: selected,
+        lastUpdate: today
+      }
+    }
+  };
+
+  await saveState(userId, newState);
+  return newState;
+}
+
 router.get('/', async (req, res) => {
   try {
     const userId = req.userId;
-    // getOrCreateDefault already calls saveState internally if needed
-    const state = (await getState(userId)) || (await getOrCreateDefault(userId));
+    let state = (await getState(userId)) || (await getOrCreateDefault(userId));
+    
+    // Ensure daily quests are populated
+    state = await ensureDailyQuests(userId, state);
+    
     res.json(state);
   } catch (e) {
     res.status(500).json({ error: e.message });

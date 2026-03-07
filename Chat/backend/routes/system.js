@@ -1,6 +1,7 @@
 import express from 'express';
 // import { requireAuth } from '../middlewares/authMiddleware.js'; 
 import { pcController } from '../services/pcControllerService.js';
+import os from 'os';
 
 const router = express.Router();
 
@@ -84,7 +85,27 @@ router.post('/alert', async (req, res) => {
 });
 
 router.get('/stats', async (req, res) => {
-    res.json({ status: 'online', uptime: process.uptime() });
+    const totalRam = os.totalmem() / (1024 ** 3); // GB
+    const freeRam = os.freemem() / (1024 ** 3); // GB
+    const usedRam = totalRam - freeRam;
+    
+    // CPU Load (1min avg)
+    const load = os.loadavg()[0];
+    const cores = os.cpus().length;
+    const cpuLoad = (load / cores) * 100;
+
+    const uptime = os.uptime();
+    const hours = Math.floor(uptime / 3600);
+    const minutes = Math.floor((uptime % 3600) / 60);
+
+    res.json({ 
+        status: 'online', 
+        cpu_load: `${cpuLoad.toFixed(1)}%`,
+        ram_usage: `${usedRam.toFixed(1)}/${totalRam.toFixed(0)} GB`,
+        battery: 'AC/Desktop', // Node.js cannot easily see battery without extra libs
+        uptime: `${hours}h ${minutes}m`,
+        platform: os.platform()
+    });
 });
 
 export default router;

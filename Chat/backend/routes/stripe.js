@@ -193,7 +193,6 @@ router.post('/create-checkout', requireAuth, async (req, res) => {
         }
         res.status(500).json({ 
             error: 'Failed to create checkout session', 
-            details: error.message,
             type: error.type
         });
     }

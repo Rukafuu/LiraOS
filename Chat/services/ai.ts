@@ -406,6 +406,24 @@ Diretrizes de Resposta:
       }
     }
     
+    // 🎨 DETECT IMAGE GENERATION INTENT
+    const generateKeywords = ['gere uma imagem', 'gerar imagem', 'crie uma imagem', 'draw a', 'generate an image', 'me mostre uma foto de', 'faça um desenho'];
+    const isImageRequest = generateKeywords.some(kw => newMessage.toLowerCase().includes(kw));
+    
+    if (isImageRequest && !attachments.some(a => a.type === 'image')) {
+       yield `🎨 Entendido! Vou gerar essa imagem para você agora mesmo...\n\n`;
+       try {
+           const { generateImage } = await import('./imageService');
+           const imageUrl = await generateImage(newMessage);
+           if (imageUrl) {
+               yield `![Generated Image](${imageUrl})`;
+               return;
+           }
+       } catch (err) {
+           console.error("Image generation failed:", err);
+       }
+    }
+
     // Para mensagens sem imagem, usar backend (Mistral mais rápido)
     const formattedMessage = formatMessageWithAttachments(newMessage, attachments);
     
@@ -419,11 +437,26 @@ Diretrizes de Resposta:
     const temperature = settings.temperature ?? 0.7;
     const finalSystemInstruction = settings.systemInstructions || persona.systemInstruction;
     
-    let effectiveModel = model;
-    if (settings.model) {
-        if (settings.model === 'flash') effectiveModel = 'gemini-flash';
-        else if (settings.model === 'pro') effectiveModel = 'gemini-pro';
-        else effectiveModel = settings.model;
+    let effectiveModel: string = model;
+    
+    // Explicit Mode-based model selection
+    const settingsMode = (settings as any).mode || 'normal';
+    
+    if (settingsMode === 'pro' || settingsMode === 'premium') {
+        effectiveModel = 'gemini-1.5-pro';
+    } else if (settingsMode === 'deep' || settingsMode === 'thinking') {
+        effectiveModel = 'gemini-2.0-flash-thinking-exp';
+    } else {
+        effectiveModel = 'gemini-1.5-flash';
+    }
+
+    // Override if a specific model was manually picked
+    const settingsModel = (settings as any).model;
+    if (settingsModel && settingsModel !== 'default') {
+        effectiveModel = settingsModel === 'pro' ? 'gemini-1.5-pro' : 
+                         settingsModel === 'flash' ? 'gemini-1.5-flash' : 
+                         settingsModel === 'thinking' ? 'gemini-2.0-flash-thinking-exp' : 
+                         settingsModel;
     }
 
     const token = (() => {

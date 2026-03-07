@@ -55,12 +55,15 @@ const PORT = process.env.PORT || 4000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 // Middleware
-// Middleware - MANUAL CORS OVERRIDE
+// Middleware - SECURE CORS
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (origin) {
+  const allowedOrigins = [FRONTEND_URL, 'https://liraos.xyz', 'https://www.liraos.xyz'];
+  
+  if (origin && allowedOrigins.includes(origin)) {
     res.header("Access-Control-Allow-Origin", origin);
-  } else {
+  } else if (!origin) {
+    // Basic support for non-browser requests (like mobile app or testing)
     res.header("Access-Control-Allow-Origin", "*");
   }
 
@@ -133,7 +136,6 @@ app.use('/api/recovery', recoveryRoutes);
 app.use('/api/moderation', moderationRoutes);
 app.use('/api/iris', irisRoutes);
 app.use('/api/system', systemRoutes);
-app.use('/api/discord', discordRoutes);
 app.use('/api/discord', discordRoutes);
 app.use('/api/patreon', patreonRoutes);
 import copilotRoutes from './routes/copilot.js';

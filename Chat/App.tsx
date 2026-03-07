@@ -29,6 +29,7 @@ import { ParticleBackground } from './components/ui/ParticleBackground';
 import { ThemeProvider, useTheme } from './contexts/ThemeContext';
 import { GamificationProvider, useGamification } from './contexts/GamificationContext';
 import { ToastProvider, useToast } from './contexts/ToastContext';
+import { UIProvider, useUI } from './contexts/UIContext';
 import { useCopilot } from './hooks/useCopilot';
 import { useAmbientGlow } from './hooks/useAmbientGlow';
 import { useKeyboardManager } from './hooks/useKeyboardManager';
@@ -184,39 +185,39 @@ const LiraAppContent = () => {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [memories, setMemories] = useState<Memory[]>([]);
 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 768;
-    }
-    return false;
-  });
 
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
-  const [isStoreOpen, setIsStoreOpen] = useState(false);
-  const [isPricingOpen, setIsPricingOpen] = useState(false);
-  const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
-  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
-  const [isCookieModalOpen, setIsCookieModalOpen] = useState(false);
-  const [isGamerOpen, setIsGamerOpen] = useState(false);
-  const [isDailyQuestsOpen, setIsDailyQuestsOpen] = useState(false);
-  const [isJarvisDashboardOpen, setIsJarvisDashboardOpen] = useState(false);
-  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
-  const [isTodoPanelOpen, setIsTodoPanelOpen] = useState(false);
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-  const [isSupportersOpen, setIsSupportersOpen] = useState(false);
-  const [isTraePanelOpen, setIsTraePanelOpen] = useState(false);
-  const [isVoiceActive, setIsVoiceActive] = useState(false);
+  const {
+    isSettingsOpen, setSettingsOpen,
+    isDashboardOpen, setDashboardOpen,
+    isStoreOpen, setStoreOpen,
+    isPricingOpen, setPricingOpen,
+    isWhatsNewOpen, setWhatsNewOpen,
+    isShortcutsOpen, setShortcutsOpen,
+    isCookieModalOpen, setCookieModalOpen,
+    isGamerOpen, setGamerOpen,
+    isDailyQuestsOpen, setDailyQuestsOpen,
+    isJarvisDashboardOpen, setJarvisDashboardOpen,
+    isAdminPanelOpen, setAdminPanelOpen,
+    isTodoPanelOpen, setTodoPanelOpen,
+    isCalendarOpen, setCalendarOpen,
+    isSupportersOpen, setSupportersOpen,
+    isTraePanelOpen, setTraePanelOpen,
+    isVoiceActive, setVoiceActive,
+    isSidebarOpen, setSidebarOpen,
+    closeAllModals
+  } = useUI();
+
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [isReturningUser, setIsReturningUser] = useState(false);
+  const [dynamicPersona, setDynamicPersona] = useState(false);
+  const [showCompanion, setShowCompanion] = useState(false);
+
   const [streamingText, setStreamingText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedModel, setSelectedModel] = useState<'mistral' | 'xiaomi'>('mistral');
   const [backendStatus, setBackendStatus] = useState<'online' | 'offline' | 'checking'>('checking');
   const [isDeepMode, setIsDeepMode] = useState(false);
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(false);
-  const [isReturningUser, setIsReturningUser] = useState(false);
-  const [dynamicPersona, setDynamicPersona] = useState(false); // Fix for missing state
-  const [showCompanion, setShowCompanion] = useState(false);
 
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -268,26 +269,17 @@ const LiraAppContent = () => {
       createNewChat();
       addToast('New conversation created', 'info');
     },
-    onToggleSidebar: () => setIsSidebarOpen(prev => !prev),
-    onOpenSettings: () => setIsSettingsOpen(true),
-    onOpenShortcuts: () => setIsShortcutsOpen(true),
-    onCloseModals: () => {
-      setIsSettingsOpen(false);
-      setIsDashboardOpen(false);
-      setIsStoreOpen(false);
-      setIsShortcutsOpen(false);
-      setIsCookieModalOpen(false);
-      setIsGamerOpen(false);
-      setIsDailyQuestsOpen(false);
-      setIsPricingOpen(false);
-    },
+onToggleSidebar: () => setSidebarOpen(prev => !prev),
+    onOpenSettings: () => setSettingsOpen(true),
+    onOpenShortcuts: () => setShortcutsOpen(true),
+    onCloseModals: closeAllModals,
     onGodMode: handleGodMode
   });
   
   // 👂 Wake Word Listener ("Lira tá aí?")
   // Só ativa se estiver logado e não estiver já em chamada
   useWakeWord(isLoggedIn && !isVoiceActive, () => {
-    setIsVoiceActive(true);
+setVoiceActive(true);
     addToast('🎙️ Lira está ouvindo...', 'success');
   });
 
@@ -391,7 +383,7 @@ const [connectionError, setConnectionError] = useState('');
             const s = await r.json();
             if (s?.selectedModel) setSelectedModel(s.selectedModel);
             if (typeof s?.isDeepMode === 'boolean') setIsDeepMode(s.isDeepMode);
-            if (typeof s?.isSidebarOpen === 'boolean') setIsSidebarOpen(s.isSidebarOpen);
+setSidebarOpen(s.isSidebarOpen);
             if (s?.themeId) setTheme(s.themeId);
           }
         } catch { }
@@ -637,7 +629,7 @@ const [connectionError, setConnectionError] = useState('');
 
   const handleCookieSave = (preferences: CookiePreferences) => {
     localStorage.setItem(COOKIE_CONSENT_KEY, JSON.stringify(preferences));
-    setIsCookieModalOpen(false);
+setCookieModalOpen(false);
     addToast('Preferences saved', 'success');
   };
 
@@ -655,7 +647,7 @@ const [connectionError, setConnectionError] = useState('');
     };
     setSessions(prev => [newSession, ...prev]);
     setCurrentSessionId(newSession.id);
-    if (window.innerWidth < 768) setIsSidebarOpen(false);
+if (window.innerWidth < 768) setSidebarOpen(false);
   };
 
   const handleDeleteSession = (id: string) => {
@@ -700,7 +692,7 @@ const [connectionError, setConnectionError] = useState('');
   };
 
   const toggleSidebar = () => {
-    setIsSidebarOpen(prev => !prev);
+    setSidebarOpen(prev => !prev);
   };
   const handleAnalyzeLira = async () => {
     try {
@@ -1228,23 +1220,21 @@ const [connectionError, setConnectionError] = useState('');
         onSelectSession={setCurrentSessionId}
         onNewChat={createNewChat}
         onDeleteSession={handleDeleteSession}
-        onOpenSettings={() => setIsSettingsOpen(true)}
-        onOpenDashboard={() => setIsJarvisDashboardOpen(true)}
-        onOpenStore={() => setIsStoreOpen(true)}
-        onOpenShortcuts={() => setIsShortcutsOpen(true)}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenDashboard={() => setJarvisDashboardOpen(true)}
+        onOpenStore={() => setStoreOpen(true)}
+        onOpenShortcuts={() => setShortcutsOpen(true)}
         onOpenLegal={() => setIsLegalModalOpen(true)}
         onOpenDiscord={() => setIsDiscordOpen(true)}
         onOpenGamer={() => window.location.href = '/gamer/'}
-        onOpenDailyQuests={() => setIsDailyQuestsOpen(true)}
-        onOpenSupporters={() => setIsSupportersOpen(true)}
-        onOpenAdminPanel={() => setIsAdminPanelOpen(true)}
-        onOpenTodoPanel={() => setIsTodoPanelOpen(true)}
-        onOpenCalendar={() => setIsCalendarOpen(true)}
-        onOpenTraePanel={() => setIsTraePanelOpen(true)}
-        onOpenPricing={() => setIsPricingOpen(true)}
-        onOpenWhatsNew={() => setIsWhatsNewOpen(true)}
-        isOpen={isSidebarOpen}
-        onCloseMobile={() => setIsSidebarOpen(false)}
+        onOpenDailyQuests={() => setDailyQuestsOpen(true)}
+        onOpenSupporters={() => setSupportersOpen(true)}
+        onOpenAdminPanel={() => setAdminPanelOpen(true)}
+        onOpenTodoPanel={() => setTodoPanelOpen(true)}
+        onOpenCalendar={() => setCalendarOpen(true)}
+        onOpenTraePanel={() => setTraePanelOpen(true)}
+        onOpenPricing={() => setPricingOpen(true)}
+        onOpenWhatsNew={() => setWhatsNewOpen(true)}
       />
 
       <div className="flex-1 flex flex-col min-w-0">
@@ -1282,7 +1272,7 @@ const [connectionError, setConnectionError] = useState('');
             setIsLoggedIn(false);
             setIsLoginOpen(false);
           }}
-          onStartVoiceCall={() => setIsVoiceActive(true)}
+          onStartVoiceCall={() => setVoiceActive(true)}
           voiceEnabled={isVoiceEnabled}
           onToggleVoice={handleToggleVoice}
           isExhausted={moodState.mood === 'exausta'}
@@ -1341,7 +1331,7 @@ const [connectionError, setConnectionError] = useState('');
       <Suspense fallback={<LoadingScreen />}>
         <SettingsModal
           isOpen={isSettingsOpen}
-          onClose={() => setIsSettingsOpen(false)}
+          onClose={() => setSettingsOpen(false)}
           memories={memories}
           onDeleteMemory={handleDeleteMemory}
           onClearUserData={async () => {
@@ -1375,7 +1365,7 @@ const [connectionError, setConnectionError] = useState('');
             setCurrentSessionId(null);
             setMemories([]);
             setIsLoggedIn(false);
-            setIsSettingsOpen(false);
+            setSettingsOpen(false);
             addToast('Logged out', 'success');
           }}
           onOpenLegal={(section) => {
@@ -1438,41 +1428,41 @@ const [connectionError, setConnectionError] = useState('');
         />
         <DashboardModal
           isOpen={isDashboardOpen}
-          onClose={() => setIsDashboardOpen(false)}
+          onClose={() => setDashboardOpen(false)}
         />
         <StoreModal
           isOpen={isStoreOpen}
-          onClose={() => setIsStoreOpen(false)}
+          onClose={() => setStoreOpen(false)}
         />
         <PricingModal
           isOpen={isPricingOpen}
-          onClose={() => setIsPricingOpen(false)}
+          onClose={() => setPricingOpen(false)}
           currentPlan={stats.plan || 'free'}
         />
         <WhatsNewModal
           isOpen={isWhatsNewOpen}
-          onClose={() => setIsWhatsNewOpen(false)}
+          onClose={() => setWhatsNewOpen(false)}
         />
         <ShortcutsModal
           isOpen={isShortcutsOpen}
-          onClose={() => setIsShortcutsOpen(false)}
+          onClose={() => setShortcutsOpen(false)}
         />
         {/* <GamerModal
           isOpen={isGamerOpen}
-          onClose={() => setIsGamerOpen(false)}
+          onClose={() => setGamerOpen(false)}
         /> */}
         <DailyQuestsModal
           isOpen={isDailyQuestsOpen}
-          onClose={() => setIsDailyQuestsOpen(false)}
+          onClose={() => setDailyQuestsOpen(false)}
         />
         <CookieConsentModal
           isOpen={isCookieModalOpen}
           onSave={handleCookieSave}
-          onClose={() => setIsCookieModalOpen(false)}
+          onClose={() => setCookieModalOpen(false)}
         />
         <VoiceCallOverlay
           isOpen={isVoiceActive}
-          onClose={() => setIsVoiceActive(false)}
+          onClose={() => setVoiceActive(false)}
           onSendMessage={(text) => handleSendMessage(text, [])}
           userName={stats.username || 'User'}
           avatarUrl={LIRA_AVATAR}
@@ -1511,12 +1501,12 @@ const [connectionError, setConnectionError] = useState('');
 
         <AdminPanel
           isOpen={isAdminPanelOpen}
-          onClose={() => setIsAdminPanelOpen(false)}
+          onClose={() => setAdminPanelOpen(false)}
         />
 
         <TodoPanel
           isOpen={isTodoPanelOpen}
-          onClose={() => setIsTodoPanelOpen(false)}
+          onClose={() => setTodoPanelOpen(false)}
           userTier={(() => {
             const currentUser = getCurrentUser();
             if (!currentUser) return 'Observer';
@@ -1537,23 +1527,23 @@ const [connectionError, setConnectionError] = useState('');
 
         {isCalendarOpen && (
           <CalendarApp
-            onClose={() => setIsCalendarOpen(false)}
+            onClose={() => setCalendarOpen(false)}
           />
         )}
 
         <SupportersModal
           isOpen={isSupportersOpen}
-          onClose={() => setIsSupportersOpen(false)}
+          onClose={() => setSupportersOpen(false)}
         />
 
         {isTraePanelOpen && (
-          <TraePanel onClose={() => setIsTraePanelOpen(false)} />
+          <TraePanel onClose={() => setTraePanelOpen(false)} />
         )}
         
         {isJarvisDashboardOpen && (
             <div className="fixed inset-0 z-[100] bg-black">
                 <button 
-                    onClick={() => setIsJarvisDashboardOpen(false)}
+                    onClick={() => setJarvisDashboardOpen(false)}
                     className="absolute top-4 right-4 z-[110] text-cyan-500 hover:text-white"
                 >
                     ✕ CLOSE SYSTEM
@@ -1590,9 +1580,11 @@ const App: React.FC = () => {
     <ThemeProvider>
       <ToastProvider>
         <GamificationProvider>
-          <ErrorBoundary>
-            <LiraAppContent />
-          </ErrorBoundary>
+          <UIProvider>
+            <ErrorBoundary>
+              <LiraAppContent />
+            </ErrorBoundary>
+          </UIProvider>
         </GamificationProvider>
       </ToastProvider>
     </ThemeProvider>

@@ -128,3 +128,20 @@ class ImageService {
 }
 
 export const imageService = new ImageService();
+
+/**
+ * Convenient helper for direct image generation in chat
+ */
+export const generateImage = async (prompt: string): Promise<string | null> => {
+    try {
+        const { jobId } = await imageService.generateImage(prompt);
+        return new Promise((resolve) => {
+            imageService.pollJob(jobId, (job) => {
+                if (job.status === 'ready') resolve(job.imageUrl || null);
+                if (job.status === 'error') resolve(null);
+            });
+        });
+    } catch {
+        return null;
+    }
+};

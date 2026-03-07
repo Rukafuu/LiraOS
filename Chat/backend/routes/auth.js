@@ -24,6 +24,16 @@ function buildQuery(params) {
   return usp.toString();
 }
 
+// 🛡️ Secure Redirect Helper: Uses URL Hash (#) instead of Query (?)
+// Fragments are not sent to the server, preventing token leakage in logs/referer headers.
+function sendSecureRedirect(res, baseUrl, oauthType, data) {
+  const params = new URLSearchParams({
+    oauth: oauthType,
+    ...data
+  });
+  res.redirect(`${baseUrl}#${params.toString()}`);
+}
+
 // --- Traditional Auth ---
 
 router.post('/register', async (req, res) => {
@@ -250,11 +260,15 @@ router.get('/google/callback', async (req, res) => {
       exp: Date.now() + 7 * 24 * 3600 * 1000 
     });
     
-    // Redirect with all necessary data
-    const redirect = `${returnTo}/?oauth=google&token=${encodeURIComponent(token)}&refreshToken=${encodeURIComponent(rt.token)}&email=${encodeURIComponent(finalUser.email)}&name=${encodeURIComponent(finalUser.username)}&uid=${encodeURIComponent(finalUser.id)}`;
-    
+    // Redirect with all necessary data SECURELY using hash
     console.log(`[OAuth Google] Success! Redirecting user ${finalUser.id}`);
-    res.redirect(redirect);
+    sendSecureRedirect(res, returnTo, 'google', {
+      token,
+      refreshToken: rt.token,
+      email: finalUser.email,
+      name: finalUser.username,
+      uid: finalUser.id
+    });
     
   } catch (e) {
     console.error('[OAuth Google] Unexpected error:', e);
@@ -384,11 +398,15 @@ router.get('/github/callback', async (req, res) => {
       exp: Date.now() + 7 * 24 * 3600 * 1000 
     });
     
-    // Redirect with all necessary data
-    const redirect = `${returnTo}/?oauth=github&token=${encodeURIComponent(token)}&refreshToken=${encodeURIComponent(rt.token)}&email=${encodeURIComponent(finalUser.email)}&name=${encodeURIComponent(finalUser.username)}&uid=${encodeURIComponent(finalUser.id)}`;
-    
+    // Redirect with all necessary data SECURELY using hash
     console.log(`[OAuth GitHub] Success! Redirecting user ${finalUser.id}`);
-    res.redirect(redirect);
+    sendSecureRedirect(res, returnTo, 'github', {
+      token,
+      refreshToken: rt.token,
+      email: finalUser.email,
+      name: finalUser.username,
+      uid: finalUser.id
+    });
     
   } catch (e) {
     console.error('[OAuth GitHub] Unexpected error:', e);
@@ -548,11 +566,15 @@ router.get('/patreon/callback', async (req, res) => {
       exp: Date.now() + 7 * 24 * 3600 * 1000 
     });
     
-    // Redirect with all necessary data
-    const redirect = `${returnTo}/?oauth=patreon&token=${encodeURIComponent(token)}&refreshToken=${encodeURIComponent(rt.token)}&email=${encodeURIComponent(finalUser.email)}&name=${encodeURIComponent(finalUser.username)}&uid=${encodeURIComponent(finalUser.id)}`;
-    
+    // Redirect with all necessary data SECURELY using hash
     console.log(`[OAuth Patreon] Success! Redirecting user ${finalUser.id}`);
-    res.redirect(redirect);
+    sendSecureRedirect(res, returnTo, 'patreon', {
+      token,
+      refreshToken: rt.token,
+      email: finalUser.email,
+      name: finalUser.username,
+      uid: finalUser.id
+    });
     
   } catch (e) {
     console.error('[OAuth Patreon] Unexpected error:', e);

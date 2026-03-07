@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { FeedbackModal } from './FeedbackModal';
 import { SystemStatus } from './SystemStatus';
 import { useChangelogBadge } from './WhatsNewModal';
+import { useUI } from '../contexts/UIContext';
 
 interface SidebarProps {
     sessions: ChatSession[];
@@ -31,8 +32,6 @@ interface SidebarProps {
     onOpenTraePanel: () => void;
     onOpenPricing: () => void;
     onOpenWhatsNew: () => void;
-    isOpen: boolean;
-    onCloseMobile: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -56,10 +55,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onOpenCalendar,
     onOpenTraePanel,
     onOpenPricing,
-    onOpenWhatsNew,
-    isOpen,
-    onCloseMobile
+    onOpenWhatsNew
 }) => {
+    const { isSidebarOpen: isOpen, setSidebarOpen: setOpen } = useUI();
     const { t } = useTranslation();
     const [searchTerm, setSearchTerm] = useState('');
     const [isMobile, setIsMobile] = useState(false);
@@ -133,8 +131,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        onClick={onCloseMobile}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+                        onClick={() => setOpen(false)}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[140]"
                     />
                 )}
             </AnimatePresence>
@@ -153,7 +151,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {/* MOBILE CLOSE BUTTON */}
                 {isMobile && (
                     <button 
-                        onClick={onCloseMobile}
+                        onClick={() => setOpen(false)}
                         className="absolute top-4 right-4 p-2 rounded-full bg-white/5 text-gray-400 z-50 hover:text-white"
                     >
                         <X size={20} />
@@ -176,7 +174,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </div>
 
                     <button
-                        onClick={onNewChat}
+                        onClick={() => {
+                            onNewChat();
+                            if (isMobile) setOpen(false);
+                        }}
                         className="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white p-2.5 rounded-xl border border-white/5 hover:border-purple-500/30 transition-all group"
                     >
                         <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300 text-purple-400" />
@@ -335,7 +336,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     ? 'bg-purple-500/10 text-white border border-purple-500/20'
                                     : 'text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-transparent'
                                     }`}
-                                onClick={() => onSelectSession(session.id)}
+                                onClick={() => {
+                                    onSelectSession(session.id);
+                                    if (isMobile) setOpen(false);
+                                }}
                             >
                                 <MessageSquare size={14} className={currentSessionId === session.id ? 'text-purple-400' : 'text-gray-500'} />
                                 <div className="flex-1 overflow-hidden">

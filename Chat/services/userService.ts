@@ -169,7 +169,9 @@ export const isAuthenticated = (): boolean => {
 };
 
 export const handleOAuthCallback = async (): Promise<boolean> => {
-  const params = new URLSearchParams(window.location.search);
+  // Support both new secure hash fragments and legacy query params
+  const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+  const params = new URLSearchParams(hash || window.location.search);
   
   // Check for OAuth errors first
   const error = params.get('error');
@@ -260,10 +262,11 @@ const SETTINGS_API_URL = `${API_BASE_URL}/api/settings`;
 export interface UserSettings {
   temperature?: number;
   systemInstructions?: string;
-  model?: 'flash' | 'pro' | 'mistral';
+  model?: 'flash' | 'pro' | 'mistral' | 'thinking';
+  mode?: 'normal' | 'pro' | 'premium' | 'deep' | 'thinking';
   theme?: string;
   notifications?: boolean;
-  dynamicPersona?: boolean; // Toggle for AI auto-switching personality
+  dynamicPersona?: boolean;
 }
 
 export const getSettings = async (): Promise<UserSettings> => {
