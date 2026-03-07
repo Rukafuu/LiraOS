@@ -646,18 +646,22 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
 
         let response, data, candidate, part, functionCall;
 
-        const geminiCascade = async (body, models = GEMINI_MODELS) => {
+        const geminiCascade = async (body, models = GEMINI_MODELS, useStream = false) => {
           let lastError = null;
           for (const model of models) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+            const apiMethod = useStream ? 'streamGenerateContent?alt=sse' : 'generateContent';
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:${apiMethod}&key=${GEMINI_API_KEY}`;
             
             // Try each model with 1 retry
             for (let attempt = 0; attempt < 2; attempt++) {
               const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 30000);
+              const timeoutId = setTimeout(() => controller.abort(), 45000);
               try {
-                console.log(`[ADMIN] Trying ${model}${attempt > 0 ? ` (retry ${attempt})` : ''}...`);
-                const res = await fetch(url, {
+                console.log(`[ADMIN] Trying ${model}${attempt > 0 ? ` (retry ${attempt})` : ''} [STREAM: ${useStream}]...`);
+                // Correção no URL se for SSE usa &key senao ?key
+                const cleanUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:${useStream ? 'streamGenerateContent?alt=sse&' : 'generateContent?'}key=${GEMINI_API_KEY}`;
+                
+                const res = await fetch(cleanUrl, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify(body),
@@ -692,8 +696,54 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
           throw lastError || new Error('All Gemini models returned 429');
         };
 
+        // Helper para processar stream no server e repassar via res.write
+        const processGeminiStream = async (fetchRes) => {
+           let foundFunctionCall = null;
+           const reader = fetchRes.body?.getReader();
+           if (!reader) throw new Error('Unreadable stream');
+           const decoder = new TextDecoder();
+           let buffer = '';
+
+           while (true) {
+               const { done, value } = await reader.read();
+               if (done) break;
+               
+               buffer += decoder.decode(value, { stream: true });
+               const lines = buffer.split('\n');
+               buffer = lines.pop() || ''; 
+
+               for (const line of lines) {
+                   const trimmed = line.trim();
+                   if (!trimmed || trimmed === 'data: [DONE]') continue;
+                   
+                   if (trimmed.startsWith('data: ')) {
+                       try {
+                           const data = JSON.parse(trimmed.slice(6));
+                           const candidate = data.candidates?.[0];
+                           const parts = candidate?.content?.parts || [];
+                           
+                           // Checa Function Call no chunk (geralmente chega inteiro no Gemini)
+                           const callPart = parts.find(p => p.functionCall);
+                           if (callPart) {
+                               foundFunctionCall = callPart.functionCall;
+                           }
+                           
+                           // Checa Texto
+                           const textPart = parts.find(p => p.text);
+                           if (textPart && textPart.text) {
+                               res.write(`data: ${JSON.stringify({ content: textPart.text })}\n\n`);
+                           }
+                       } catch (e) {
+                           // parse falhou ou fragmentado
+                       }
+                   }
+               }
+           }
+           return foundFunctionCall;
+        };
+
         try {
-          response = await geminiCascade(payload);
+          response = await geminiCascade(payload, GEMINI_MODELS, true);
 
           console.log(`[ADMIN] Gemini Response Status: ${response.status}`);
 
@@ -703,16 +753,8 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
             throw new Error('Gemini API Error: ' + response.status);
           }
 
-          data = await response.json();
-
-          candidate = data.candidates?.[0];
-          const parts = candidate?.content?.parts || [];
-
-          // Find function call in ANY part
-          functionCall = parts.find(p => p.functionCall)?.functionCall;
-
-          // Also get text if present (for transparency)
-          const textPart = parts.find(p => p.text)?.text;
+          // Processa o SSE Stream inicial (repasse para o Client + Detecta function options)
+          functionCall = await processGeminiStream(response);
 
         } catch (fetchError) {
           throw fetchError;
@@ -1162,7 +1204,7 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                   ...contents,
                   { role: 'model', parts: [{ functionCall }] },
                   { 
-                    role: 'user', // Recommended for v1beta function result delivery
+                    role: 'user', 
                     parts: [{ 
                       functionResponse: { 
                         name: functionCall.name, 
@@ -1173,7 +1215,8 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                 ],
                 system_instruction: { parts: [{ text: adminSystemPrompt }] }
               },
-              FOLLOWUP_MODELS
+              FOLLOWUP_MODELS,
+              true // Habilita o streaming para a reposta de follow-up também
             );
 
             console.log(`[ADMIN] Follow-up status: ${finalRes.status}`);
@@ -1181,26 +1224,13 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
             if (!finalRes.ok) {
               const errText = await finalRes.text();
               console.error('[ADMIN] Follow-up Error:', errText);
-            }
-
-            const finalData = await finalRes.json();
-            const finalText = finalData.candidates?.[0]?.content?.parts?.[0]?.text;
-
-            console.log(`[ADMIN] Final text length: ${finalText ? finalText.length : 0}`);
-
-            if (finalText) {
-              res.write(`data: ${JSON.stringify({ content: finalText })}\n\n`);
+            } else {
+              await processGeminiStream(finalRes);
             }
           }
 
         } else {
-          // No function call, just text
-          const parts = candidate?.content?.parts || [];
-          const text = parts.find(p => p.text)?.text;
-
-          if (text) {
-            res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
-          }
+          // No function call. The text was already streamed to the client by processGeminiStream!
         }
 
         res.write('data: [DONE]\n\n');
