@@ -31,7 +31,10 @@ export const createShortVideo = async (script, imageUrl, voice = 'pt-BR-Francisc
         fs.writeFileSync(audioPath, audioBuffer);
 
         // 2. Handle Image
-        if (imageUrl.startsWith('http')) {
+        if (imageUrl.startsWith('data:image')) {
+            const base64Data = imageUrl.split(',')[1];
+            fs.writeFileSync(imagePath, Buffer.from(base64Data, 'base64'));
+        } else if (imageUrl.startsWith('http')) {
             const fetch = (await import('node-fetch')).default;
             const res = await fetch(imageUrl);
             const buffer = await res.arrayBuffer();

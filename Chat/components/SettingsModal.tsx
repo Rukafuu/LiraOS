@@ -273,10 +273,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-4xl h-[650px] bg-[#0c0c0e] border border-white/10 rounded-2xl shadow-premium overflow-hidden flex flex-col md:flex-row z-50"
+            className="relative w-full max-w-4xl h-[92dvh] md:h-[650px] bg-[#0c0c0e] border border-white/10 rounded-2xl shadow-premium overflow-hidden flex flex-col md:flex-row z-50"
           >
             {/* Sidebar */}
-            <aside className="w-full md:w-60 bg-[#121215] border-r border-white/5 flex flex-col">
+            <aside className="w-full md:w-60 bg-[#121215] border-r border-white/5 flex flex-col flex-shrink-0 max-h-[30vh] md:max-h-full overflow-y-auto">
               <div className="p-6">
                 <h2 className="text-lg font-bold text-white">{t('settings.title')}</h2>
               </div>

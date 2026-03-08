@@ -17,12 +17,10 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { title } = req.body; // Expecting { title: "..." } or full object
+    const { title, items } = req.body; 
     const name = title || req.body.title || "Nova Lista"; 
-    const list = await todoService.createList(req.userId, name);
-    res.json(list); // Returns list object directly? or wrapped? Frontend expects list/array?
-    // Frontend expects: { success: true, list: ... } or just array if GET.
-    // Let's check frontend: Line 87 setLists(prev => [newList, ...prev]).
+    const list = await todoService.createList(req.userId, name, items || []);
+    res.json(list);
     // Frontend POST body is full object. Service createList creates new object.
     // Let's adapt frontend slightly or make service accept full object.
     // Actually, service createList takes title. Frontend sends full object.

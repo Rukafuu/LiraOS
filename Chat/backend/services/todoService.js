@@ -42,7 +42,7 @@ export const todoService = {
     return loadLists(userId);
   },
 
-  createList: async (userId, title) => {
+  createList: async (userId, title, initialItems = []) => {
     const user = await getUserById(userId);
     const tier = user?.plan || 'free';
     const limit = getTierLimit(tier, 'maxTodoLists');
@@ -56,7 +56,7 @@ export const todoService = {
     const newList = {
       id: `list_${Date.now()}`,
       title,
-      items: [],
+      items: initialItems,
       createdAt: Date.now(),
       updatedAt: Date.now()
     };

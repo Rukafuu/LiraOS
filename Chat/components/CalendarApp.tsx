@@ -178,11 +178,11 @@ export const CalendarApp: React.FC<CalendarAppProps> = ({ onClose }) => {
             <div className="absolute inset-0 bg-black/60 backdrop-blur-md pointer-events-auto" onClick={onClose} />
             
             <motion.div 
-                className="relative z-10 pointer-events-auto bg-[#0a0a0f] w-full max-w-5xl h-[700px] rounded-2xl border border-white/10 shadow-2xl flex overflow-hidden flex-col md:flex-row"
+                className="relative z-10 pointer-events-auto bg-[#0a0a0f] w-full max-w-5xl h-[92dvh] md:h-[700px] rounded-2xl border border-white/10 shadow-2xl flex overflow-hidden flex-col md:flex-row"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* LEFT: Calendar Grid */}
-                <div className="flex-1 flex flex-col border-r border-white/5 bg-[#0a0a0f]">
+                <div className="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-white/5 bg-[#0a0a0f] min-h-[50vh] md:min-h-0">
                     {/* Calendar Header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
                         <div className="flex items-center gap-4">
@@ -255,7 +255,7 @@ export const CalendarApp: React.FC<CalendarAppProps> = ({ onClose }) => {
                 </div>
 
                 {/* RIGHT: Editor / Details Panel */}
-                <div className="w-[350px] bg-[#0f0f15] border-l border-white/5 p-6 flex flex-col">
+                <div className="w-full md:w-[350px] bg-[#0f0f15] border-t md:border-t-0 md:border-l border-white/5 p-6 flex flex-col overflow-y-auto max-h-[50dvh] md:max-h-full">
                     {error && error.includes('Not connected') ? (
                          <div className="flex-1 flex flex-col items-center justify-center text-center">
                             <CalendarIcon size={48} className="text-gray-600 mb-4"/>

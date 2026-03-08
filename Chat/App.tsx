@@ -750,10 +750,15 @@ if (window.innerWidth < 768) setSidebarOpen(false);
         finalPrompt += `\n\n[SYSTEM: You are currently EXHAUSTED (Low Battery/Tired). Your responses should be shorter, more direct, maybe with some sighs (*sigh*) or pauses (...). Avoid long explanations. If the user asks complicated things, ask for a break or be brief. DO NOT switch personas while exhausted.]`;
       }
 
+      // MOBILE DETECT FOR SYSTEM COMMANDS
+      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        finalPrompt += `\n\n[SYSTEM: The user is currently accessing you via a MOBILE device. DO NOT use 'execute_system_command' for opening websites or apps because it will execute on the server PC, not their phone. Instead, MUST provide standard markdown links (e.g., [Abrir YouTube](https://youtube.com)) so they can click and open it on their mobile browser.]`;
+      }
+
       // Pass memories to context - using selected model with relevance
       const personaToUse = isDeepMode ? { ...activePersona, systemInstruction: `${activePersona.systemInstruction}\nResponda com raciocínio detalhado, valide suposições, cite fontes quando úteis, e apresente passos claros.` } : activePersona;
       const localDateTime = new Date().toLocaleString();
-      const stream = streamResponse(history, promptText, personaToUse, relevantMemories, selectedModel, abortCtrl.signal, attachments, userId, localDateTime);
+      const stream = streamResponse(history, finalPrompt, personaToUse, relevantMemories, selectedModel, abortCtrl.signal, attachments, userId, localDateTime);
 
       // Throttled Update Logic
       const UPDATE_INTERVAL = 80; 
@@ -854,17 +859,7 @@ if (window.innerWidth < 768) setSidebarOpen(false);
             addToast(`${t('persona_switched') || 'Persona switched to'} ${targetId}`, 'info');
           }
         }
-
-        const currentSess = sessions.find(s => s.id === sessionId);
-        if (currentSess) {
-          const sessionToSave = {
-            ...currentSess,
-            messages: [...history, finalModelMsg],
-            updatedAt: Date.now()
-          };
-          saveSessionServer(sessionToSave);
         }
-      }
 
       // Auto TTS
       if (isVoiceEnabled && accumulatedResponse && !abortCtrl.signal.aborted && !isVoiceActive) {
@@ -875,15 +870,20 @@ if (window.innerWidth < 768) setSidebarOpen(false);
         });
       }
 
-      setSessions(prev => prev.map(s => {
-        if (s.id === sessionId) {
-          return {
-            ...s,
-            messages: s.messages.map(m => m.id === modelMessageId ? { ...m, isStreaming: false, status: 'done', content: accumulatedResponse } : m)
-          };
-        }
-        return s;
-      }));
+      setSessions(prev => {
+        return prev.map(s => {
+          if (s.id === sessionId) {
+            const newS = {
+              ...s,
+              updatedAt: Date.now(),
+              messages: s.messages.map(m => m.id === modelMessageId ? { ...m, isStreaming: false, status: 'done' as const, content: accumulatedResponse } : m)
+            };
+            if (userId) saveSessionServer(newS);
+            return newS;
+          }
+          return s;
+        });
+      });
       setStreamingText('');
     }
   };
@@ -955,11 +955,16 @@ if (window.innerWidth < 768) setSidebarOpen(false);
     await triggerAIResponse(activeSessionId, updatedHistory, text, attachments);
     
     generateChatTitle(text, selectedModel).then(title => {
-      setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, title } : s));
-      const saved = sessions.find(ss => ss.id === activeSessionId);
-      if (saved && userId) {
-        saveSessionServer({ ...saved, title, userId });
-      }
+      setSessions(prev => {
+        return prev.map(ss => {
+          if (ss.id === activeSessionId) {
+            const newS = { ...ss, title };
+            if (userId) saveSessionServer({ ...newS, userId });
+            return newS;
+          }
+          return ss;
+        });
+      });
     });
   };
 
@@ -1137,28 +1142,8 @@ if (window.innerWidth < 768) setSidebarOpen(false);
         />
 
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Temporary Warning Banner */}
-          <AnimatePresence>
-          {!isBannerDismissed('stress-test') && (
-            <motion.div 
-               initial={{ opacity: 0, y: -20 }}
-               animate={{ opacity: 1, y: 0 }}
-               exit={{ opacity: 0, y: -20 }}
-               className="bg-red-500/20 border-b border-red-500/50 py-1.5 px-4 flex items-center justify-between gap-2 z-[60]"
-            >
-               <div className="flex items-center justify-center flex-1 gap-2 cursor-pointer" onClick={() => setActiveModal('pricing')}>
-                  <WarningCircle size={16} className="text-red-400" />
-                  <p className="text-[12px] font-bold text-red-200 text-center">
-                      [TESTE ANTI-BOT ATIVO]: Sistema em stress-test pelas próximas 24h. Lentidão prevista.
-                  </p>
-                  <ChevronRight size={14} className="text-red-400 group-hover:translate-x-0.5 transition-transform" />
-               </div>
-               <button onClick={() => dismissBanner('stress-test')} className="text-red-400/50 hover:text-red-400 p-1">
-                  <X size={14} weight="bold" />
-               </button>
-            </motion.div>
-          )}
-          </AnimatePresence>
+          {/* Temporary Warning Banner removed */}
+
 
           <AnimatePresence>
           {stats.plan === 'free' && !isBannerDismissed('standard-plan') && (
@@ -1166,7 +1151,7 @@ if (window.innerWidth < 768) setSidebarOpen(false);
                initial={{ opacity: 0, y: -20 }}
                animate={{ opacity: 1, y: 0 }}
                exit={{ opacity: 0, y: -20 }}
-               className="bg-gradient-to-r from-purple-600/10 via-pink-600/10 to-purple-600/10 border-b border-white/5 py-1.5 px-4 flex items-center justify-between gap-2 z-[60]"
+               className="bg-gradient-to-r from-purple-600/10 via-pink-600/10 to-purple-600/10 border-b border-white/5 py-1.5 px-4 flex items-center justify-between gap-2 z-[100010]"
             >
                 <div className="flex items-center justify-center flex-1 gap-2 cursor-pointer" onClick={() => setActiveModal('pricing')}>
                   <Sparkles size={14} className="text-yellow-400 animate-pulse" />

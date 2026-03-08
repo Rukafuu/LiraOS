@@ -74,7 +74,7 @@ const LIRA_CAPABILITIES: FunctionCapability[] = [
     name: 'Image Generation',
     description: 'Gera imagens usando DALL-E ou Stable Diffusion',
     category: 'tools',
-    status: 'untested',
+    status: 'working',
     icon: Image,
     example: 'Peça: "Gere uma imagem de..."'
   },
@@ -107,8 +107,17 @@ const LIRA_CAPABILITIES: FunctionCapability[] = [
     name: 'Calendar Widget',
     description: 'Exibe eventos de calendário',
     category: 'widgets',
-    status: 'untested',
+    status: 'working',
     icon: Calendar
+  },
+  {
+    id: 'generate_video',
+    name: 'Video Generation',
+    description: 'Gera vídeos a partir de prompts de texto',
+    category: 'tools',
+    status: 'working',
+    icon: Sparkles,
+    example: 'Peça: "Gere um vídeo de um gato pulando"'
   }
 ];
 
@@ -156,7 +165,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-5xl h-[80vh] bg-[#0c0c0e] border border-white/10 rounded-2xl shadow-premium overflow-hidden flex flex-col z-50"
+        className="relative w-full max-w-5xl h-[92dvh] md:h-[80vh] bg-[#0c0c0e] border border-white/10 rounded-2xl shadow-premium overflow-hidden flex flex-col z-50"
       >
         {/* Header */}
         <div className="p-6 border-b border-white/10 flex items-center justify-between bg-gradient-to-r from-lira-pink/5 to-transparent">
@@ -178,7 +187,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ isOpen, onClose }) => {
         </div>
 
         {/* Filters */}
-        <div className="p-4 border-b border-white/5 bg-[#121215] flex flex-wrap gap-3">
+        <div className="p-4 border-b border-white/5 bg-[#121215] flex flex-wrap md:flex-nowrap gap-3 shrink-0">
           <div className="flex gap-2">
             <span className="text-xs text-gray-500 uppercase font-bold self-center">Categoria:</span>
             {['all', 'widgets', 'tools', 'integrations'].map(cat => (

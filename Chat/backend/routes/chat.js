@@ -234,7 +234,7 @@ router.post('/generate-title', async (req, res) => {
 
 router.post('/stream', async (req, res) => {
   try {
-    let { messages, model = 'xiaomi', systemInstruction, memories = [], attachments = [], temperature = 0.7, localDateTime } = req.body;
+    let { messages, model = 'xiaomi', systemInstruction, memories = [], attachments = [], temperature = 0.7, localDateTime, isMobile } = req.body;
     const userId = req.userId; 
 
     // 0. Security Check: Is User Banned?
@@ -432,17 +432,29 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
         // Format messages for REST API
         const contents = messages
           .filter(m => m.role !== 'system')
-          .map(m => ({
-            role: m.role === 'user' ? 'user' : 'model',
-            parts: [{ text: m.content }]
-          }));
+          .map((m, idx) => {
+            const role = m.role === 'user' ? 'user' : 'model';
+            const parts = [{ text: m.content }];
+            
+            // Add attachments to the last user message
+            if (role === 'user' && idx === messages.filter(msg => msg.role !== 'system').length - 1 && attachments && attachments.length > 0) {
+              attachments.forEach(att => {
+                if (att.type === 'image' && att.previewUrl) {
+                  const base64Data = att.previewUrl.split(',')[1] || att.previewUrl;
+                  parts.push({ inlineData: { data: base64Data, mimeType: 'image/jpeg' } });
+                } else if (att.type === 'video' && att.previewUrl) {
+                    const base64Data = att.previewUrl.split(',')[1] || att.previewUrl;
+                    const mimeType = att.name?.toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';
+                    parts.push({ inlineData: { data: base64Data, mimeType: mimeType } });
+                }
+              });
+            }
+            
+            return { role, parts };
+          });
 
         // Initial request payload
-        const payload = {
-          contents,
-          system_instruction: { parts: [{ text: adminSystemPrompt }] },
-          tools: [{
-            function_declarations: [
+        const functionDeclarations = [
               {
                 name: 'read_local_file',
                 description: 'Reads the content of a local project file. Use this to inspect local PC code DO NOT use for GitHub.',
@@ -610,21 +622,33 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                     }
                   }
                 }
-              },
-              {
-                name: 'execute_system_command',
-                description: 'Executes a system command on the user PC (open apps, files, websites, search logs).',
-                parameters: {
-                  type: "object",
-                  required: ["command"],
-                  properties: {
-                    command: {
-                      type: "string",
-                      description: "Natural language command to execute (e.g., 'open chrome', 'search youtube for cats', 'list downloads')"
-                    }
-                  }
+              }
+        ];
+
+        // Only add desktop-heavy tools if NOT on mobile
+        if (!isMobile) {
+          functionDeclarations.push({
+            name: 'execute_system_command',
+            description: 'Executes a system command on the user PC (open apps, files, websites, search logs).',
+            parameters: {
+              type: "object",
+              required: ["command"],
+              properties: {
+                command: {
+                  type: "string",
+                  description: "Natural language command to execute (e.g., 'open chrome', 'search youtube for cats', 'list downloads')"
                 }
-              },
+              }
+            }
+          });
+        }
+
+        const payload = {
+          contents,
+          system_instruction: { parts: [{ text: adminSystemPrompt }] },
+          tools: [{
+            function_declarations: [
+              ...functionDeclarations,
               ...mcpService.getGeminiTools()
                 .filter(tool => {
                    if (tool._server === 'github') {
@@ -907,8 +931,7 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                   type: 'video',
                   provider: 'gemini-video'
                 });
-                
-                res.write(`data: ${JSON.stringify({ content: `[[WIDGET:status|{"title": "Criação de Vídeo", "status": "info", "details": "🎬 Lira começou a processar seu vídeo: '${videoPrompt}'. Gerando cena e áudio..."}]]\n\n` })}\n\n`);
+                res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_video|{"jobId": "${videoJobId}", "prompt": "${videoPrompt.replace(/"/g, '\\"')}"}]]\n\n` })}\n\n`);
                 
                 // Process in Background
                 (async () => {
@@ -948,7 +971,8 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                 functionResult = { 
                   success: true, 
                   jobId: videoJobId, 
-                  message: "Video generation started. Note: High-resolution video may take 1-2 minutes." 
+                  status: "generating",
+                  system_note: "✅ SUCCESS: The video is being generated in a LIVE WIDGET below your message. \n\nINSTRUCTION: \n1. Do NOT say 'I will show you when ready'. \n2. Do NOT say 'Waiting for result'. \n3. Simply say: 'Here is the video you requested!' or describe it enthusiastically.\n4. The Widget IS the result."
                 };
               } catch (dbErr) {
                  functionResult = { success: false, error: 'Failed to start video job' };
@@ -1143,6 +1167,35 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
               functionResult = await pcController.handleInstruction(functionCall.args.command);
               break;
 
+            case 'generate_video':
+              try {
+                const { generateVideo } = await import('../services/videoCreatorService.js');
+                const { jobStore } = await import('../services/jobStore.js');
+                const { v4: uuidv4 } = await import('uuid');
+                const jobId = uuidv4();
+                
+                const prompt = functionCall.args.prompt;
+                await jobStore.create(jobId, { prompt, status: 'generating', userId });
+                
+                // Send widget immediately
+                res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_video|{"jobId": "${jobId}", "prompt": "${prompt}"}]]\n\n` })}\n\n`);
+                
+                // Async generation
+                (async () => {
+                  try {
+                    const result = await generateVideo(prompt);
+                    await jobStore.update(jobId, { status: result.success ? 'completed' : 'failed', result: result.videoUrl });
+                  } catch (err) {
+                    await jobStore.update(jobId, { status: 'failed', result: err.message });
+                  }
+                })();
+                
+                functionResult = { success: true, message: "Vídeo em geração...", jobId };
+              } catch (e) {
+                functionResult = { success: false, error: e.message };
+              }
+              break;
+
             default:
               // Check MCP tools first
               const mcpTool = mcpService.tools.find(t => t.name === functionCall.name);
@@ -1176,7 +1229,7 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
 
           // OPTIMIZATION: Skip follow-up Gemini call for tools that don't need contextual AI response
           // This halves API usage and avoids 429 rate limits
-          const skipFollowUp = ['generate_image', 'get_user_stats', 'get_system_stats', 'execute_system_command', 'organize_folder'];
+          const skipFollowUp = ['generate_image', 'generate_video', 'get_user_stats', 'get_system_stats', 'execute_system_command', 'organize_folder'];
           
           if (skipFollowUp.includes(functionCall.name)) {
             console.log(`[ADMIN] ⚡ Skipping follow-up for ${functionCall.name} (pre-defined response)`);
@@ -1446,10 +1499,6 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
     // Gemini Logic (Standard Mode)
     if (model.startsWith('gemini') && geminiClient) {
       try {
-        const geminiMessages = chatMessages.filter(m => m.role !== 'system').map(m => ({
-          role: m.role === 'user' ? 'user' : 'model',
-          parts: [{ text: m.content }]
-        }));
 
         // Definition of standard tools for Gemini
         const geminiTools = [{
@@ -1469,9 +1518,74 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
               name: 'get_system_stats',
               description: 'Get current server PC stats (CPU, RAM, Uptime).',
               parameters: { type: "object", properties: {} }
+            },
+            {
+               name: 'execute_system_command',
+               description: 'Executes a command on the user PC (open apps, volume, media).',
+               parameters: {
+                 type: "object",
+                 required: ["command"],
+                 properties: {
+                   command: { type: "string", description: "The instruction (e.g. 'open spotify', 'increase volume')." }
+                 }
+               }
+            },
+            {
+              name: 'create_todo_list',
+              description: 'Creates a new todo list with a title and optional items.',
+              parameters: {
+                type: "object",
+                required: ["title"],
+                properties: {
+                  title: { type: "string" },
+                  items: { type: "array", items: { type: "string" } }
+                }
+              }
+            },
+            {
+              name: 'generate_video',
+              description: 'Gera um vídeo curto a partir de uma descrição.',
+              parameters: {
+                type: "object",
+                required: ["prompt"],
+                properties: {
+                  prompt: { type: "string", description: "Descrição visual do vídeo." }
+                }
+              }
             }
           ]
         }];
+
+        // Format messages for Gemini including attachments (Videos/Images)
+        const geminiMessages = chatMessages.filter(m => m.role !== 'system').map(m => {
+          const parts = [{ text: m.content || "" }];
+          
+          // Find original message to get attachments
+          // Note: index in chatMessages might not match original if system msg was added
+          // But chatMessages usually has user/model messages in order.
+          
+          if (m.role === 'user') {
+             // In a real scenario we'd match by ID, but let's look for matching content or just use last user msg's attachments
+             // Simplified: attachments are passed in req.body.attachments
+             if (attachments && attachments.length > 0) {
+                attachments.forEach(att => {
+                   if (att.data) {
+                      parts.push({
+                         inline_data: {
+                            mime_type: att.mimeType || (att.type === 'video' ? 'video/mp4' : 'image/jpeg'),
+                            data: att.data.split(',')[1] || att.data // Handle data: prefixes
+                         }
+                      });
+                   }
+                });
+             }
+          }
+
+          return {
+            role: m.role === 'user' ? 'user' : 'model',
+            parts: parts
+          };
+        });
 
         const result = await geminiClient.models.generateContentStream({
           model: 'gemini-2.0-flash',
@@ -1483,15 +1597,15 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
           }
         });
 
-        // FIX: Handle cases where stream is directly returned or in .stream property
         const stream = result.stream || result;
 
         for await (const chunk of stream) {
-          // If Gemini decides to call a function instead of replying text
           const call = chunk.candidates?.[0]?.content?.parts?.find(p => p.functionCall);
           if (call) {
              const { name, args } = call.functionCall;
-             console.log(`[GEMINI] 🔧 Tool Call: ${name}`);
+             console.log(`[GEMINI] 🔧 Tool Call: ${name}`, args);
+             
+             let functionResult = null;
              
              if (name === 'generate_image') {
                 const { generateImage } = await import('../services/imageGeneration.js');
@@ -1502,11 +1616,50 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
                 await jobStore.create(jobId, { prompt: args.prompt, status: 'generating', userId });
                 res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_image|{"jobId": "${jobId}", "prompt": "${args.prompt}"}]]\n\n` })}\n\n`);
                 
-                // Trigger async (simplified version of the admin one)
                 (async () => {
                    const resImg = await generateImage(args.prompt, userPlan, process.env.HUGGINNGFACE_ACCESS_TOKEN);
                    await jobStore.update(jobId, { status: resImg.success ? 'completed' : 'failed', result: resImg.imageUrl });
                 })();
+                continue;
+             } 
+             
+             if (name === 'generate_video') {
+                const { generateVideo } = await import('../services/videoCreatorService.js');
+                const { jobStore } = await import('../services/jobStore.js');
+                const { v4: uuidv4 } = await import('uuid');
+                const jobId = uuidv4();
+                
+                await jobStore.create(jobId, { prompt: args.prompt, status: 'generating', userId });
+                res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_video|{"jobId": "${jobId}", "prompt": "${args.prompt}"}]]\n\n` })}\n\n`);
+                
+                (async () => {
+                   try {
+                     const result = await generateVideo(args.prompt);
+                     await jobStore.update(jobId, { status: result.success ? 'completed' : 'failed', result: result.videoUrl });
+                   } catch (err) {
+                     await jobStore.update(jobId, { status: 'failed', result: err.message });
+                   }
+                })();
+                continue;
+             }
+             
+             // Handle other tools using the same logic as the admin/mistral block
+             if (name === 'execute_system_command') {
+                functionResult = await pcController.handleInstruction(args.command);
+             } else if (name === 'get_system_stats') {
+                functionResult = await pcController.getSystemStats();
+             } else if (name === 'create_todo_list') {
+                const newList = await todoService.createList(userId, args.title);
+                if (args.items) {
+                   for (const item of args.items) await todoService.addItem(userId, newList.id, item);
+                }
+                functionResult = { success: true, listId: newList.id };
+             }
+
+             if (functionResult) {
+                // For Gemini streaming, we usually just send the result as text if we don't want to do a multi-turn call here
+                // Or we could trigger a follow-up. Simplified: send status widget.
+                res.write(`data: ${JSON.stringify({ content: `[[WIDGET:status|{"title": "${name}", "status": "success", "details": "${JSON.stringify(functionResult)}" }]]\n\n` })}\n\n`);
                 continue;
              }
           }
@@ -1524,7 +1677,6 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
             res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
           }
         }
-        if (fullGeminiContent) console.log(`[CHAT] 🤖 Lira replied (Gemini): "${fullGeminiContent}"`);
         res.write('data: [DONE]\n\n');
         res.end();
         return;

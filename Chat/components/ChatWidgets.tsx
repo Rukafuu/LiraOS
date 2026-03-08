@@ -60,8 +60,9 @@ const TodoWidget: React.FC<{ title: string; items: string[] }> = ({ title, items
       });
 
       if (res.ok) {
+        const createdList = await res.json();
         setSaved(true);
-        setSavedListId(newList.id);
+        setSavedListId(createdList.id);
       }
     } catch (e) {
       console.error('Failed to save to panel:', e);

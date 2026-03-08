@@ -42,7 +42,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-lg bg-[#0c0c0e] border border-white/10 rounded-2xl shadow-premium overflow-hidden flex flex-col"
+            className="relative w-full max-w-lg h-[92dvh] md:h-auto max-h-[92dvh] bg-[#0c0c0e] border border-white/10 rounded-2xl shadow-premium overflow-hidden flex flex-col"
           >
             {/* Header */}
             <div className="p-6 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
@@ -58,7 +58,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
             </div>
 
             {/* Content */}
-            <div className="p-6 space-y-1">
+            <div className="p-6 space-y-1 overflow-y-auto hidden-scrollbar">
               <ShortcutRow label={t('shortcuts.new_chat')} keys={[<Command size={12} key="cmd"/>, 'K']} />
               <ShortcutRow label={t('shortcuts.toggle_sidebar')} keys={[<Command size={12} key="cmd"/>, 'B']} />
               <ShortcutRow label={t('shortcuts.open_settings')} keys={[<Command size={12} key="cmd"/>, ',']} />

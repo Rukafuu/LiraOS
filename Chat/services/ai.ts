@@ -280,6 +280,8 @@ const formatMessageWithAttachments = (content: string, attachments: Attachment[]
       formattedMessage += `\n\n[ARQUIVO DE CÓDIGO: ${attName}] - Analise o código anexado.`;
     } else if (attachment.type === 'document' && attachment.previewUrl) {
       formattedMessage += `\n\n[DOCUMENTO: ${attName}] - Analise o documento.`;
+    } else if (attachment.type === 'video' && attachment.previewUrl) {
+      formattedMessage += `\n\n[VÍDEO ANEXADO: ${attName}] - Por favor, analise as cenas deste vídeo, resuma seu conteúdo e responda perguntas sobre ele.`;
     }
   }
   
@@ -471,7 +473,8 @@ Diretrizes de Resposta:
         attachments: prepareAttachmentsForBackend(attachments),
         userId,
         temperature,
-        localDateTime
+        localDateTime,
+        isMobile: typeof window !== 'undefined' && window.innerWidth < 768
     });
 
     // --- DESKTOP MODE (RUST NATIVE STREAM) ---

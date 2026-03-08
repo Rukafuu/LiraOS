@@ -54,6 +54,8 @@ class PCControllerService {
     async openApp(target) {
         const appMap = {
             'spotify': 'spotify:',
+            'spot': 'spotify:',
+            'music': 'spotify:',
             'discord': 'com.squirrel.Discord.Discord', 
             'notepad': 'notepad.exe',
             'calc': 'calc.exe',
