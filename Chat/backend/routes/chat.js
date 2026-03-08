@@ -781,7 +781,7 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
           const isAdminUser = userId === 'user_1734661833589' || user?.username?.toLowerCase().includes('admin');
           
           if (PRO_TOOLS.includes(functionCall.name) && userTier === 'free' && !isAdminUser) {
-            const lastUsage = user.lastProToolUsage ? Number(user.lastProToolUsage) : 0;
+            const lastUsage = user?.lastProToolUsage ? Number(user.lastProToolUsage) : 0;
             const cooldownMs = limits.proToolsCooldownHours * 3600000;
             const now = Date.now();
             
