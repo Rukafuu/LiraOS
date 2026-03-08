@@ -1202,10 +1202,14 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
               res.write(`data: ${JSON.stringify({ content: quickText })}\n\n`);
             }
           } else {
-            // Follow-up uses cascade starting from lighter models (unless in deep mode)
-            let FOLLOWUP_MODELS = isDeepMode 
-               ? ['gemini-2.0-flash-thinking-exp-01-21', 'gemini-1.5-pro', 'gemini-2.0-flash'] 
-               : ['gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+            // Status update for user so they don't think it froze
+            const analyzingMsg = `\n> *🧠 Analisando os resultados...*\n\n`;
+            res.write(`data: ${JSON.stringify({ content: analyzingMsg })}\n\n`);
+
+            // Garantir que a resposta seja um objeto JSON válido para a API Gemini
+            const safeResponse = typeof functionResult === 'object' && functionResult !== null 
+              ? functionResult 
+              : { result: functionResult };
 
             const finalRes = await geminiCascade(
               {
@@ -1217,14 +1221,15 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                     parts: [{ 
                       functionResponse: { 
                         name: functionCall.name, 
-                        response: { content: functionResult } 
+                        response: safeResponse 
                       } 
                     }] 
                   }
                 ],
-                system_instruction: { parts: [{ text: adminSystemPrompt }] }
+                system_instruction: { parts: [{ text: adminSystemPrompt }] },
+                tools: payload.tools // OBRIGATÓRIO: A API Gemini exige receber as tools novamente no follow-up
               },
-              FOLLOWUP_MODELS,
+              GEMINI_MODELS, // Usa os mesmos modelos da primeira chamada para evitar inconsistência de tokens
               true // Habilita o streaming para a reposta de follow-up também
             );
 
