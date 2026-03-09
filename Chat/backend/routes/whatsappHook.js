@@ -24,8 +24,11 @@ const router = express.Router();
 const configPath = path.resolve('config/whatsapp_mode.json');
 let sysConfig = null;
 try {
-    if (fs.existsSync(configPath)) {
-        sysConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    try {
+        await fs.promises.access(configPath);
+        sysConfig = JSON.parse(await fs.promises.readFile(configPath, 'utf8'));
+    } catch (err) {
+        if (err.code !== 'ENOENT') throw err;
     }
 } catch (e) { console.error('Failed to load system config', e); }
 
