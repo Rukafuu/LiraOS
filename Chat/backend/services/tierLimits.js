@@ -19,7 +19,7 @@ export const TIER_LIMITS = {
         maxTodoLists: 3,
         proToolsCooldownHours: 24,
         deepMode: false,
-        models: ['gemini-2.0-flash', 'gemini-1.5-flash'],
+        models: ['gemini-2.0-flash', 'gemini-1.5-flash-latest'],
         imageQuality: 'standard',
         features: ['basic_chat', 'system_stats', 'calendar_view', 'todo_basic']
     },

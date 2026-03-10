@@ -1459,6 +1459,22 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
             }
           }
         }
+      }, {
+        type: "function",
+        function: {
+          name: "generate_video",
+          description: "Gera um vídeo curto a partir de uma descrição visual.",
+          parameters: {
+            type: "object",
+            required: ["prompt"],
+            properties: {
+              prompt: {
+                type: "string",
+                description: "Descrição visual do vídeo."
+              }
+            }
+          }
+        }
       }],
       tool_choice: "auto"
     };
@@ -1837,6 +1853,30 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
                 } catch (parseError) {
                   console.error('[IMAGE_GEN] Error processing image generation:', parseError);
                   res.write(`data: ${JSON.stringify({ content: `\n> ❌ **Erro ao processar solicitação de imagem.** Tente novamente ou reformule sua descrição.\n\n` })}\n\n`);
+                }
+                currentToolCall = null;
+                toolArgsBuffer = '';
+              } else if (currentToolCall.name === 'generate_video') {
+                try {
+                  const args = JSON.parse(toolArgsBuffer);
+                  const { generateVideo } = await import('../services/videoCreatorService.js');
+                  const { jobStore } = await import('../services/jobStore.js');
+                  const { v4: uuidv4 } = await import('uuid');
+                  const jobId = uuidv4();
+
+                  await jobStore.create(jobId, { prompt: args.prompt, status: 'generating', userId });
+                  res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_video|{"jobId": "${jobId}", "prompt": "${args.prompt.replace(/"/g, '\\"')}"}]]\n\n` })}\n\n`);
+
+                  (async () => {
+                    try {
+                      const result = await generateVideo(args.prompt);
+                      await jobStore.update(jobId, { status: result.success ? 'completed' : 'failed', result: result.videoUrl });
+                    } catch (err) {
+                      await jobStore.update(jobId, { status: 'failed', result: err.message });
+                    }
+                  })();
+                } catch (e) {
+                  console.error('[VIDEO_GEN] Error:', e);
                 }
                 currentToolCall = null;
                 toolArgsBuffer = '';

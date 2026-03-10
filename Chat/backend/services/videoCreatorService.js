@@ -92,3 +92,36 @@ export const createShortVideo = async (script, imageUrl, voice = 'pt-BR-Francisc
         throw error;
     }
 };
+
+/**
+ * Higher level function for AI tool usage
+ * 1. Generates an image from prompt
+ * 2. Creates a short descriptive video with audio narrative
+ */
+export const generateVideo = async (prompt, userId = null, userPlan = 'free') => {
+    try {
+        const { generateImage } = await import('./imageGeneration.js');
+        
+        console.log(`[VIDEO_GEN] Pipeline started for: "${prompt}"`);
+        
+        // Step 1: Generate Visual
+        const imgResult = await generateImage(prompt, userId, userPlan);
+        if (!imgResult.success) {
+            throw new Error(`Visual generation failed: ${imgResult.error}`);
+        }
+        
+        // Step 2: Create Video
+        // Narrate the prompt itself or a shorter version
+        const result = await createShortVideo(prompt, imgResult.imageUrl);
+        
+        return {
+            success: true,
+            videoUrl: result.url,
+            prompt: prompt,
+            thumbnail: imgResult.imageUrl
+        };
+    } catch (e) {
+        console.error('[VIDEO_GEN] Error in pipeline:', e);
+        return { success: false, error: e.message };
+    }
+};

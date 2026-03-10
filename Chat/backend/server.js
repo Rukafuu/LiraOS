@@ -310,7 +310,7 @@ server.listen(PORT, '0.0.0.0', async () => {
   // Register Tavily Search MCP (FREE for all)
   if (process.env.TAVILY_API_KEY) {
       console.log('[MCP] Tavily Search detected. Connecting (Global access)...');
-      mcpService.registerServer('tavily', 'npx', ['-y', '@modelcontextprotocol/server-tavily'], { TAVILY_API_KEY: process.env.TAVILY_API_KEY });
+      mcpService.registerServer('tavily', 'npx', ['-y', 'tavily-mcp'], { TAVILY_API_KEY: process.env.TAVILY_API_KEY });
   }
 
   // Register Brave Search MCP (Premium / VEGA+)
@@ -334,7 +334,7 @@ server.listen(PORT, '0.0.0.0', async () => {
   // Register SQLite MCP (Universal Local Memory)
   console.log('[MCP] Connecting SQLite Persistent Memory...');
   const dbPath = path.resolve(__dirname, './data/mcp_memory.db');
-  mcpService.registerServer('sqlite', 'npx', ['-y', '@modelcontextprotocol/server-sqlite', '--db', dbPath]);
+  mcpService.registerServer('sqlite', 'npx', ['-y', '@pollinations/mcp-server-sqlite', '--db', dbPath]);
 
   // Register Filesystem MCP (Access to user data)
   if (process.platform === 'win32' && process.env.USERPROFILE) {
