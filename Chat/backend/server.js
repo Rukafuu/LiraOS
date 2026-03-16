@@ -334,7 +334,7 @@ server.listen(PORT, '0.0.0.0', async () => {
   // Register SQLite MCP (Universal Local Memory)
   console.log('[MCP] Connecting SQLite Persistent Memory...');
   const dbPath = path.resolve(__dirname, './data/mcp_memory.db');
-  mcpService.registerServer('sqlite', 'npx', ['-y', '@pollinations/mcp-server-sqlite', '--db', dbPath]);
+  mcpService.registerServer('sqlite', 'npx', ['-y', '@pollinations/mcp-server-sqlite', dbPath]);
 
   // Register Filesystem MCP (Access to user data)
   if (process.platform === 'win32' && process.env.USERPROFILE) {

@@ -8,7 +8,26 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 async function runMigration() {
   console.log('[MIGRATE] Checking and fixing critical tables...');
-  const client = await pool.connect();
+  
+  let client;
+  let retries = 5;
+  while (retries > 0) {
+    try {
+      client = await pool.connect();
+      break;
+    } catch (error) {
+       if (error.code === '57P03' || error.message.includes('starting up') || error.message.includes('not yet accepting connections')) {
+          console.log(`[MIGRATE] Banco ainda iniciando... Retentando em 5s (${retries} tentativas restantes)`);
+          retries--;
+          await new Promise(r => setTimeout(r, 5000));
+          continue;
+       }
+       console.error('[MIGRATE] Erro de conexão fatal:', error.message);
+       return;
+    }
+  }
+
+  if (!client) return;
   
   try {
     // 1. Sessions Table
