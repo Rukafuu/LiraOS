@@ -17,7 +17,7 @@ interface GamificationContextType {
   activePersonaId: PersonaId;
   setUsername: (name: string) => void;
   setActivePersonaId: (id: PersonaId) => void;
-  addXp: (amount: number) => void;
+  addXp: (amount: number, metadata?: any) => void;
   addCoins: (amount: number) => void;
   increaseBond: (amount: number) => void;
   completeQuest: (questId: string) => void;
@@ -272,26 +272,15 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
                 setLeaderboard(prev => prev.filter(u => !u.isCurrentUser).map((u, i) => ({ ...u, rank: i + 1 })));
             }
             
-            // Check for First Login quest completion (auto-complete if logged in)
-            let questsToSet = Array.isArray(data?.quests) ? data.quests : INITIAL_QUESTS;
-            const q1 = questsToSet.find((q: Quest) => q.id === 'q1');
-            if (q1 && !q1.isCompleted) {
-              questsToSet = questsToSet.map((q: Quest) => q.id === 'q1' ? { ...q, isCompleted: true } : q);
-              // Trigger immediate save for this update
-              setTimeout(() => {
-                fetch(`${backendUrl}/api/gamification`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-                  body: JSON.stringify({ userId, patch: { quests: questsToSet } })
-                }).catch(() => { });
-              }, 1000);
+            // Track daily login
+            if (mapped.level < 50) {
+                addXp(0, { login: true });
             }
-            setQuests(questsToSet);
-
-            if (Array.isArray(data?.unlockedThemes)) setUnlockedThemes(data.unlockedThemes);
-            if (Array.isArray(data?.unlockedPersonas)) setUnlockedPersonas(data.unlockedPersonas);
-            if (data?.activePersonaId) setActivePersonaId(data.activePersonaId as PersonaId);
-            if (Array.isArray(data?.achievements)) setAchievements(data.achievements);
+            if (Array.isArray(data?.quests)) {
+                setQuests(data.quests);
+            } else if (data?.stats?.dailyQuests?.quests) {
+                setQuests(data.stats.dailyQuests.quests);
+            }
 
 
             // Recovery from local if server looks default and local has richer state
@@ -343,13 +332,13 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         } catch { } // End main fetch try
 
       /* 
-       * 🛑 DEBUG CODE REMOVED
+       * DEBUG CODE REMOVED
        * Use proper DB-based admin roles instead of forcing client-side level 50.
        * This was causing infinite loops: loadData -> force level 50 -> useEffect -> loadData
        */
        
       /*
-      // 👑 ADMIN FORCE UNLOCK (Runs for ALL logged in users, regardless of API status)
+      // ADMIN FORCE UNLOCK (Runs for ALL logged in users, regardless of API status)
         const ALL_THEMES: LiraThemeId[] = ['lira-dark', 'lira-aurora', 'lira-ice', 'lira-nature', 'lira-desert', 'lira-halloween', 'lira-xmas', 'lira-carnival', 'lira-cyberleaf', 'lira-obsidian', 'lira-royal', 'lira-singularity'];
         
         setStats(prev => ({ 
@@ -372,7 +361,7 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setQuests(prev => prev.map(q => ({ ...q, isCompleted: true, isClaimed: true })));
 
         if (!isAlreadyAdmin) {
-            addToast('👑 Admin Access Granted', 'success');
+            addToast('Admin Access Granted', 'success');
         }
       */
 
@@ -469,19 +458,28 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     setStats(prev => ({ ...prev, plan }));
   };
 
-  const addXp = (amount: number) => {
+  const addXp = (amount: number, metadata: any = {}) => {
     const u = getCurrentUser();
     const userId = u?.id;
     if (userId) {
       fetch(`${backendUrl}/api/gamification/award`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-        body: JSON.stringify({ userId, xp: amount, messageInc: 1 })
+        body: JSON.stringify({ 
+           userId, 
+           xp: amount, 
+           plan: stats.plan,
+           ...metadata 
+        })
       }).then(async r => {
         if (r.ok) {
           const data = await r.json();
           setStats(mapBackendToFrontend(data));
-          if (Array.isArray(data?.quests)) setQuests(data.quests);
+          if (Array.isArray(data?.quests)) {
+              setQuests(data.quests);
+          } else if (data?.stats?.dailyQuests?.quests) {
+              setQuests(data.stats.dailyQuests.quests);
+          }
         } else {
           setStats(prev => ({ ...prev, currentXp: prev.currentXp + amount, totalMessages: prev.totalMessages + 1 }));
         }
@@ -546,15 +544,24 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const u = getCurrentUser();
       const userId = u?.id;
       if (userId) {
-        fetch(`${backendUrl}/api/gamification/award`, {
+        fetch(`${backendUrl}/api/gamification/claim`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
-          body: JSON.stringify({ userId, xp: quest.xpReward, coins: quest.coinReward, claimedQuestId: questId })
+          body: JSON.stringify({ userId, questId })
         }).then(async r => {
           if (r.ok) {
-            const data = await r.json();
-            setStats(mapBackendToFrontend(data));
-            if (Array.isArray(data?.quests)) setQuests(data.quests);
+            const result = await r.json();
+            // result is { success, reward }
+            // Refresh stats to get new coins/xp
+            const r2 = await fetch(`${backendUrl}/api/gamification?userId=${encodeURIComponent(userId)}`, {
+              headers: getAuthHeaders()
+            });
+            if (r2.ok) {
+              const data = await r2.json();
+              setStats(mapBackendToFrontend(data));
+              if (Array.isArray(data?.quests)) setQuests(data.quests);
+              else if (data?.stats?.dailyQuests?.quests) setQuests(data.stats.dailyQuests.quests);
+            }
           }
         }).catch(() => {
           setStats(prev => ({ ...prev, currentXp: prev.currentXp + quest.xpReward, coins: prev.coins + quest.coinReward }));
@@ -584,15 +591,14 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             checkAchievement('change_theme');
             if (data.unlockedThemes?.length >= 3) checkAchievement('unlock_theme', data.unlockedThemes.length);
             if (data.unlockedThemes?.length >= 10) checkAchievement('unlock_all_themes');
+            if (data.unlockedThemes?.length >= 10) checkAchievement('unlock_all_themes');
+            // Notify award for theme change
+            addXp(10, { settings: true });
           } else {
             const error = await r.json().catch(() => ({ error: 'Unknown error' }));
-            console.error('[Gamification] Theme purchase failed:', r.status, error);
             addToast(`Failed to purchase theme: ${error.error}`, 'error');
           }
-        }).catch(err => {
-          console.error('[Gamification] Failed to save theme purchase:', err);
-          addToast('Failed to purchase theme', 'error');
-        });
+        }).catch(() => addToast('Failed to purchase theme', 'error'));
       } else {
         // Fallback for non-logged users (local only)
         setStats(prev => ({ ...prev, coins: prev.coins - cost }));
@@ -601,6 +607,7 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           checkAchievement('change_theme');
           if (next.length >= 3) checkAchievement('unlock_theme', next.length);
           if (next.length >= 10) checkAchievement('unlock_all_themes');
+          addXp(10, { settings: true });
           return next;
         });
       }

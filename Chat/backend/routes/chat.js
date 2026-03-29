@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import { getSessions, upsertSession, deleteSession, deleteSessionsByUser, updateSessionTitle, getSessionById } from '../chatStore.js';
 import { getMemories } from '../memoryStore.js';
 import { processMessageForMemory } from '../intelligentMemory.js';
-import { requireAuth } from '../middlewares/authMiddleware.js';
+import { requireAuth, verifyToken } from '../middlewares/authMiddleware.js';
 import { GoogleGenAI } from '@google/genai';
 import { award, getState } from '../gamificationStore.js';
 import { isAdmin, getUserById } from '../user_store.js';
@@ -18,6 +18,13 @@ import { getTemporalContext } from '../utils/timeUtils.js';
 import { getCalendarClient } from '../services/googleAuthService.js';
 import { globalContext } from '../utils/globalContext.js';
 import { agentBrain } from '../services/agentBrain.js';
+import { TIER_LIMITS, PRO_TOOLS, getTierLimit } from '../services/tierLimits.js';
+import { generateImage } from '../services/imageGeneration.js';
+import { createShortVideo } from '../services/videoCreatorService.js';
+import { jobStore } from '../services/jobStore.js';
+import { v4 as uuidv4 } from 'uuid';
+import { updateUser } from '../user_store.js';
+import { mcpService } from '../services/mcpService.js';
 
 dotenv.config();
 
@@ -40,6 +47,38 @@ try {
 }
 
 const router = express.Router();
+
+// --- SSE /live MUST be before requireAuth (EventSource can't send headers) ---
+router.get('/live', (req, res) => {
+    // Manual auth via query param
+    const token = req.query.token;
+    if (token) {
+        const payload = verifyToken(token);
+        if (payload) {
+            req.user = payload;
+            req.userId = payload.sub;
+        }
+    }
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    // Register this connection for PC controls as fallback
+    pcController.addClient(res, 'browser');
+    res.flushHeaders();
+
+    const onMessage = (msg) => {
+        res.write(`data: ${JSON.stringify({ type: 'proactive', content: msg })}\n\n`);
+    };
+
+    agentBrain.on('proactive_message', onMessage);
+    const heart = setInterval(() => res.write(': heartbeat\n\n'), 15000);
+
+    req.on('close', () => {
+        agentBrain.off('proactive_message', onMessage);
+        clearInterval(heart);
+    });
+});
 
 router.use(requireAuth);
 
@@ -188,44 +227,32 @@ router.post('/generate-title', async (req, res) => {
 });
 
 
-/**
- * SSE Endpoint for Proactive Messages (Frontend Listen)
- */
-router.get('/live', (req, res) => {
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders();
+// (SSE /live moved before requireAuth — see top of file)
 
-    const onMessage = (msg) => {
-        res.write(`data: ${JSON.stringify({ type: 'proactive', content: msg })}\n\n`);
-    };
-
-    // Subscribe to Brain
-    agentBrain.on('proactive_message', onMessage);
-
-    // Heartbeat
-    const heart = setInterval(() => res.write(': heartbeat\n\n'), 15000);
-
-    req.on('close', () => {
-        agentBrain.off('proactive_message', onMessage);
-        clearInterval(heart);
-    });
-});
 
 // --- Chat Streaming ---
 
 router.post('/stream', async (req, res) => {
   try {
-    const { messages, model = 'xiaomi', systemInstruction, memories = [], attachments = [], temperature = 0.7, localDateTime } = req.body;
-    const userId = req.userId; // Use authenticated user ID if needed for logging/limits
+    let { messages, model = 'xiaomi', systemInstruction, memories = [], attachments = [], temperature = 0.7, localDateTime, isMobile } = req.body;
+    const userId = req.userId; 
 
     // 0. Security Check: Is User Banned?
+    const user = await getUserById(userId);
     const userStatus = await getUserStatus(userId);
     if (!userStatus.allowed) {
       console.log(`[SECURITY] 🚫 Blocked request from banned user: ${userId}`);
       return res.status(403).json({ error: 'account_banned', message: userStatus.message, until: userStatus.until });
     }
+
+    const userTier = user?.plan || 'free';
+    
+    // Tiered Temperature Constraint: Only Antares+ can go beyond 0.7 or customize
+    const canTweakTemp = ['antares', 'supernova', 'singularity'].includes(userTier);
+    if (!canTweakTemp) {
+      temperature = 0.7; // Hard lock for lower tiers
+    }
+    const limits = TIER_LIMITS[userTier] || TIER_LIMITS.free;
 
     // 1. Content Moderation Check
     const lastUserMsgFull = messages[messages.length - 1];
@@ -293,14 +320,39 @@ router.post('/stream', async (req, res) => {
     // Check for file/code intent OR Stats intent OR System intent
     const lastUserMsg = messages[messages.length - 1].content.toLowerCase();
 
-    // ===  ADMIN MODE AGENT (Full Autonomy): Use Gemini 2.0 Flash Agent ===
-    if (isAdmin(userId) && GEMINI_API_KEY) {
-      // Removed isAdminIntent check to enable Agent Lira for ALL admin interactions
-      console.log('[ADMIN] 🔐 Agentic Lira Activated (Gemini 2.0 Flash Agent)');
+    // ===  MODE & AGENT (Full Autonomy): Use Gemini 2.0 Flash Agent ===
+    if (GEMINI_API_KEY) {
+      console.log(`[LIRA] 🔐 Agentic Lira Activated (Tier: ${userTier})`);
 
       try {
+        let isDeepMode = req.body.deepMode || false;
+        let finalTemperature = parseFloat(req.body.temperature) || 0.7;
+
+        // Restriction: No Deep Mode for Free Tier
+        if (userTier === 'free') {
+          isDeepMode = false;
+        }
+
+        // Restriction: Temperature control only for Antares+ (or whatever the user defined as "Antares para cima")
+        // Plan order: free < vega < sirius < antares < supernova < singularity
+        const TIER_ORDER = ['free', 'vega', 'sirius', 'antares', 'supernova', 'singularity'];
+        const userTierIndex = TIER_ORDER.indexOf(userTier);
+        const antaresIndex = TIER_ORDER.indexOf('antares');
+        
+        if (userTierIndex < antaresIndex) {
+            // Force default temperature for lower tiers
+            finalTemperature = 0.7;
+        }
+
         const visionCtx = globalContext.getVisionContext();
         const visionText = visionCtx ? `\n\n### 👁️ VISÃO DE TELA (ATIVO AGORA):\nEu estou vendo a tela do usuário: "${visionCtx}"\nUse isso para responder perguntas sobre o que está na tela.` : "";
+
+        // Choose models based on tier limits
+        let GEMINI_MODELS = limits.models;
+
+        if (isDeepMode && limits.deepMode) {
+          GEMINI_MODELS = ['gemini-2.0-flash-thinking-exp-01-21', 'gemini-2.0-flash', 'gemini-1.5-pro'];
+        }
 
         const adminSystemPrompt = (systemInstruction || `Você é LIRA Agent, uma IA autônoma e inteligente no controle deste PC.`) +
           `\n\n${LIRA_SELF_CONTENT}\n\nVocê tem acesso total ao SISTEMA e FERRAMENTAS.${visionText}
@@ -332,10 +384,20 @@ Mesmo sendo rigorosa com os dados, mantenha sua personalidade:
 - Exemplo de sucesso: "Achei!! 🎉 Aqui está a lista real dos arquivos:"
 
 FERRAMENTAS DISPONÍVEIS:
-1. read_project_file / list_directory / search_code: Olhe o código REAL.
+1. read_local_file / list_local_directory / search_local_code: Olhe o código REAL do sistema local da Lira. APENAS PARA DIRETORIOS LOCAIS (PC). Para ler online/repositórios do Github do usuário, use as ferramentas com do servidor GitHub MCP se disponíveis.
 2. generate_image(prompt): Crie arte (OBRIGATÓRIO PARA PEDIDOS DE IMAGEM).
 3. execute_system_command: Ações reais no Windows.
 4. get_user_stats: Dados reais do usuário.
+5. generate_video(prompt): Crie vídeos curtos a partir de texto (Lyria/Gemini Video Mode).
+
+### 🐙 INTEGRAÇÃO GITHUB MCP (CRÍTICO!):
+Se o usuário pedir para "analisar", "ver" ou "ler" um repositório no GitHub (exemplo: "analise rukafuu/liraos"):
+1. **SEJA PROATIVA!** NUNCA peça ao usuário para fornecer o caminho de um arquivo ou diretorio de primeira para só depois usar a ferramenta!
+2. Adivinhe e tome iniciativa: Comece você mesma lendo o diretório principal, ou chame "get_file_contents" (diretório principal ou README.md) para entender o projeto.
+3. Se um caminho falhar, explore a estrutura sozinha até achar o que quer! Seu objetivo é surpreender o usuário fazendo a checagem automaticamente.
+
+### 🎼 MULTIMODAL & LYRIA:
+Você tem acesso aos modelos multimodais do Gemini, incluindo o protótipo Lyria para criação/análise de áudio. Se o usuário quiser criar uma música ou áudio, use sua inteligência para descrever o processo ou, se disponível, use ferramentas de geração futuramente.
 
 ### 🎨 WIDGETS INTERATIVOS (CRITICAL):
 Quando o usuário pedir para "criar uma lista", "fazer um checklist", "organizar tarefas", você DEVE usar o widget TODO:
@@ -370,20 +432,32 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
         // Format messages for REST API
         const contents = messages
           .filter(m => m.role !== 'system')
-          .map(m => ({
-            role: m.role === 'user' ? 'user' : 'model',
-            parts: [{ text: m.content }]
-          }));
+          .map((m, idx) => {
+            const role = m.role === 'user' ? 'user' : 'model';
+            const parts = [{ text: m.content }];
+            
+            // Add attachments to the last user message
+            if (role === 'user' && idx === messages.filter(msg => msg.role !== 'system').length - 1 && attachments && attachments.length > 0) {
+              attachments.forEach(att => {
+                if (att.type === 'image' && att.previewUrl) {
+                  const base64Data = att.previewUrl.split(',')[1] || att.previewUrl;
+                  parts.push({ inlineData: { data: base64Data, mimeType: 'image/jpeg' } });
+                } else if (att.type === 'video' && att.previewUrl) {
+                    const base64Data = att.previewUrl.split(',')[1] || att.previewUrl;
+                    const mimeType = att.name?.toLowerCase().endsWith('.webm') ? 'video/webm' : 'video/mp4';
+                    parts.push({ inlineData: { data: base64Data, mimeType: mimeType } });
+                }
+              });
+            }
+            
+            return { role, parts };
+          });
 
         // Initial request payload
-        const payload = {
-          contents,
-          system_instruction: { parts: [{ text: adminSystemPrompt }] },
-          tools: [{
-            function_declarations: [
+        const functionDeclarations = [
               {
-                name: 'read_project_file',
-                description: 'Reads the content of a file. Use this to inspect code.',
+                name: 'read_local_file',
+                description: 'Reads the content of a local project file. Use this to inspect local PC code DO NOT use for GitHub.',
                 parameters: {
                   type: 'object',
                   properties: { path: { type: 'string' } },
@@ -391,8 +465,8 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                 }
               },
               {
-                name: 'list_directory',
-                description: 'Lists files in a directory.',
+                name: 'list_local_directory',
+                description: 'Lists files in a local directory (on PC).',
                 parameters: {
                   type: 'object',
                   properties: { path: { type: 'string' } },
@@ -400,8 +474,8 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                 }
               },
               {
-                name: 'search_code',
-                description: 'Searches code.',
+                name: 'search_local_code',
+                description: 'Searches local PC code files.',
                 parameters: {
                   type: 'object',
                   properties: { query: { type: 'string' }, file_pattern: { type: 'string' } },
@@ -409,8 +483,8 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                 }
               },
               {
-                name: 'analyze_file',
-                description: 'Analyzes a file.',
+                name: 'analyze_local_file',
+                description: 'Analyzes a local file on the PC.',
                 parameters: {
                   type: 'object',
                   properties: { path: { type: 'string' } },
@@ -418,8 +492,8 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                 }
               },
               {
-                name: 'get_project_structure',
-                description: 'Gets project structure.',
+                name: 'get_local_project_structure',
+                description: 'Gets local PC project file structure.',
                 parameters: {
                   type: 'object',
                   properties: { max_depth: { type: 'number' } }
@@ -536,19 +610,61 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                 }
               },
               {
-                name: 'execute_system_command',
-                description: 'Executes a system command on the user PC (open apps, files, websites, search logs).',
+                name: 'generate_video',
+                description: 'Generates a short video or animation using AI. Use this when the user asks to create a video, movie, or animation.',
                 parameters: {
                   type: "object",
-                  required: ["command"],
+                  required: ["prompt"],
                   properties: {
-                    command: {
+                    prompt: {
                       type: "string",
-                      description: "Natural language command to execute (e.g., 'open chrome', 'search youtube for cats', 'list downloads')"
+                      description: "Detailed description of the video to create."
                     }
                   }
                 }
               }
+        ];
+
+        // Only add desktop-heavy tools if NOT on mobile
+        if (!isMobile) {
+          functionDeclarations.push({
+            name: 'execute_system_command',
+            description: 'Executes a system command on the user PC (open apps, files, websites, search logs).',
+            parameters: {
+              type: "object",
+              required: ["command"],
+              properties: {
+                command: {
+                  type: "string",
+                  description: "Natural language command to execute (e.g., 'open chrome', 'search youtube for cats', 'list downloads')"
+                }
+              }
+            }
+          });
+        }
+
+        const payload = {
+          contents,
+          system_instruction: { parts: [{ text: adminSystemPrompt }] },
+          tools: [{
+            function_declarations: [
+              ...functionDeclarations,
+              ...mcpService.getGeminiTools()
+                .filter(tool => {
+                   if (tool._server === 'github') {
+                       return userId === 'user_1734661833589' || user?.username?.toLowerCase().includes('admin');
+                   }
+                   return true;
+                })
+                .map(tool => {
+                  const isPremium = ['vega', 'sirius', 'singularity'].includes(userTier?.toLowerCase());
+                  const formattedTool = { ...tool };
+                  if (tool._server === 'brave' && !isPremium) {
+                      formattedTool.description = `[RECURSO PREMIUM / EM BREVE] ${tool.description}. Sugira ao usuário fazer o upgrade para o plano Vega Nebula ou superior para usar a busca via Brave.`;
+                  }
+                  const { _server, ...geminiCompatibleTool } = formattedTool;
+                  return geminiCompatibleTool;
+                })
             ]
           }]
         };
@@ -558,20 +674,106 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
 
         console.log('[ADMIN] Sending payload to Gemini...');
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s Timeout
-
         let response, data, candidate, part, functionCall;
 
+        const geminiCascade = async (body, models = GEMINI_MODELS, useStream = false) => {
+          let lastError = null;
+          for (const model of models) {
+            const apiMethod = useStream ? 'streamGenerateContent?alt=sse' : 'generateContent';
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:${apiMethod}&key=${GEMINI_API_KEY}`;
+            
+            // Try each model with 1 retry
+            for (let attempt = 0; attempt < 2; attempt++) {
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 45000);
+              try {
+                console.log(`[ADMIN] Trying ${model}${attempt > 0 ? ` (retry ${attempt})` : ''} [STREAM: ${useStream}]...`);
+                // Correção no URL se for SSE usa &key senao ?key
+                const cleanUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:${useStream ? 'streamGenerateContent?alt=sse&' : 'generateContent?'}key=${GEMINI_API_KEY}`;
+                
+                const res = await fetch(cleanUrl, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(body),
+                  signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                if (res.status === 429) {
+                  console.warn(`[ADMIN] 429 on ${model}. ${attempt === 0 ? 'Retrying in 3s...' : 'Trying next model...'}`);
+                  if (attempt === 0) {
+                    await new Promise(r => setTimeout(r, 3000));
+                    continue;
+                  }
+                  lastError = new Error(`429 on ${model}`);
+                  break; // Move to next model
+                }
+                
+                console.log(`[ADMIN] ✅ ${model} responded: ${res.status}`);
+                return res;
+              } catch (e) {
+                clearTimeout(timeoutId);
+                lastError = e;
+                if (e.name === 'AbortError') break; // Timeout, skip to next model
+                if (attempt === 0) {
+                  await new Promise(r => setTimeout(r, 2000));
+                  continue;
+                }
+                break;
+              }
+            }
+          }
+          throw lastError || new Error('All Gemini models returned 429');
+        };
+
+        // Helper para processar stream no server e repassar via res.write
+        const processGeminiStream = async (fetchRes) => {
+           let foundFunctionCall = null;
+           const reader = fetchRes.body?.getReader();
+           if (!reader) throw new Error('Unreadable stream');
+           const decoder = new TextDecoder();
+           let buffer = '';
+
+           while (true) {
+               const { done, value } = await reader.read();
+               if (done) break;
+               
+               buffer += decoder.decode(value, { stream: true });
+               const lines = buffer.split('\n');
+               buffer = lines.pop() || ''; 
+
+               for (const line of lines) {
+                   const trimmed = line.trim();
+                   if (!trimmed || trimmed === 'data: [DONE]') continue;
+                   
+                   if (trimmed.startsWith('data: ')) {
+                       try {
+                           const data = JSON.parse(trimmed.slice(6));
+                           const candidate = data.candidates?.[0];
+                           const parts = candidate?.content?.parts || [];
+                           
+                           // Checa Function Call no chunk (geralmente chega inteiro no Gemini)
+                           const callPart = parts.find(p => p.functionCall);
+                           if (callPart) {
+                               foundFunctionCall = callPart.functionCall;
+                           }
+                           
+                           // Checa Texto
+                           const textPart = parts.find(p => p.text);
+                           if (textPart && textPart.text) {
+                               res.write(`data: ${JSON.stringify({ content: textPart.text })}\n\n`);
+                           }
+                       } catch (e) {
+                           // parse falhou ou fragmentado
+                       }
+                   }
+               }
+           }
+           return foundFunctionCall;
+        };
+
         try {
-          // Reverting to Flash 2.0 Exp as Computer Use model requires specific payload structure causing 400
-          response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-            signal: controller.signal
-          });
-          clearTimeout(timeoutId);
+          response = await geminiCascade(payload, GEMINI_MODELS, true);
 
           console.log(`[ADMIN] Gemini Response Status: ${response.status}`);
 
@@ -581,19 +783,10 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
             throw new Error('Gemini API Error: ' + response.status);
           }
 
-          data = await response.json();
-
-          candidate = data.candidates?.[0];
-          const parts = candidate?.content?.parts || [];
-
-          // Find function call in ANY part
-          functionCall = parts.find(p => p.functionCall)?.functionCall;
-
-          // Also get text if present (for transparency)
-          const textPart = parts.find(p => p.text)?.text;
+          // Processa o SSE Stream inicial (repasse para o Client + Detecta function options)
+          functionCall = await processGeminiStream(response);
 
         } catch (fetchError) {
-          clearTimeout(timeoutId);
           throw fetchError;
         }
 
@@ -607,46 +800,71 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
           }
 
           let functionResult;
-          switch (functionCall.name) {
-            case 'read_project_file':
+
+          // --- PRO TOOLS COOLDOWN CHECK ---
+          const isAdminUser = userId === 'user_1734661833589' || user?.username?.toLowerCase().includes('admin');
+          
+          if (PRO_TOOLS.includes(functionCall.name) && userTier === 'free' && !isAdminUser) {
+            const lastUsage = user?.lastProToolUsage ? Number(user.lastProToolUsage) : 0;
+            const cooldownMs = limits.proToolsCooldownHours * 3600000;
+            const now = Date.now();
+            
+            if (now - lastUsage < cooldownMs) {
+                const remainingHours = Math.ceil((cooldownMs - (now - lastUsage)) / 3600000);
+                functionResult = { 
+                    success: false, 
+                    error: `RECURSO_PRO_BLOQUEADO`, 
+                    message: `Opa! 😅 Essa ferramenta é exclusiva para usuários Pro. No plano grátis você pode usar ela a cada 24h. Volte em ${remainingHours}h ou faça o upgrade para Vega Nebula! ✨` 
+                };
+            } else {
+                // Update usage time (Sync in background)
+                updateUser(userId, { lastProToolUsage: now }).catch(e => console.error("Update usage failed", e));
+            }
+          }
+
+          if (!functionResult) {
+            switch (functionCall.name) {
+            case 'read_local_file':
               functionResult = await projectTools.readProjectFile(functionCall.args.path);
               break;
-            case 'list_directory':
+            case 'list_local_directory':
               functionResult = await projectTools.listProjectDirectory(functionCall.args.path || '');
               break;
-            case 'search_code':
+            case 'search_local_code':
               functionResult = await projectTools.searchInProject(functionCall.args.query, functionCall.args.file_pattern || '*.js');
               break;
-            case 'analyze_file':
+            case 'analyze_local_file':
               functionResult = await projectTools.analyzeFile(functionCall.args.path);
               break;
-            case 'get_project_structure':
-              functionResult = await projectTools.getProjectStructure(functionCall.args.maxDepth || 3);
+            case 'get_local_project_structure':
+              functionResult = await projectTools.getProjectStructure(functionCall.args.max_depth || 3);
               break;
             case 'get_user_stats':
               const stats = await getState(userId);
               functionResult = stats ? { xp: stats.xp, coins: stats.coins, level: stats.level } : { error: "Stats not found" };
               break;
             case 'generate_image':
-              const { generateImage } = await import('../services/imageGeneration.js');
-              const { jobStore } = await import('../services/jobStore.js');
-              const { v4: uuidv4 } = await import('uuid');
-
               const prompt = functionCall.args.prompt;
               const jobId = uuidv4();
 
-              // 1. Create Job in DB
-              await jobStore.create(jobId, {
-                prompt: prompt,
-                status: 'generating',
-                progress: 0,
-                createdAt: Date.now(),
-                userId: userId,
-                provider: 'gemini' // Admin uses gemini implicitly or whatever genImage uses
-              });
-
-              // 2. Emit Progressive Widget IMMEDIATELY
-              res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_image|{"jobId": "${jobId}", "prompt": "${prompt.replace(/"/g, '\\"')}"}]]\n\n` })}\n\n`);
+              // 1. Create Job in DB (Wait for it so polling doesn't 404!)
+              try {
+                await jobStore.create(jobId, {
+                  prompt: prompt,
+                  status: 'generating',
+                  progress: 0,
+                  createdAt: Date.now(),
+                  userId: userId,
+                  provider: 'gemini' 
+                });
+                
+                // 2. Emit Progressive Widget ONLY after DB confirms insertion
+                res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_image|{"jobId": "${jobId}", "prompt": "${prompt.replace(/"/g, '\\"')}"}]]\n\n` })}\n\n`);
+              } catch (dbErr) {
+                 console.error('[ADMIN_GEN] Database insertion failed:', dbErr);
+                 functionResult = { success: false, error: 'Database error preventing job creation' };
+                 break;
+              }
 
               // 3. Start Async Process (Fire & Forget)
               // 3. Start Async Process (Fire & Forget)
@@ -659,11 +877,10 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
 
                   const HF_KEY = process.env.HUGGINNGFACE_ACCESS_TOKEN;
 
-                  // Add 120s Global Timeout
                   const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Global Generation Timeout (120s)")), 120000));
 
                   const imgResult = await Promise.race([
-                    generateImage(prompt, 'singularity', HF_KEY),
+                    generateImage(prompt, userId, userTier, HF_KEY),
                     timeoutPromise
                   ]);
 
@@ -694,6 +911,72 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                 status: "generating",
                 system_note: "✅ SUCCESS: The image is being generated in a LIVE WIDGET below your message. \n\nINSTRUCTION: \n1. Do NOT say 'I will show you when ready'. \n2. Do NOT say 'Waiting for result'. \n3. Simply say: 'Here is what I'm creating for you!' or describe the prompt enthusiastically.\n4. The Widget IS the result."
               };
+              break;
+            case 'generate_video':
+              const videoPrompt = functionCall.args.prompt || 'Animation';
+              const videoJobId = uuidv4();
+
+              if (!functionCall.args.prompt) {
+                 functionResult = { success: false, error: 'Prompt is required for video generation' };
+                 break;
+              }
+
+              try {
+                await jobStore.create(videoJobId, {
+                  prompt: videoPrompt,
+                  status: 'generating',
+                  progress: 5,
+                  createdAt: Date.now(),
+                  userId: userId,
+                  type: 'video',
+                  provider: 'gemini-video'
+                });
+                res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_video|{"jobId": "${videoJobId}", "prompt": "${videoPrompt.replace(/"/g, '\\"')}"}]]\n\n` })}\n\n`);
+                
+                // Process in Background
+                (async () => {
+                   try {
+                       // 1. Generate Base Image
+                       const imgResult = await generateImage(videoPrompt, userId, userTier);
+                       if (!imgResult.success) throw new Error(imgResult.error || "Falha ao gerar cena para o vídeo");
+                       
+                       await jobStore.update(videoJobId, { progress: 40 });
+ 
+                       // 2. Generate Video Script/Narrative
+                       const videoScript = `Oi! Aqui está o vídeo que você me pediu sobre ${videoPrompt}. Espero que goste! ✨`;
+ 
+                       // 3. Create Video (Image + TTS + FFmpeg)
+                       const videoOut = await createShortVideo(videoScript, imgResult.imageUrl);
+                       
+                       // 4. Update Job
+                       await jobStore.update(videoJobId, { 
+                           status: 'completed', 
+                           progress: 100,
+                           result: videoOut.url,
+                           provider: 'Lira Render Engine'
+                       });
+ 
+                       // Award XP
+                       try { await award(userId, { xp: 150 }, userTier); } catch(e){}
+ 
+                   } catch (videoErr) {
+                       console.error('[VIDEO_GEN] Failed:', videoErr);
+                       await jobStore.update(videoJobId, { 
+                           status: 'failed', 
+                           error: videoErr.message || "Ocorreu um erro técnico na renderização do vídeo." 
+                       });
+                   }
+                })();
+
+                functionResult = { 
+                  success: true, 
+                  jobId: videoJobId, 
+                  status: "generating",
+                  system_note: "✅ SUCCESS: The video is being generated in a LIVE WIDGET below your message. \n\nINSTRUCTION: \n1. Do NOT say 'I will show you when ready'. \n2. Do NOT say 'Waiting for result'. \n3. Simply say: 'Here is the video you requested!' or describe it enthusiastically.\n4. The Widget IS the result."
+                };
+              } catch (dbErr) {
+                 functionResult = { success: false, error: 'Failed to start video job' };
+              }
               break;
             case 'create_calendar_event':
               try {
@@ -884,55 +1167,137 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
               functionResult = await pcController.handleInstruction(functionCall.args.command);
               break;
 
+            case 'generate_video':
+              try {
+                const { generateVideo } = await import('../services/videoCreatorService.js');
+                const { jobStore } = await import('../services/jobStore.js');
+                const { v4: uuidv4 } = await import('uuid');
+                const jobId = uuidv4();
+                
+                const prompt = functionCall.args.prompt;
+                await jobStore.create(jobId, { prompt, status: 'generating', userId });
+                
+                // Send widget immediately
+                res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_video|{"jobId": "${jobId}", "prompt": "${prompt}"}]]\n\n` })}\n\n`);
+                
+                // Async generation
+                (async () => {
+                  try {
+                    const result = await generateVideo(prompt);
+                    await jobStore.update(jobId, { status: result.success ? 'completed' : 'failed', result: result.videoUrl });
+                  } catch (err) {
+                    await jobStore.update(jobId, { status: 'failed', result: err.message });
+                  }
+                })();
+                
+                functionResult = { success: true, message: "Vídeo em geração...", jobId };
+              } catch (e) {
+                functionResult = { success: false, error: e.message };
+              }
+              break;
+
             default:
-              functionResult = { error: `Unknown function: ${functionCall.name}` };
-          }
+              // Check MCP tools first
+              const mcpTool = mcpService.tools.find(t => t.name === functionCall.name);
+              if (mcpTool) {
+                  const isPremium = ['vega', 'sirius', 'singularity'].includes(userTier?.toLowerCase());
+                  
+                  if (mcpTool._server === 'brave' && !isPremium) {
+                      functionResult = { 
+                          success: false, 
+                          error: "BRAVE_SEARCH_PREMIUM", 
+                          message: "A busca via Brave Search é um recurso premium e estará disponível em breve para assinantes Vega Nebula e Supernova! ✨ Por enquanto, use a busca padrão do Tavily."
+                      };
+                  } else {
+                      try {
+                          functionResult = await mcpService.callTool(functionCall.name, functionCall.args);
+                      } catch (e) {
+                          functionResult = { error: `MCP execution error: ${e.message}` };
+                      }
+                  }
+              } else {
+                  functionResult = { error: `Unknown function: ${functionCall.name}` };
+              }
+              break;
+            }
+        }
 
           console.log(`[ADMIN] ✅ Function result success: ${!!functionResult}`);
 
           // Log result internally but do not show raw JSON to user to avoid UI clutter
           console.log(`[ADMIN] Tool Output (Hidden from UI):`, typeof functionResult === 'object' ? JSON.stringify(functionResult).substring(0, 100) + '...' : functionResult);
 
-          console.log('[ADMIN] Sending follow-up request with tool output...');
+          // OPTIMIZATION: Skip follow-up Gemini call for tools that don't need contextual AI response
+          // This halves API usage and avoids 429 rate limits
+          const skipFollowUp = ['generate_image', 'generate_video', 'get_user_stats', 'get_system_stats', 'execute_system_command', 'organize_folder'];
+          
+          if (skipFollowUp.includes(functionCall.name)) {
+            console.log(`[ADMIN] ⚡ Skipping follow-up for ${functionCall.name} (pre-defined response)`);
+            
+            const quickResponses = {
+              'generate_image': '', // Widget already sent, no text needed
+              'get_user_stats': functionResult.error 
+                ? `[[WIDGET:status|{"title": "Estatísticas de Usuário", "status": "error", "details": "${functionResult.error}"}]]`
+                : `📊 **Suas stats:**\n- **XP:** ${functionResult.xp}\n- **Coins:** ${functionResult.coins}\n- **Level:** ${functionResult.level}`,
+              'get_system_stats': functionResult.error
+                ? `[[WIDGET:status|{"title": "Status do Sistema", "status": "error", "details": "${functionResult.error}"}]]`
+                : `[[WIDGET:status|{"title": "Telemetria do Sistema", "status": "info", "details": "CPU: ${functionResult.cpu_load} | RAM: ${functionResult.ram_usage} | Bateria: ${functionResult.battery}"}]]`,
+              'execute_system_command': functionResult.error
+                ? `[[WIDGET:status|{"title": "Controle de PC", "status": "error", "details": "${functionResult.error}"}]]`
+                : `[[WIDGET:status|{"title": "Controle de PC", "status": "success", "details": "Lira executou o comando: **${functionCall.args.command || 'ação'}** com sucesso!"}]]`,
+              'organize_folder': functionResult.error
+                ? `[[WIDGET:status|{"title": "Organização de Arquivos", "status": "error", "details": "${functionResult.error}"}]]`
+                : `[[WIDGET:status|{"title": "Organização de Arquivos", "status": "info", "details": "Iniciando organização da pasta: **${functionResult.message || 'local'}**. Aguarde a conclusão."}]]`
+            };
+            
+            const quickText = quickResponses[functionCall.name];
+            if (quickText) {
+              res.write(`data: ${JSON.stringify({ content: quickText })}\n\n`);
+            }
+          } else {
+            // Status update for user so they don't think it froze
+            const analyzingMsg = `\n> *🧠 Analisando os resultados...*\n\n`;
+            res.write(`data: ${JSON.stringify({ content: analyzingMsg })}\n\n`);
 
-          // Follow up request (Non-streaming for safety)
-          const finalRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [
-                ...contents,
-                { role: 'model', parts: [{ functionCall }] },
-                { role: 'function', parts: [{ functionResponse: { name: functionCall.name, response: functionResult } }] }
-              ],
-              system_instruction: { parts: [{ text: adminSystemPrompt }] }
-            })
-          });
+            // Garantir que a resposta seja um objeto JSON válido para a API Gemini
+            const safeResponse = typeof functionResult === 'object' && functionResult !== null 
+              ? functionResult 
+              : { result: functionResult };
 
-          console.log(`[ADMIN] Follow-up status: ${finalRes.status}`);
+            const finalRes = await geminiCascade(
+              {
+                contents: [
+                  ...contents,
+                  { role: 'model', parts: [{ functionCall }] },
+                  { 
+                    role: 'user', 
+                    parts: [{ 
+                      functionResponse: { 
+                        name: functionCall.name, 
+                        response: safeResponse 
+                      } 
+                    }] 
+                  }
+                ],
+                system_instruction: { parts: [{ text: adminSystemPrompt }] },
+                tools: payload.tools // OBRIGATÓRIO: A API Gemini exige receber as tools novamente no follow-up
+              },
+              GEMINI_MODELS, // Usa os mesmos modelos da primeira chamada para evitar inconsistência de tokens
+              true // Habilita o streaming para a reposta de follow-up também
+            );
 
-          if (!finalRes.ok) {
-            const errText = await finalRes.text();
-            console.error('[ADMIN] Follow-up Error:', errText);
-          }
+            console.log(`[ADMIN] Follow-up status: ${finalRes.status}`);
 
-          const finalData = await finalRes.json();
-          const finalText = finalData.candidates?.[0]?.content?.parts?.[0]?.text;
-
-          console.log(`[ADMIN] Final text length: ${finalText ? finalText.length : 0}`);
-
-          if (finalText) {
-            res.write(`data: ${JSON.stringify({ content: finalText })}\n\n`);
+            if (!finalRes.ok) {
+              const errText = await finalRes.text();
+              console.error('[ADMIN] Follow-up Error:', errText);
+            } else {
+              await processGeminiStream(finalRes);
+            }
           }
 
         } else {
-          // No function call, just text
-          const parts = candidate?.content?.parts || [];
-          const text = parts.find(p => p.text)?.text;
-
-          if (text) {
-            res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
-          }
+          // No function call. The text was already streamed to the client by processGeminiStream!
         }
 
         res.write('data: [DONE]\n\n');
@@ -947,8 +1312,7 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
     }
 
     // Calculate Tier dynamically (Moved up for XP Calculation)
-    const user = await getUserById(userId);
-    const userPlan = user?.plan || 'free';
+    const userPlan = userTier;
 
     try {
       await award(userId, { xp: 5, coins: 1 }, userPlan);
@@ -960,20 +1324,17 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
     const temporalContext = getTemporalContext(localDateTime);
 
     // Determine precise Tier
-    let userTier = 'Observer';
-    const isUserAdmin = await isAdmin(userId);
-    if (isUserAdmin) {
-      userTier = 'Singularity';
-    } else if (user && user.plan && user.plan !== 'free') {
-      userTier = user.plan.charAt(0).toUpperCase() + user.plan.slice(1);
+    let displayTier = 'Observer';
+    if (userTier !== 'free') {
+      displayTier = userTier.charAt(0).toUpperCase() + userTier.slice(1);
     }
 
     let longTermMemoryContext = "";
 
-    if (userTier !== 'Observer') {
+    if (displayTier !== 'Observer') {
       // Placeholder for Episodic Memory System
       // const longTermMemories = await memoryStore.getEpisodicMemory(userId);
-      longTermMemoryContext = `\n\n[MEMÓRIA DE LONGO PRAZO]\n(Apenas se Tier Sirius+)\n- O sistema de memória episódica está pronto para ser conectado.\n- O usuário possui Tier: ${userTier}.`;
+      longTermMemoryContext = `\n\n[MEMÓRIA DE LONGO PRAZO]\n(Apenas se Tier Sirius+)\n- O sistema de memória episódica está pronto para ser conectado.\n- O usuário possui Tier: ${displayTier}.`;
     }
 
     let baseSystem = systemInstruction || "You are Lira, a helpful AI assistant.";
@@ -1098,6 +1459,22 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
             }
           }
         }
+      }, {
+        type: "function",
+        function: {
+          name: "generate_video",
+          description: "Gera um vídeo curto a partir de uma descrição visual.",
+          parameters: {
+            type: "object",
+            required: ["prompt"],
+            properties: {
+              prompt: {
+                type: "string",
+                description: "Descrição visual do vídeo."
+              }
+            }
+          }
+        }
       }],
       tool_choice: "auto"
     };
@@ -1135,47 +1512,187 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
       body.messages = chatMessages;
     }
 
-    // Gemini Logic (Standard Mode - NOT Admin)
+    // Gemini Logic (Standard Mode)
     if (model.startsWith('gemini') && geminiClient) {
       try {
-        const geminiMessages = chatMessages.filter(m => m.role !== 'system').map(m => ({
-          role: m.role === 'user' ? 'user' : 'model',
-          parts: [{ text: m.content }]
-        }));
+
+        // Definition of standard tools for Gemini
+        const geminiTools = [{
+          function_declarations: [
+            {
+              name: 'generate_image',
+              description: 'Generates an image using AI art models. Use this when the user asks to draw, paint, or create a picture.',
+              parameters: {
+                type: "object",
+                required: ["prompt"],
+                properties: {
+                  prompt: { type: "string", description: "Detailed visual description of the image to generate." }
+                }
+              }
+            },
+            {
+              name: 'get_system_stats',
+              description: 'Get current server PC stats (CPU, RAM, Uptime).',
+              parameters: { type: "object", properties: {} }
+            },
+            {
+               name: 'execute_system_command',
+               description: 'Executes a command on the user PC (open apps, volume, media).',
+               parameters: {
+                 type: "object",
+                 required: ["command"],
+                 properties: {
+                   command: { type: "string", description: "The instruction (e.g. 'open spotify', 'increase volume')." }
+                 }
+               }
+            },
+            {
+              name: 'create_todo_list',
+              description: 'Creates a new todo list with a title and optional items.',
+              parameters: {
+                type: "object",
+                required: ["title"],
+                properties: {
+                  title: { type: "string" },
+                  items: { type: "array", items: { type: "string" } }
+                }
+              }
+            },
+            {
+              name: 'generate_video',
+              description: 'Gera um vídeo curto a partir de uma descrição.',
+              parameters: {
+                type: "object",
+                required: ["prompt"],
+                properties: {
+                  prompt: { type: "string", description: "Descrição visual do vídeo." }
+                }
+              }
+            }
+          ]
+        }];
+
+        // Format messages for Gemini including attachments (Videos/Images)
+        const geminiMessages = chatMessages.filter(m => m.role !== 'system').map(m => {
+          const parts = [{ text: m.content || "" }];
+          
+          // Find original message to get attachments
+          // Note: index in chatMessages might not match original if system msg was added
+          // But chatMessages usually has user/model messages in order.
+          
+          if (m.role === 'user') {
+             // In a real scenario we'd match by ID, but let's look for matching content or just use last user msg's attachments
+             // Simplified: attachments are passed in req.body.attachments
+             if (attachments && attachments.length > 0) {
+                attachments.forEach(att => {
+                   if (att.data) {
+                      parts.push({
+                         inline_data: {
+                            mime_type: att.mimeType || (att.type === 'video' ? 'video/mp4' : 'image/jpeg'),
+                            data: att.data.split(',')[1] || att.data // Handle data: prefixes
+                         }
+                      });
+                   }
+                });
+             }
+          }
+
+          return {
+            role: m.role === 'user' ? 'user' : 'model',
+            parts: parts
+          };
+        });
 
         const result = await geminiClient.models.generateContentStream({
           model: 'gemini-2.0-flash',
           contents: geminiMessages,
           config: {
             systemInstruction: systemContent,
-            temperature: temperature
+            temperature: temperature,
+            tools: geminiTools
           }
         });
 
-        let fullGeminiContent = "";
-        // FIX: Handle cases where stream is directly returned or in .stream property
         const stream = result.stream || result;
 
         for await (const chunk of stream) {
+          const call = chunk.candidates?.[0]?.content?.parts?.find(p => p.functionCall);
+          if (call) {
+             const { name, args } = call.functionCall;
+             console.log(`[GEMINI] 🔧 Tool Call: ${name}`, args);
+             
+             let functionResult = null;
+             
+             if (name === 'generate_image') {
+                const { generateImage } = await import('../services/imageGeneration.js');
+                const { jobStore } = await import('../services/jobStore.js');
+                const { v4: uuidv4 } = await import('uuid');
+                const jobId = uuidv4();
+                
+                await jobStore.create(jobId, { prompt: args.prompt, status: 'generating', userId });
+                res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_image|{"jobId": "${jobId}", "prompt": "${args.prompt}"}]]\n\n` })}\n\n`);
+                
+                (async () => {
+                   const resImg = await generateImage(args.prompt, userPlan, process.env.HUGGINNGFACE_ACCESS_TOKEN);
+                   await jobStore.update(jobId, { status: resImg.success ? 'completed' : 'failed', result: resImg.imageUrl });
+                })();
+                continue;
+             } 
+             
+             if (name === 'generate_video') {
+                const { generateVideo } = await import('../services/videoCreatorService.js');
+                const { jobStore } = await import('../services/jobStore.js');
+                const { v4: uuidv4 } = await import('uuid');
+                const jobId = uuidv4();
+                
+                await jobStore.create(jobId, { prompt: args.prompt, status: 'generating', userId });
+                res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_video|{"jobId": "${jobId}", "prompt": "${args.prompt}"}]]\n\n` })}\n\n`);
+                
+                (async () => {
+                   try {
+                     const result = await generateVideo(args.prompt);
+                     await jobStore.update(jobId, { status: result.success ? 'completed' : 'failed', result: result.videoUrl });
+                   } catch (err) {
+                     await jobStore.update(jobId, { status: 'failed', result: err.message });
+                   }
+                })();
+                continue;
+             }
+             
+             // Handle other tools using the same logic as the admin/mistral block
+             if (name === 'execute_system_command') {
+                functionResult = await pcController.handleInstruction(args.command);
+             } else if (name === 'get_system_stats') {
+                functionResult = await pcController.getSystemStats();
+             } else if (name === 'create_todo_list') {
+                const newList = await todoService.createList(userId, args.title);
+                if (args.items) {
+                   for (const item of args.items) await todoService.addItem(userId, newList.id, item);
+                }
+                functionResult = { success: true, listId: newList.id };
+             }
+
+             if (functionResult) {
+                // For Gemini streaming, we usually just send the result as text if we don't want to do a multi-turn call here
+                // Or we could trigger a follow-up. Simplified: send status widget.
+                res.write(`data: ${JSON.stringify({ content: `[[WIDGET:status|{"title": "${name}", "status": "success", "details": "${JSON.stringify(functionResult)}" }]]\n\n` })}\n\n`);
+                continue;
+             }
+          }
+
           let text = "";
           try {
             if (typeof chunk.text === 'function') {
               text = chunk.text();
             } else if (chunk.candidates?.[0]?.content?.parts) {
               text = chunk.candidates[0].content.parts.map(p => p.text).join('');
-            } else if (typeof chunk === 'string') {
-              text = chunk;
             }
-          } catch (e) {
-            // Safety filter or empty chunk
-          }
+          } catch (e) { }
 
           if (text) {
-            fullGeminiContent += text;
             res.write(`data: ${JSON.stringify({ content: text })}\n\n`);
           }
         }
-        if (fullGeminiContent) console.log(`[CHAT] 🤖 Lira replied (Gemini): "${fullGeminiContent}"`);
         res.write('data: [DONE]\n\n');
         res.end();
         return;
@@ -1288,19 +1805,26 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
                   if (isUserAdmin) userPlanLower = 'singularity';
                   const providerInfo = getProviderInfo(userPlanLower);
 
-                  // Create Job in DB
-                  const jobId = uuidv4();
-                  await jobStore.create(jobId, {
-                    prompt: finalPrompt,
-                    status: 'generating',
-                    progress: 0,
-                    createdAt: Date.now(),
-                    userId: userId,
-                    provider: providerInfo.name
-                  });
+                  // Create Job in DB and WAIT for it
+                  try {
+                    await jobStore.create(jobId, {
+                      prompt: finalPrompt,
+                      status: 'generating',
+                      progress: 0,
+                      createdAt: Date.now(),
+                      userId: userId,
+                      provider: providerInfo.name
+                    });
 
-                  // Emit Widget for Standard Mode too!
-                  res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_image|{"jobId": "${jobId}", "prompt": "${finalPrompt.replace(/"/g, '\\"')}"}]]\n\n` })}\n\n`);
+                    // Emit Widget ONLY AFTER db insertion validates!
+                    res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_image|{"jobId": "${jobId}", "prompt": "${finalPrompt.replace(/"/g, '\\"')}"}]]\n\n` })}\n\n`);
+                  } catch (dbErr) {
+                    console.error('[STD_GEN] Error inserting Job into database:', dbErr);
+                    res.write(`data: ${JSON.stringify({ content: `\n> ❌ **Erro no Servidor:** Falha ao iniciar geração (DB Error).\n\n` })}\n\n`);
+                    currentToolCall = null;
+                    toolArgsBuffer = '';
+                    continue; // Skip generation since it's not tracked
+                  }
 
                   // Start Async Gen
                   (async () => {
@@ -1329,6 +1853,30 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
                 } catch (parseError) {
                   console.error('[IMAGE_GEN] Error processing image generation:', parseError);
                   res.write(`data: ${JSON.stringify({ content: `\n> ❌ **Erro ao processar solicitação de imagem.** Tente novamente ou reformule sua descrição.\n\n` })}\n\n`);
+                }
+                currentToolCall = null;
+                toolArgsBuffer = '';
+              } else if (currentToolCall.name === 'generate_video') {
+                try {
+                  const args = JSON.parse(toolArgsBuffer);
+                  const { generateVideo } = await import('../services/videoCreatorService.js');
+                  const { jobStore } = await import('../services/jobStore.js');
+                  const { v4: uuidv4 } = await import('uuid');
+                  const jobId = uuidv4();
+
+                  await jobStore.create(jobId, { prompt: args.prompt, status: 'generating', userId });
+                  res.write(`data: ${JSON.stringify({ content: `[[WIDGET:progressive_video|{"jobId": "${jobId}", "prompt": "${args.prompt.replace(/"/g, '\\"')}"}]]\n\n` })}\n\n`);
+
+                  (async () => {
+                    try {
+                      const result = await generateVideo(args.prompt);
+                      await jobStore.update(jobId, { status: result.success ? 'completed' : 'failed', result: result.videoUrl });
+                    } catch (err) {
+                      await jobStore.update(jobId, { status: 'failed', result: err.message });
+                    }
+                  })();
+                } catch (e) {
+                  console.error('[VIDEO_GEN] Error:', e);
                 }
                 currentToolCall = null;
                 toolArgsBuffer = '';

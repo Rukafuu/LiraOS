@@ -74,12 +74,12 @@ export const MessageItem: React.FC<MessageItemProps> = ({
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className={`group w-full flex justify-start mb-6 px-4`}
+        className={`group w-full flex justify-start mb-4 md:mb-6 px-2 md:px-4`}
       >
         <div className={`flex w-full max-w-3xl gap-4 flex-row`}>
 
           {!isUser && (
-            <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-1 border border-white/10 shadow-sm overflow-hidden bg-[#0c0c0e]">
+            <div className="flex-shrink-0 w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center mt-1 border border-white/10 shadow-sm overflow-hidden bg-[#0c0c0e]">
               <img src={LIRA_AVATAR} alt="Lira" className="w-full h-full object-cover" />
             </div>
           )}
@@ -150,8 +150,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 </div>
               ) : (
                 <div className={`
-                relative text-[15px] leading-7 text-gray-200 text-left w-fit max-w-full break-words [overflow-wrap:anywhere]
-                ${isUser ? 'bg-white/5 px-4 py-2 rounded-2xl rounded-tr-none' : ''}
+                relative text-[14px] md:text-[15px] leading-relaxed md:leading-7 text-gray-200 text-left w-fit max-w-full break-words [overflow-wrap:anywhere]
+                ${isUser ? 'bg-white/5 px-3 md:px-4 py-2 rounded-2xl rounded-tr-none' : ''}
               `}>
                   <div className="markdown-content w-full">
                     {/* Use Streaming Bubble for AI messages, standard markdown for User */}
@@ -190,7 +190,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
 
             {!isEditing && !message.isStreaming && (
               <div className={`
-                flex items-center gap-1 mt-1 opacity-40 group-hover:opacity-100 transition-opacity duration-200
+                flex items-center gap-1 mt-1 opacity-100 md:opacity-40 md:group-hover:opacity-100 transition-opacity duration-200
                 ${isUser ? 'justify-end pr-0' : 'justify-start pl-0'}
               `}>
                 <button

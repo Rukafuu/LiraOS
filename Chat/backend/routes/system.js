@@ -1,6 +1,7 @@
 import express from 'express';
 // import { requireAuth } from '../middlewares/authMiddleware.js'; 
 import { pcController } from '../services/pcControllerService.js';
+import os from 'os';
 
 const router = express.Router();
 
@@ -62,8 +63,77 @@ router.post('/control', async (req, res) => {
     }
 });
 
+router.post('/alert', async (req, res) => {
+    try {
+        const { type, message, stats } = req.body;
+        console.log(`[SYSTEM ALERT] ${type}: ${message}`, stats || '');
+
+        // Broadcast to Companion (Frontend)
+        if (global.broadcastToCompanions) {
+            global.broadcastToCompanions({
+                type: 'proactive',
+                content: `⚠️ Alert: ${message}`,
+                emotion: 'concerned'
+            });
+        }
+
+        res.json({ success: true, message: 'Alert received' });
+    } catch (error) {
+        console.error('[SYSTEM ALERT ERROR]', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Helper function for uptime formatting
+const formatUptime = (seconds) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    return `${hours}h ${minutes}m`;
+};
+
 router.get('/stats', async (req, res) => {
-    res.json({ status: 'online', uptime: process.uptime() });
+  try {
+    const load = os.loadavg();
+    const cpuCount = os.cpus()?.length || 1;
+    const cpuUsage = Math.min(100, (load[0] / cpuCount) * 100).toFixed(1);
+    
+    let totalMem = os.totalmem();
+    let freeMem = os.freemem();
+
+    // Container limit detection (Linux only)
+    if (os.platform() === 'linux') {
+      try {
+        const fs = await import('fs');
+        // Read Memory Limit
+        if (fs.existsSync('/sys/fs/cgroup/memory/memory.limit_in_bytes')) {
+          const limit = parseInt(fs.readFileSync('/sys/fs/cgroup/memory/memory.limit_in_bytes', 'utf8'));
+          if (limit > 0 && limit < totalMem) {
+            totalMem = limit;
+          }
+        }
+        // Read Memory Usage
+        if (fs.existsSync('/sys/fs/cgroup/memory/memory.usage_in_bytes')) {
+          const usage = parseInt(fs.readFileSync('/sys/fs/cgroup/memory/memory.usage_in_bytes', 'utf8'));
+          freeMem = totalMem - usage;
+        }
+      } catch (err) {
+        console.warn('[System] Failed to read cgroup memory:', err.message);
+      }
+    }
+
+    const usedMem = totalMem - freeMem;
+    const ramFormatted = `${(usedMem / 1024 / 1024 / 1024).toFixed(2)}/${(totalMem / 1024 / 1024 / 1024).toFixed(2)} GB`;
+
+    res.json({
+      cpu: `${cpuUsage}%`,
+      ram: ramFormatted,
+      uptime: formatUptime(os.uptime()),
+      platform: os.platform().toUpperCase()
+    });
+  } catch (e) {
+    console.error('[System Stats Error]', e);
+    res.status(500).json({ error: 'Internal stats error' });
+  }
 });
 
 export default router;

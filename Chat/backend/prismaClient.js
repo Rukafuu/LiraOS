@@ -3,7 +3,33 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const basePrisma = new PrismaClient();
+const basePrisma = new PrismaClient({
+  log: process.env.NODE_ENV === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
+});
+
+/**
+ * Automagically retries connection on startup
+ */
+async function connectWithRetry(retries = 10, delay = 5000) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            await basePrisma.$connect();
+            console.log('[PRISMA] ✅ Conectado ao banco de dados com sucesso.');
+            return;
+        } catch (err) {
+            console.error(`[PRISMA] ⏳ Tentativa ${i + 1}/${retries} falhou: ${err.message}`);
+            if (i < retries - 1) {
+                console.log(`[PRISMA] Aguardando ${delay/1000}s para tentar novamente...`);
+                await new Promise(res => setTimeout(res, delay));
+            } else {
+                console.error('[PRISMA] ❌ Todas as tentativas de conexão falharam.');
+                // Don't exit, let queries throw error so server stays up
+            }
+        }
+    }
+}
+
+connectWithRetry();
 
 // Helper to handle JSON Strings in SQLite
 const jsonFields = {

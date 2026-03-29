@@ -9,13 +9,24 @@ function getTodayDate() {
 }
 
 function generateDailyQuests() {
+  const pool = [
+    { id: 'daily_login', title: 'Login Diário', desc: 'Entre no sistema hoje', target: 1, progress: 1, reward: 50, claimed: false, type: 'login' },
+    { id: 'msg_10', title: 'Conversador', desc: 'Envie 10 mensagens', target: 10, progress: 0, reward: 100, claimed: false, type: 'message_count' },
+    { id: 'xp_200', title: 'Evolução', desc: 'Ganhe 200 XP', target: 200, progress: 0, reward: 150, claimed: false, type: 'xp_gain' },
+    { id: 'image_gen', title: 'Visão Artística', desc: 'Gere uma imagem com a Lira', target: 1, progress: 0, reward: 120, claimed: false, type: 'image' },
+    { id: 'pro_mode', title: 'Explorador Deep', desc: 'Use o Modo Profundo (Deep)', target: 1, progress: 0, reward: 150, claimed: false, type: 'pro' },
+    { id: 'settings_mod', title: 'Estilista', desc: 'Mude as configurações ou tema', target: 1, progress: 0, reward: 80, claimed: false, type: 'settings' },
+    { id: 'chat_specialist', title: 'Interação Ativa', desc: 'Fale com a Lira 5 vezes', target: 5, progress: 0, reward: 90, claimed: false, type: 'chat' }
+  ];
+
+  // Pick 3 random quests, ensuring login is often there (or first 3)
+  const shuffled = [...pool].sort(() => 0.5 - Math.random());
+  const selected = shuffled.slice(0, 3);
+
+  // Sort them so consistent IDs come first if possible, or just return
   return {
     date: getTodayDate(),
-    quests: [
-      { id: 'daily_login', title: 'Login Diário', desc: 'Entre no sistema hoje', target: 1, progress: 1, reward: 50, claimed: false, type: 'login' },
-      { id: 'msg_10', title: 'Conversador', desc: 'Envie 10 mensagens', target: 10, progress: 0, reward: 100, claimed: false, type: 'message_count' },
-      { id: 'xp_200', title: 'Evolução', desc: 'Ganhe 200 XP', target: 200, progress: 0, reward: 150, claimed: false, type: 'xp_gain' }
-    ]
+    quests: selected
   };
 }
 
@@ -59,7 +70,8 @@ export const getState = async (userId) => {
     };
     
     if (isAdm) {
-        const adminStats = safeParse(row?.statsStr, {});
+        const adminStatsRaw = safeParse(row?.statsStr, {});
+        const adminStats = await checkDailyRotation(userId, adminStatsRaw);
         const adminThemes = safeParse(row?.unlockedThemesStr, []);
         const adminPersonas = safeParse(row?.unlockedPersonasStr, []);
         const adminAchievements = safeParse(row?.achievementsStr, []);
@@ -84,14 +96,17 @@ export const getState = async (userId) => {
     const parsedStats = safeParse(row.statsStr, {});
     const stats = await checkDailyRotation(userId, parsedStats);
 
+    const themes = safeParse(row.unlockedThemesStr, []);
+    const personas = safeParse(row.unlockedPersonasStr, []);
+
     return {
       userId: row.userId,
       xp: row.xp || 0,
       coins: row.coins || 0,
       level: row.level || 1,
       stats: stats, 
-      unlockedThemes: safeParse(row.unlockedThemesStr, []),
-      unlockedPersonas: safeParse(row.unlockedPersonasStr, []),
+      unlockedThemes: themes.includes('lira-dark') ? themes : [...themes, 'lira-dark'],
+      unlockedPersonas: personas.includes('default') ? personas : [...personas, 'default'],
       achievements: safeParse(row.achievementsStr, []),
       activePersonaId: row.activePersonaId || 'default',
       updatedAt: toInt(row.updatedAt)
@@ -107,6 +122,20 @@ export const saveState = async (userId, data) => {
     const existing = await getState(userId);
     const now = Date.now();
     
+    // Verify user exists in DB before upsert (prevents FK violation for Guest/local IDs)
+    if (!existing) {
+      const userExists = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+      if (!userExists) {
+        console.warn(`[Gamification] User ${userId} not found in DB — returning default state (no save)`);
+        return {
+          userId, xp: data.xp || 0, coins: data.coins || 0, level: data.level || 1,
+          stats: data.stats || {}, unlockedThemes: data.unlockedThemes || [],
+          unlockedPersonas: data.unlockedPersonas || [], achievements: data.achievements || [],
+          activePersonaId: data.activePersonaId || 'default', updatedAt: now
+        };
+      }
+    }
+
     // Construct data
     const upsertData = {
       xp: data.xp !== undefined ? data.xp : (existing?.xp || 0),
@@ -168,8 +197,8 @@ export const getOrCreateDefault = async (userId) => {
     coins: 0,
     level: 1,
     stats: { dailyQuests: generateDailyQuests() },
-    unlockedThemes: [],
-    unlockedPersonas: [],
+    unlockedThemes: ['lira-dark'],
+    unlockedPersonas: ['default'],
     activePersonaId: 'default'
   };
   await saveState(userId, def);
@@ -230,9 +259,18 @@ export const award = async (userId, rewards, plan = 'free') => {
       if (q.progress >= q.target) return;
       
       let increment = 0;
-      if (q.type === 'message_count' && rewards.xp > 0) increment = 1; 
+      // Existing type message_count OR new type messages
+      if ((q.type === 'message_count' || q.type === 'messages') && (rewards.xp > 0 || rewards.messages || rewards.messageInc)) increment = 1; 
+      
+      // XP Gain tracking
       if (q.type === 'xp_gain' && xpGain > 0) increment = xpGain;
-      // Login is auto-1 on generation
+      
+      // Feature specific tracking
+      if (q.type === 'image' && rewards.image) increment = 1;
+      if (q.type === 'pro' && (rewards.pro || rewards.isDeepMode)) increment = 1;
+      if (q.type === 'chat' && rewards.chat) increment = 1;
+      if (q.type === 'settings' && rewards.settings) increment = 1;
+      if (q.type === 'login' && rewards.login) increment = 1;
 
       if (increment > 0) {
           q.progress = Math.min(q.target, q.progress + increment);
@@ -254,27 +292,26 @@ export const award = async (userId, rewards, plan = 'free') => {
 
 export const getLeaderboard = async () => {
   try {
-    // Manual join to avoid schema dependency for now
     const topGamers = await prisma.gamification.findMany({
       where: { level: { lt: 50 } },
       orderBy: { xp: 'desc' },
-      take: 10
+      take: 10,
+      include: {
+        user: {
+          select: { username: true, avatar: true }
+        }
+      }
     });
     
-    // Fetch users
     const results = [];
     for (const g of topGamers) {
-      const user = await prisma.user.findUnique({
-        where: { id: g.userId },
-        select: { username: true, avatar: true }
-      });
-      if (user) {
+      if (g.user) {
         results.push({
           userId: g.userId,
           xp: g.xp,
           level: g.level,
-          username: user.username,
-          avatar: user.avatar
+          username: g.user.username,
+          avatar: g.user.avatar
         });
       }
     }

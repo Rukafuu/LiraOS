@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { Brain, Zap, LogOut, Headset, Volume2, VolumeX, AppWindow, Eye, Cast } from 'lucide-react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { Brain, Lightning, SignOut, Headset, SpeakerHigh, SpeakerSlash, Browser, Eye, Airplay, ChartBar, Desktop, Pulse } from '@phosphor-icons/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { AvatarPulse } from './ui/AvatarPulse';
 import { useTranslation } from 'react-i18next';
+import { CompactSystemStats } from './CompactSystemStats';
 
 interface ChatHeaderProps {
   title: string;
@@ -23,13 +24,6 @@ interface ChatHeaderProps {
   onStartVoiceCall?: () => void;
   voiceEnabled?: boolean;
   onToggleVoice?: () => void;
-  isExhausted?: boolean;
-  fatigue?: number;
-  onToggleCompanion?: () => void;
-  onToggleCopilot?: () => void;
-  isCopilotActive?: boolean;
-  onToggleOverlay?: () => void;
-  isOverlayActive?: boolean;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({ 
@@ -43,178 +37,131 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onLogout,
   onStartVoiceCall,
   voiceEnabled,
-  onToggleVoice,
-  isExhausted,
-  fatigue,
-  onToggleCompanion,
-  onToggleCopilot,
-  isCopilotActive,
-  onToggleOverlay,
-  isOverlayActive
+  onToggleVoice
 }) => {
-  const [showModelSelector, setShowModelSelector] = useState(false);
   const { t } = useTranslation();
+  const [showStats, setShowStats] = useState(() => localStorage.getItem('lira_show_telemetry') === 'true');
+
+  const toggleStats = () => {
+    const newVal = !showStats;
+    setShowStats(newVal);
+    localStorage.setItem('lira_show_telemetry', String(newVal));
+  };
+
 
   return (
-    <header className="sticky top-0 z-30 w-full glass-panel border-x-0 border-t-0 border-b border-lira-blue/5 backdrop-blur-2xl">
-      <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
+    <header className="sticky top-0 z-30 w-full glass-panel border-x-0 border-t-0 border-b border-white/5 backdrop-blur-3xl">
+      <div className="mx-auto px-2 md:px-5 h-14 md:h-18 flex items-center justify-between">
         
-        <div className="flex items-center">
+        <div className="flex items-center min-w-0 flex-1 gap-2 md:gap-4">
             <button 
               onClick={onToggleSidebar}
-              className="relative w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/5 transition-colors focus:outline-none z-50 mr-2 md:mr-6"
-              aria-label="Toggle Sidebar"
+              className="relative w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 hover:bg-white/10 transition-colors focus:outline-none z-50 flex-shrink-0"
+              aria-label={t('common.toggle_sidebar')}
             >
               <div className="w-5 h-3.5 relative flex flex-col justify-between">
                 <motion.span 
                   animate={isSidebarOpen ? { rotate: 45, y: 6 } : { rotate: 0, y: 0 }}
-                  transition={{ duration: 0.3, ease: "easeInOut" }}
-                  className="w-full h-0.5 bg-gray-300 block rounded-full origin-center"
+                  transition={{ duration: 0.3 }}
+                  className="w-full h-0.5 bg-gray-400 block rounded-full origin-center"
                 />
                 <motion.span 
                   animate={isSidebarOpen ? { opacity: 0, x: -10 } : { opacity: 1, x: 0 }}
-                  transition={{ duration: 0.3, ease: "easeInOut" }}
-                  className="w-full h-0.5 bg-gray-300 block rounded-full"
+                  transition={{ duration: 0.3 }}
+                  className="w-full h-0.5 bg-gray-400 block rounded-full"
                 />
                 <motion.span 
                   animate={isSidebarOpen ? { rotate: -45, y: -6 } : { rotate: 0, y: 0 }}
-                  transition={{ duration: 0.3, ease: "easeInOut" }}
-                  className="w-full h-0.5 bg-gray-300 block rounded-full origin-center"
+                  transition={{ duration: 0.3 }}
+                  className="w-full h-0.5 bg-gray-400 block rounded-full origin-center"
                 />
               </div>
             </button>
           
-          <div className="flex items-center gap-4">
-             <AvatarPulse status={status} size="sm" />
+          <div className="flex items-center gap-3 md:gap-5 overflow-hidden">
+             <div className="hidden sm:block">
+                <AvatarPulse status={status} size="sm" />
+             </div>
              
-             <div className="flex flex-col gap-0.5">
-                <motion.h2 
-                  key={title}
-                  initial={{ opacity: 0, y: -5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="font-semibold text-sm md:text-[15px] text-white/90 truncate flex-1 min-w-0 max-w-[150px] md:max-w-md"
-                >
-                  {title}
-                </motion.h2>
-                
+             <div className="flex flex-col gap-0.5 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className={`text-[10px] uppercase tracking-widest font-medium transition-colors duration-500 ${status === 'generating' ? 'text-lira-pink' : 'text-lira-blue/70'}`}>
-                    {status === 'generating' ? t('chat_header.thinking') : t('chat_header.online')}
-                  </span>
-                  
-                  <div className="flex items-center gap-1">
-                    <div className={`w-1.5 h-1.5 rounded-full ${
+                    <motion.h2 
+                        key={title}
+                        initial={{ opacity: 0, x: -5 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="font-bold text-sm md:text-base text-white truncate max-w-[120px] sm:max-w-[200px] lg:max-w-md"
+                    >
+                        {title}
+                    </motion.h2>
+                    
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${
                       backendStatus === 'online' ? 'bg-green-400' : 
                       backendStatus === 'offline' ? 'bg-red-400' : 'bg-yellow-400'
                     }`} />
-                    <span className="text-[8px] text-gray-400">
+                    <span className="text-[10px] text-gray-500 font-medium">
                       {backendStatus === 'online' ? t('chat_header.status_on') : backendStatus === 'offline' ? t('chat_header.status_off') : t('chat_header.status_chk')}
                     </span>
                   </div>
 
-                  {isExhausted && (
-                    <span className="ml-2 text-[8px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30 font-bold tracking-wider animate-pulse">
-                      EXHAUSTED
-                    </span>
-                  )}
-                  
-                  {typeof fatigue === 'number' && (
-                    <div className="ml-2 flex flex-col gap-0.5 w-12" title={`Energy: ${Math.round(100 - fatigue)}%`}>
-                        <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
-                           <div 
-                              className={`h-full transition-all duration-500 ${
-                                 (100 - fatigue) > 50 ? 'bg-green-400' : 
-                                 (100 - fatigue) > 25 ? 'bg-yellow-400' : 'bg-red-400'
-                              }`} 
-                              style={{ width: `${Math.max(0, 100 - fatigue)}%` }}
-                           />
-                        </div>
-                    </div>
-                  )}
+                  <span className={`text-[10px] uppercase tracking-tighter font-bold transition-colors ${status === 'generating' ? 'text-lira-pink' : 'text-blue-400/60'}`}>
+                    {status === 'generating' ? t('chat_header.thinking') : t('chat_header.online')}
+                  </span>
                 </div>
              </div>
           </div>
         </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-3 ml-2">
+            
+            {/* Toggleable Telemetry (Moved to right section) */}
+            <AnimatePresence>
+                {showStats && !isMobile && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="mr-2"
+                    >
+                        <CompactSystemStats />
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <button
+                onClick={toggleStats}
+                className={`p-2 sm:p-2.5 rounded-xl transition-all ${showStats ? 'text-blue-400 bg-blue-400/10' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                title={t('chat_header.toggle_telemetry') || "Toggle Telemetry"}
+            >
+                <Desktop size={18} className="sm:w-5 sm:h-5" />
+            </button>
+
             {onToggleVoice && (
               <button
                 onClick={onToggleVoice}
-                className={`p-2.5 rounded-xl transition-all ${voiceEnabled ? 'text-green-400 bg-green-400/10' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                title={voiceEnabled ? "Disable Read Aloud" : "Enable Read Aloud"}
+                className={`p-2 sm:p-2.5 rounded-xl transition-all ${voiceEnabled ? 'text-green-400 bg-green-400/10' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                title={voiceEnabled ? t('chat_header.voice_disable') : t('chat_header.voice_enable')}
               >
-                {voiceEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
+                {voiceEnabled ? <SpeakerHigh size={18} className="sm:w-5 sm:h-5" /> : <SpeakerSlash size={18} className="sm:w-5 sm:h-5" />}
               </button>
             )}
-          {onStartVoiceCall && (
-             <button 
-               onClick={onStartVoiceCall}
-               className="p-2.5 rounded-xl text-white hover:text-lira-pink hover:bg-white/5 transition-all"
-               title={t('chat_header.start_call')}
-             >
-               <Headset size={20} />
-             </button>
-          )}
 
-          {status === 'generating' && onStop && (
-            <button
-              onClick={onStop}
-              className="p-2.5 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
-              title={t('chat_header.stop_generation')}
-            >
-              <motion.div
-                animate={{ scale: [1, 1.1, 1] }}
-                transition={{ duration: 1, repeat: Infinity }}
-              >
-                ⏹️
-              </motion.div>
-            </button>
-          )}
-          {onToggleCompanion && (
-            <button 
-                onClick={onToggleCompanion}
-                className="p-2.5 rounded-xl text-purple-400 hover:text-purple-300 hover:bg-purple-400/10 transition-colors hidden sm:flex items-center gap-2"
-                title="Lira Companion Mode (Float)"
-            >
-                <AppWindow size={18} />
-            </button>
-          )}
-
-          {onToggleOverlay && (
-             <button
-               onClick={onToggleOverlay}
-               className={`p-2.5 rounded-xl transition-all hidden sm:flex items-center gap-2 ${isOverlayActive ? 'text-lira-pink bg-lira-pink/10 animate-pulse' : 'text-cyan-400 hover:text-cyan-300 hover:bg-cyan-400/10'}`}
-               title={isOverlayActive ? "Disable VTuber Overlay" : "Enable VTuber Overlay (Desktop)"}
-             >
-               <Cast size={18} />
-             </button>
-          )}
-
-          {onToggleCopilot && (
-             <button
-               onClick={onToggleCopilot}
-               className={`p-2.5 rounded-xl transition-all ${isCopilotActive ? 'text-lira-pink bg-lira-pink/10 animate-pulse' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-               title={isCopilotActive ? "Disable Copilot (Watcher)" : "Enable Copilot (Watcher)"}
-             >
-               <Eye size={18} />
-             </button>
-          )}
           {onLogout && (
-            <button onClick={onLogout} className="p-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-colors" title={t('chat_header.logout')}>
-              <LogOut size={18} />
+            <button 
+                onClick={onLogout} 
+                className="p-2 sm:p-2.5 rounded-xl text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all" 
+                title={t('chat_header.logout')}
+            >
+              <SignOut size={18} className="sm:w-5 sm:h-5" />
             </button>
           )}
         </div>
       </div>
       
-      <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-lira-blue/20 to-transparent opacity-50" />
-      
-      {showModelSelector && (
-        <div 
-          className="fixed inset-0 z-40" 
-          onClick={() => setShowModelSelector(false)}
-        />
-      )}
+      <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/5 to-transparent" />
     </header>
   );
 };

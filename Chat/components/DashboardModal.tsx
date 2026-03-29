@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { X, Trophy, Zap, Heart, Calendar, Target, Shield, Crown, Sparkles, Check, History, GripVertical, Layout, HelpCircle, Moon, Sun, Palette, Mic, Image as ImageIcon, Code, Save, Settings, Flame, MessageCircle, Languages, Edit, RefreshCw, Coins, Users, Brush, Send, Brain, Eye, Terminal, DollarSign, Grid, Star, RotateCcw, Cpu, Briefcase, Link, Ghost, Layers, Award, Shuffle, Infinity as InfinityIcon, Database, CheckCircle, Bug, FlaskConical, Search, Repeat, Share2 } from 'lucide-react';
+import { X, Trophy, Zap, Heart, Calendar, Target, Shield, Crown, Sparkles, Check, History, GripVertical, Layout, HelpCircle, Moon, Sun, Palette, Mic, Image as ImageIcon, Code, Save, Settings, Flame, MessageCircle, Languages, Edit, RefreshCw, Coins, Users, Brush, Send, Brain, Eye, Terminal, DollarSign, Grid, Star, RotateCcw, Cpu, Briefcase, Link, Ghost, Layers, Award, Shuffle, Infinity as InfinityIcon, Database, CircleCheck, Bug, FlaskConical, Search, Repeat, Share2 } from 'lucide-react';
 import { useGamification } from '../contexts/GamificationContext';
 import { useTranslation } from 'react-i18next';
 import { Achievement, AchievementRarity } from '../types';
@@ -68,7 +68,7 @@ const AchievementIcon = ({ name, size = 14 }: { name: string, size?: number }) =
     case 'infinity': return <InfinityIcon size={size} />;
     case 'anchor': return <Target size={size} />; // fallback
     case 'database': return <Database size={size} />;
-    case 'check-circle': return <CheckCircle size={size} />;
+    case 'check-circle': return <CircleCheck size={size} />;
     case 'bug': return <Bug size={size} />;
     case 'flask-conical': return <FlaskConical size={size} />;
     case 'search': return <Search size={size} />;

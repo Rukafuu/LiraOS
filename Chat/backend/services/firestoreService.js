@@ -61,9 +61,10 @@ class FirestoreService {
                         projectId: serviceAccount.project_id
                     });
                 } else {
-                    // 4. Fallback: Assumption of ADC (Application Default Credentials) usually for Cloud Run
-                     console.warn('[FIRESTORE] No key found. Trying Application Default Credentials...');
-                     admin.initializeApp();
+                    // No credentials available — do NOT initialize (prevents massive error flood)
+                    console.warn('[FIRESTORE] ⚠️ No credentials found. Firestore DISABLED. Set FIREBASE_SERVICE_ACCOUNT_JSON to enable.');
+                    this.initialized = false;
+                    return;
                 }
             }
 

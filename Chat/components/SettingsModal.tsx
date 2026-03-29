@@ -1,6 +1,45 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, User, Brain, Palette, RefreshCw, Zap, Check, Trash2, Database, Camera, Activity, Cpu, Sliders, Star, Lock, Key, ShieldCheck, AlertCircle, Shield, Bell, LayoutGrid, Network, Keyboard, LifeBuoy, Heart, MessageSquare, ExternalLink, Settings } from 'lucide-react';
+import { 
+  X, 
+  User, 
+  Brain, 
+  Palette, 
+  ArrowsClockwise, 
+  Sparkle, 
+  Check, 
+  Trash, 
+  Database, 
+  Camera, 
+  Pulse, 
+  Cpu, 
+  Sliders, 
+  Star, 
+  Lock, 
+  Key, 
+  ShieldCheck, 
+  WarningCircle, 
+  Shield, 
+  Bell, 
+  SquaresFour, 
+  Waveform, 
+  Keyboard, 
+  Info, 
+  ChatCenteredText, 
+  ArrowSquareOut,
+  Gear,
+  Graph,
+  List,
+  IdentificationCard,
+  MapPin,
+  Calendar,
+  EnvelopeSimple,
+  Note,
+  Heart,
+  Briefcase,
+  Users,
+  BookOpen
+} from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../contexts/ThemeContext';
 import { useGamification } from '../contexts/GamificationContext';
@@ -20,15 +59,16 @@ interface SettingsModalProps {
   onExportUserData?: () => void;
   onImportUserData?: (data: any) => void;
   onOpenLegal?: (section: 'terms' | 'privacy' | 'cookies') => void;
+  onOpenFeedback?: () => void;
 }
 
 type Tab = 'profile' | 'security' | 'intelligence' | 'shortcuts' | 'memories' | 'appearance' | 'help';
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, memories = [], onDeleteMemory, onClearUserData, onLogout, onExportUserData, onImportUserData, onOpenLegal }) => {
+export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, memories = [], onDeleteMemory, onClearUserData, onLogout, onExportUserData, onImportUserData, onOpenLegal, onOpenFeedback }) => {
   const { t, i18n } = useTranslation();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState<'' | 'profile' | 'contact' | 'location' | 'birthday' | 'note'>('');
+  const [category, setCategory] = useState<'' | 'personal_info' | 'preferences' | 'projects' | 'important_dates' | 'contacts' | 'learning' | 'general'>('');
   const [priority, setPriority] = useState<'' | 'low' | 'medium' | 'high'>('');
   const { currentTheme, setTheme, availableThemes } = useTheme();
   const { stats, setUsername, unlockedThemes } = useGamification();
@@ -65,8 +105,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
       getSettings().then(settings => {
         if (settings.temperature !== undefined) setTemperature(settings.temperature);
         if (settings.systemInstructions !== undefined) setSystemInstructions(settings.systemInstructions);
-        if (settings.model) setModelSpeed(settings.model);
-        if (settings.theme) setTheme(settings.theme as any);
         if (settings.model) setModelSpeed(settings.model);
         if (settings.theme) setTheme(settings.theme as any);
         if (settings.notifications !== undefined) setNotifications(settings.notifications);
@@ -145,7 +183,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
             // Listen for window close or message to refresh status
              const messageHandler = (event: MessageEvent) => {
                 if (event.data?.type === 'GOOGLE_AUTH_SUCCESS') {
-                    addToast('Google Calendar conectado com sucesso!', 'success');
+                    addToast(t('settings.profile.google_calendar_success'), 'success');
                     window.removeEventListener('message', messageHandler);
                 }
             };
@@ -153,7 +191,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
         }
     } catch (error) {
         console.error(error);
-        addToast('Erro ao iniciar conexão com Google', 'error');
+        addToast(t('settings.profile.google_calendar_error'), 'error');
     }
   };
 
@@ -173,29 +211,50 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
 
   const menuItems = [
     { id: 'profile', label: t('settings.tabs.profile'), icon: User },
-    { id: 'security', label: t('settings.tabs.security'), icon: Shield },
+    { id: 'security', label: t('settings.tabs.security'), icon: ShieldCheck },
     { id: 'intelligence', label: t('settings.intelligence.title'), icon: Brain },
     { id: 'memories', label: t('settings.memories.title'), icon: Database },
     { id: 'appearance', label: t('settings.tabs.appearance'), icon: Palette },
-    { id: 'help', label: t('settings.tabs.help'), icon: LifeBuoy },
+    { id: 'help', label: t('settings.tabs.help'), icon: Info },
   ];
 
-  const handlePasswordSubmit = (e: React.FormEvent) => {
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!passwordForm.current || !passwordForm.new || !passwordForm.confirm) return;
     
     if (passwordForm.new !== passwordForm.confirm) {
        setPasswordStatus('error');
+       addToast(t('settings.security.status_mismatch'), 'error');
        setTimeout(() => setPasswordStatus('idle'), 3000);
        return;
     }
 
-    // Simulate API call
-    setPasswordStatus('success');
-    setTimeout(() => {
-       setPasswordStatus('idle');
-       setPasswordForm({ current: '', new: '', confirm: '' });
-    }, 2000);
+    if (!currentUser) return;
+
+    try {
+        const result = await updateProfile(currentUser.id, { 
+            password: passwordForm.new, 
+            confirmPassword: passwordForm.confirm,
+            oldPassword: passwordForm.current 
+        });
+
+        if (result.success) {
+            setPasswordStatus('success');
+            addToast(t('settings.security.toast_success'), 'success');
+            setTimeout(() => {
+               setPasswordStatus('idle');
+               setPasswordForm({ current: '', new: '', confirm: '' });
+            }, 2000);
+        } else {
+            setPasswordStatus('error');
+            addToast(result.message || t('settings.security.toast_error'), 'error');
+            setTimeout(() => setPasswordStatus('idle'), 3000);
+        }
+    } catch (err) {
+        setPasswordStatus('error');
+        addToast(t('settings.security.toast_network_error'), 'error');
+        setTimeout(() => setPasswordStatus('idle'), 3000);
+    }
   };
 
   return (
@@ -214,10 +273,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-4xl h-[650px] bg-[#0c0c0e] border border-white/10 rounded-2xl shadow-premium overflow-hidden flex flex-col md:flex-row z-50"
+            className="relative w-full max-w-4xl h-[92dvh] md:h-[650px] bg-[#0c0c0e] border border-white/10 rounded-2xl shadow-premium overflow-hidden flex flex-col md:flex-row z-50"
           >
             {/* Sidebar */}
-            <aside className="w-full md:w-60 bg-[#121215] border-r border-white/5 flex flex-col">
+            <aside className="w-full md:w-60 bg-[#121215] border-r border-white/5 flex flex-col flex-shrink-0 max-h-[30vh] md:max-h-full overflow-y-auto">
               <div className="p-6">
                 <h2 className="text-lg font-bold text-white">{t('settings.title')}</h2>
               </div>
@@ -245,9 +304,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
               </nav>
 
               <div className="p-4 border-t border-white/5">
-                <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-lira-pink/5 to-transparent rounded-lg border border-lira-pink/10">
-                  <Zap size={14} className="text-lira-pink" />
-                  <span className="text-xs font-semibold text-lira-pink">{t('settings.pro_plan')}</span>
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${currentUser?.plan === 'singularity' ? 'bg-gradient-to-r from-yellow-500/10 to-transparent border-yellow-500/20' : 'bg-gradient-to-r from-lira-pink/5 to-transparent border-lira-pink/10'}`}>
+                  <Sparkle size={14} weight="fill" className={currentUser?.plan === 'singularity' ? 'text-yellow-500' : 'text-lira-pink'} />
+                  <span className={`text-xs font-semibold uppercase tracking-widest ${currentUser?.plan === 'singularity' ? 'text-yellow-500' : 'text-lira-pink'}`}>
+                    {currentUser?.plan === 'singularity' ? 'Singularity (Elite)' : (currentUser?.plan || 'Free')}
+                  </span>
                 </div>
                 <button
                   onClick={() => onLogout && onLogout()}
@@ -329,8 +390,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                               
                               <div className="p-3 bg-white/5 rounded-xl border border-white/5 flex items-center gap-3">
                                  <div className="p-1.5 bg-purple-500/20 rounded-md text-purple-400">
-                                    <Activity size={16} />
-                                 </div>
+                                <Sparkle size={16} />
+                             </div>
                                  <div>
                                     <div className="text-[10px] text-gray-500 uppercase font-bold">{t('settings.profile.xp')}</div>
                                     <div className="text-lg font-bold text-white">{stats.currentXp}</div>
@@ -340,23 +401,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
 
                            {/* Integrations */}
                            <div className="pt-6 border-t border-white/5 space-y-4">
-                              <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Integrations</h4>
+                              <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('settings.profile.integrations') || 'Integrations'}</h4>
                               
                               <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
                                  <div className="flex items-center gap-3">
-                                    <div className="p-1.5 bg-blue-500/20 rounded-md text-blue-500">
-                                       <Activity size={16} />
-                                    </div>
+                                     <div className="p-1.5 bg-blue-500/20 rounded-md text-blue-500">
+                                        <Pulse size={16} />
+                                     </div>
                                     <div>
-                                       <div className="text-sm font-medium text-white">Google Calendar</div>
-                                       <div className="text-xs text-gray-500">Connect to manage events</div>
+                                       <div className="text-sm font-medium text-white">{t('settings.profile.google_calendar')}</div>
+                                       <div className="text-xs text-gray-500">{t('settings.profile.google_calendar_desc')}</div>
                                     </div>
                                  </div>
                                  <button
                                     onClick={handleGoogleConnect}
                                     className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs font-medium rounded-lg transition-colors border border-white/10"
                                  >
-                                    Connect
+                                    {t('settings.profile.connect')}
                                  </button>
                               </div>
                            </div>
@@ -431,7 +492,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                                         value={passwordForm.new}
                                         onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})}
                                         className="w-full bg-[#18181b] border border-white/10 rounded-lg py-2.5 px-3 text-sm text-white focus:border-white/30 outline-none transition-all placeholder-gray-700"
-                                        placeholder="New password"
+                                        placeholder={t('settings.security.new_pwd_placeholder')}
                                     />
                                 </div>
                                 <div className="space-y-1.5">
@@ -440,15 +501,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                                         type="password"
                                         value={passwordForm.confirm}
                                         onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})}
-                                        className={`w-full bg-[#18181b] border rounded-lg py-2.5 px-3 text-sm text-white outline-none transition-all placeholder-gray-700 ${passwordStatus === 'error' ? 'border-red-500/50' : 'border-white/10 focus:border-white/30'}`}
-                                        placeholder="Confirm"
+                                        className={`w-full bg-[#18181b] border rounded-lg py-2.5 px-3 text-sm text-white outline-none transition-all placeholder-gray-700 ${passwordStatus === 'error' || (passwordForm.confirm && passwordForm.new !== passwordForm.confirm) ? 'border-red-500/50' : 'border-white/10 focus:border-white/30'}`}
+                                        placeholder={t('settings.security.confirm_pwd_placeholder')}
                                     />
                                 </div>
                             </div>
 
                             <div className="pt-4 flex items-center justify-between">
                                 <div className="text-xs">
-                                    {passwordStatus === 'error' && <span className="text-red-400 flex items-center gap-1"><AlertCircle size={14} /> {t('settings.security.status_mismatch')}</span>}
+                                    {passwordStatus === 'error' && <span className="text-red-400 flex items-center gap-1"><WarningCircle size={14} /> {t('settings.security.status_mismatch')}</span>}
                                     {passwordStatus === 'success' && <span className="text-green-400 flex items-center gap-1"><ShieldCheck size={14} /> {t('settings.security.status_saved')}</span>}
                                 </div>
                                 <button 
@@ -461,7 +522,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                          </form>
 
                          <div className="mt-8 p-4 bg-yellow-500/5 border border-yellow-500/10 rounded-xl flex items-start gap-3">
-                            <AlertCircle size={18} className="text-yellow-600 shrink-0 mt-0.5" />
+                            <WarningCircle size={18} className="text-yellow-600 shrink-0 mt-0.5" />
                             <div>
                                 <h4 className="text-sm font-semibold text-yellow-500 mb-1">{t('settings.security.two_fa_title')}</h4>
                                 <p className="text-xs text-yellow-600/70">{t('settings.security.two_fa_desc')}</p>
@@ -490,7 +551,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                                   className={`p-4 rounded-xl border text-left transition-all ${modelSpeed === 'flash' ? 'bg-white/10 border-white/20' : 'bg-[#18181b] border-white/5 hover:border-white/10'}`}
                                 >
                                    <div className="flex justify-between items-start mb-2">
-                                      <span className="font-semibold text-white text-sm">Turbo</span>
+                                      <span className="font-semibold text-white text-sm">Flash (Turbo)</span>
                                       {modelSpeed === 'flash' && <Check size={14} className="text-white" />}
                                    </div>
                                    <p className="text-xs text-gray-500">{t('settings.intelligence.flash_desc')}</p>
@@ -500,7 +561,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                                   className={`p-4 rounded-xl border text-left transition-all ${modelSpeed === 'pro' ? 'bg-white/10 border-white/20' : 'bg-[#18181b] border-white/5 hover:border-white/10'}`}
                                 >
                                    <div className="flex justify-between items-start mb-2">
-                                      <span className="font-semibold text-white text-sm">Flash</span>
+                                      <span className="font-semibold text-white text-sm">Pro (Ultra)</span>
                                       {modelSpeed === 'pro' && <Check size={14} className="text-white" />}
                                    </div>
                                    <p className="text-xs text-gray-500">{t('settings.intelligence.pro_desc')}</p>
@@ -508,36 +569,53 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                              </div>
                           </div>
 
-                          {/* Temperature */}
-                          <div className="space-y-3">
-                             <div className="flex justify-between">
-                                <label className="text-xs font-medium text-gray-400 flex items-center gap-2">
-                                   <Activity size={14} /> {t('settings.intelligence.creativity')}
-                                </label>
-                                <span className="text-xs text-white font-mono">{temperature.toFixed(1)}</span>
-                             </div>
-                             <input 
-                                type="range" 
-                                min="0" 
-                                max="1" 
-                                step="0.1"
-                                value={temperature}
-                                onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                                className="w-full accent-white h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer"
-                             />
-                             <div className="flex justify-between text-[10px] text-gray-600">
-                                <span>{t('settings.intelligence.precise')}</span>
-                                <span>{t('settings.intelligence.balanced')}</span>
-                                <span>{t('settings.intelligence.creative')}</span>
-                             </div>
-                          </div>
+                            {/* Temperature */}
+                            {(() => {
+                                const TIER_ORDER = ['free', 'vega', 'sirius', 'singularity'];
+                                const userTierIndex = TIER_ORDER.indexOf(currentUser?.plan?.toLowerCase() || 'free');
+                                const requiredTierIndex = TIER_ORDER.indexOf('sirius');
+                                const isRestricted = userTierIndex < requiredTierIndex;
+
+                                // Don't return null anymore, show disabled slider with label below
+
+                                return (
+                                  <div className={`space-y-3 ${isRestricted ? 'opacity-50' : ''}`}>
+                                     <div className="flex justify-between items-center">
+                                        <label className="text-xs font-medium text-gray-400 flex items-center gap-2">
+                                           <Pulse size={14} /> {t('settings.intelligence.creativity')}
+                                           {isRestricted && (
+                                              <span className="text-[9px] bg-yellow-500/20 text-yellow-500 px-1.5 py-0.5 rounded border border-yellow-500/10 font-bold">
+                                                 SIRIUS+ REQUIRED
+                                              </span>
+                                           )}
+                                         </label>
+                                        <span className="text-xs text-white font-mono">{temperature.toFixed(1)}</span>
+                                     </div>
+                                     <input 
+                                        type="range" 
+                                        min="0" 
+                                        max="1" 
+                                        step="0.1"
+                                        value={temperature}
+                                        disabled={isRestricted}
+                                        onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                                        className={`w-full h-1.5 rounded-lg appearance-none cursor-pointer ${isRestricted ? 'bg-white/5 accent-gray-500' : 'bg-white/10 accent-white'}`}
+                                     />
+                                     <div className="flex justify-between text-[10px] text-gray-600">
+                                        <span>{t('settings.intelligence.precise')}</span>
+                                        <span>{t('settings.intelligence.balanced')}</span>
+                                        <span>{t('settings.intelligence.creative')}</span>
+                                     </div>
+                                  </div>
+                                );
+                            })()}
 
                           {/* Dynamic Persona Toggle */}
                           <div className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
                              <div className="flex items-center gap-3">
                                 <div className="p-1.5 bg-lira-blue/20 rounded-md text-lira-blue">
-                                   <RefreshCw size={16} />
-                                </div>
+                                <ChatCenteredText size={16} />
+                             </div>
                                 <div>
                                    <div className="text-sm font-medium text-white">{t('settings.intelligence.dynamic_persona_title') || 'Dynamic Persona'}</div>
                                    <div className="text-xs text-gray-500">{t('settings.intelligence.dynamic_persona_desc') || 'Automatically switch personality based on conversation mood'}</div>
@@ -590,103 +668,126 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                        <h3 className="text-xl font-semibold text-white mb-2">{t('settings.memories.title')}</h3>
                        <p className="text-gray-500 text-sm mb-6">{t('settings.memories.desc')}</p>
                        
-                       <div className="flex flex-wrap items-center gap-3 mb-4">
-                          <input
-                            type="text"
-                            placeholder={t('settings.memories.search_placeholder')}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="flex-1 min-w-[180px] bg-[#18181b] border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-white/30 outline-none transition-all"
-                          />
-                          <select
-                            onChange={(e) => setCategory(e.target.value as any)}
-                            className="bg-[#18181b] border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-white/30 outline-none transition-all"
-                          >
-                            <option value="">{t('settings.memories.all_categories')}</option>
-                            <option value="profile">{t('settings.memories.cat_profile')}</option>
-                            <option value="contact">{t('settings.memories.cat_contact')}</option>
-                            <option value="location">{t('settings.memories.cat_location')}</option>
-                            <option value="birthday">{t('settings.memories.cat_birthday')}</option>
-                            <option value="note">{t('settings.memories.cat_note')}</option>
-                          </select>
-                          <select
-                            onChange={(e) => setPriority(e.target.value as any)}
-                            className="bg-[#18181b] border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-white/30 outline-none transition-all"
-                          >
-                            <option value="">{t('settings.memories.all_priorities')}</option>
-                            <option value="high">{t('settings.memories.pri_high')}</option>
-                            <option value="medium">{t('settings.memories.pri_medium')}</option>
-                             <option value="low">{t('settings.memories.pri_low')}</option>
-                          </select>
-                            
-                          <div className="flex bg-[#18181b] p-1 rounded-lg border border-white/10 ml-auto">
-                             <button 
-                                onClick={() => setMemoryViewMode('list')}
-                                className={`p-1.5 rounded-md transition-all ${memoryViewMode === 'list' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}
-                                title="List View"
-                             >
-                                <LayoutGrid size={16} />
-                             </button>
-                             <button 
-                                onClick={() => setMemoryViewMode('graph')}
-                                className={`p-1.5 rounded-md transition-all ${memoryViewMode === 'graph' ? 'bg-white/10 text-white' : 'text-gray-500 hover:text-white'}`}
-                                title="Graph View"
-                             >
-                                <Network size={16} />
-                             </button>
-                          </div>
-                       </div>
-                       
-                       {memoryViewMode === 'graph' ? (
-                          <MemoryGraph memories={memories} />
-                       ) : (
-                       (() => {
-                          const [searchState, categoryState, priorityState] = [search, category, priority];
-                          const filtered = memories.filter(m => {
-                            const textMatch = (m.content || '').toLowerCase().includes((searchState || '').toLowerCase());
-                            const catMatch = categoryState ? m.category === categoryState : true;
-                            const priMatch = priorityState ? m.priority === priorityState : true;
-                            return textMatch && catMatch && priMatch;
-                          });
-                         
-                         return filtered.length === 0 ? (
-                           <div className="p-8 border border-dashed border-white/10 rounded-xl text-center text-gray-500 text-sm">
-                              {t('settings.memories.no_memories')}
+                       <div className="flex flex-col gap-4">
+                        <div className="flex flex-wrap items-center gap-3">
+                           <div className="relative flex-1 min-w-[200px]">
+                              <input
+                                type="text"
+                                placeholder={t('settings.memories.search_placeholder')}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="w-full bg-[#18181b] border border-white/10 rounded-xl px-10 py-2.5 text-white text-sm focus:border-white/30 outline-none transition-all placeholder-gray-600"
+                              />
+                              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600">
+                                 <List size={18} />
+                              </div>
                            </div>
-                         ) : (
-                            <div className="space-y-2">
-                               {filtered.map(mem => (
-                                  <div key={mem.id} className="p-3 bg-[#18181b] border border-white/5 rounded-lg flex items-start justify-between group hover:border-white/20 transition-colors">
-                                     <div>
-                                        <p className="text-sm text-gray-300">{mem.content}</p>
-                                        <div className="mt-1 flex items-center gap-2">
-                                          {mem.category && (
-                                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 border border-white/10 text-gray-400">
-                                              {mem.category}
-                                            </span>
-                                          )}
-                                          {mem.priority && (
-                                            <span className={`text-[10px] px-2 py-0.5 rounded-full border ${mem.priority === 'high' ? 'bg-red-500/10 border-red-500/20 text-red-300' : mem.priority === 'medium' ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-300' : 'bg-green-500/10 border-green-500/20 text-green-300'}`}>
-                                              {mem.priority}
-                                            </span>
-                                          )}
-                                        </div>
-                                        <span className="text-[10px] text-gray-600 mt-1 block">
-                                           {new Date(mem.createdAt).toLocaleDateString()}
-                                        </span>
-                                     </div>
-                                     <button 
-                                       onClick={() => onDeleteMemory && onDeleteMemory(mem.id)}
-                                       className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors opacity-0 group-hover:opacity-100"
-                                     >
-                                        <Trash2 size={14} />
-                                     </button>
-                                  </div>
-                               ))}
+                           
+                           <select
+                             value={category}
+                             onChange={(e) => setCategory(e.target.value as any)}
+                             className="bg-[#18181b] border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:border-white/30 outline-none transition-all appearance-none cursor-pointer hover:bg-[#202024]"
+                           >
+                             <option value="">{t('settings.memories.all_categories')}</option>
+                             <option value="personal_info">{t('settings.memories.cat_personal')}</option>
+                             <option value="preferences">{t('settings.memories.cat_prefs')}</option>
+                             <option value="projects">{t('settings.memories.cat_projects')}</option>
+                             <option value="important_dates">{t('settings.memories.cat_dates')}</option>
+                             <option value="contacts">{t('settings.memories.cat_contacts')}</option>
+                             <option value="learning">{t('settings.memories.cat_learning')}</option>
+                           </select>
+                             
+                           <div className="flex bg-[#18181b] p-1.5 rounded-xl border border-white/10">
+                              <button 
+                                 onClick={() => setMemoryViewMode('list')}
+                                 className={`p-1.5 rounded-lg transition-all ${memoryViewMode === 'list' ? 'bg-white/10 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                                 title="List View"
+                              >
+                                 <List size={18} />
+                              </button>
+                              <button 
+                                 onClick={() => setMemoryViewMode('graph')}
+                                 className={`p-1.5 rounded-lg transition-all ${memoryViewMode === 'graph' ? 'bg-white/10 text-white shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                                 title="Graph View"
+                              >
+                                 <Graph size={18} />
+                              </button>
+                           </div>
+                        </div>
+                        
+                        {memoryViewMode === 'graph' ? (
+                           <div className="bg-[#121215] border border-white/5 rounded-2xl p-4 min-h-[400px]">
+                              <MemoryGraph memories={memories} />
+                           </div>
+                        ) : (
+                        (() => {
+                           const filtered = memories.filter(m => {
+                             const textMatch = (m.content || '').toLowerCase().includes((search || '').toLowerCase());
+                             const catMatch = category ? m.category === category : true;
+                             return textMatch && catMatch;
+                           });
+                          
+                          return filtered.length === 0 ? (
+                            <div className="py-20 flex flex-col items-center justify-center border border-dashed border-white/10 rounded-2xl bg-white/[0.02] text-center">
+                               <div className="p-4 bg-white/5 rounded-full text-gray-600 mb-4">
+                                  <Brain size={40} weight="light" />
+                               </div>
+                               <h4 className="text-gray-400 font-medium mb-1">{t('settings.memories.no_memories')}</h4>
+                               <p className="text-xs text-gray-600 max-w-[200px]">{t('settings.memories.no_memories_desc') || "A Lira aprenderá sobre você conforme conversam."}</p>
                             </div>
-                         );
-                       })()
-                       )}
-                      </div>
+                          ) : (
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {filtered.map((mem) => {
+                                   const getIcon = (cat?: string) => {
+                                      switch(cat) {
+                                         case 'personal_info': return <IdentificationCard size={18} className="text-blue-400" />;
+                                         case 'preferences': return <Heart size={18} className="text-pink-400" />;
+                                         case 'projects': return <Briefcase size={18} className="text-orange-400" />;
+                                         case 'important_dates': return <Calendar size={18} className="text-red-400" />;
+                                         case 'contacts': return <Users size={18} className="text-purple-400" />;
+                                         case 'learning': return <BookOpen size={18} className="text-green-400" />;
+                                         default: return <Note size={18} className="text-gray-400" />;
+                                      }
+                                   };
+                                   
+                                   return (
+                                      <motion.div 
+                                        layout
+                                        key={mem.id} 
+                                        className="p-4 bg-[#18181b] border border-white/5 rounded-2xl flex flex-col justify-between group hover:border-white/10 hover:bg-[#1c1c20] transition-all"
+                                      >
+                                         <div className="flex items-start justify-between mb-3">
+                                            <div className="p-2 bg-white/5 rounded-xl">
+                                               {getIcon(mem.category)}
+                                            </div>
+                                            <button 
+                                              onClick={() => onDeleteMemory && onDeleteMemory(mem.id)}
+                                              className="p-2 text-gray-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                              title="Esquecer"
+                                            >
+                                               <Trash size={16} />
+                                            </button>
+                                         </div>
+                                         <div>
+                                            <p className="text-sm font-medium text-gray-100 leading-relaxed mb-3">{mem.content}</p>
+                                            <div className="flex items-center justify-between">
+                                               <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">
+                                                  {new Date(mem.createdAt).toLocaleDateString()}
+                                               </span>
+                                               {mem.category && (
+                                                 <span className="text-[10px] text-gray-500 bg-white/5 px-2 py-0.5 rounded-full border border-white/5 font-medium">
+                                                    {t(`settings.memories.cat_${mem.category.replace('personal_info', 'personal').replace('preferences', 'prefs').replace('important_dates', 'dates').replace('contacts', 'contacts').replace('learning', 'learning')}`)}
+                                                 </span>
+                                               )}
+                                            </div>
+                                         </div>
+                                      </motion.div>
+                                   );
+                                })}
+                             </div>
+                          );
+                        })()
+                        )}
+                       </div>
                       
                       <div className="mt-6 p-4 border border-red-500/20 rounded-xl bg-red-500/5">
                         <div className="flex items-center justify-between">
@@ -729,7 +830,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                             />
                           </label>
                         </div>
-                      </div>
+                       </div>
+                    </div>
                  </motion.div>
               )}
 
@@ -802,7 +904,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                            <div className="p-4 bg-white/5 rounded-xl border border-white/5 hover:border-white/10 transition-all">
                               <div className="flex items-center gap-3 mb-3">
                                 <div className="p-2 bg-lira-pink/20 rounded-lg text-lira-pink">
-                                   <Zap size={18} />
+                                   <Sparkle size={16} />
                                 </div>
                                 <h4 className="font-semibold text-white text-sm">{t('settings.help.subscription')}</h4>
                               </div>
@@ -835,22 +937,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                            <div className="col-span-1 md:col-span-2 p-4 bg-white/5 rounded-xl border border-white/5 hover:border-white/10 transition-all flex items-center justify-between">
                               <div className="flex items-center gap-3">
                                 <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400">
-                                   <MessageSquare size={18} />
+                                   <ChatCenteredText size={18} />
                                 </div>
                                 <div>
                                     <h4 className="font-semibold text-white text-sm">{t('settings.help.feedback')}</h4>
                                     <p className="text-xs text-gray-400">{t('settings.help.feedback_desc')}</p>
                                 </div>
                               </div>
-                              <a 
-                                href="https://forms.google.com/example-feedback" 
-                                target="_blank"
-                                rel="noopener noreferrer" 
-                                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold rounded-lg transition-colors flex items-center gap-2"
+                              <button 
+                                onClick={onOpenFeedback}
+                                className="px-4 py-2 bg-white text-black text-xs font-semibold rounded-lg hover:bg-gray-200 transition-colors flex items-center gap-2"
                               >
                                 {t('settings.help.send_feedback')}
-                                <ExternalLink size={12} />
-                              </a>
+                                <ChatCenteredText size={12} />
+                              </button>
                            </div>
 
                            {/* Social Media */}
@@ -862,7 +962,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                                    className="p-3 bg-[#9146FF]/10 border border-[#9146FF]/20 hover:bg-[#9146FF]/20 hover:border-[#9146FF]/40 rounded-xl flex items-center gap-3 transition-all group"
                                  >
                                     <div className="p-2 bg-[#9146FF] rounded-lg text-white">
-                                       <Zap size={18} fill="currentColor" />
+                                       <Sparkle size={18} weight="fill" />
                                     </div>
                                     <div>
                                        <div className="text-xs font-bold text-[#9146FF]">Twitch</div>
@@ -889,15 +989,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, m
                             <div className="flex flex-col gap-2">
                                 <button onClick={() => onOpenLegal && onOpenLegal('terms')} className="text-sm text-gray-300 hover:text-white transition-colors flex items-center justify-between p-3 bg-[#18181b] rounded-lg border border-white/5 hover:border-white/10">
                                     <span>{t('settings.help.terms')}</span>
-                                    <ExternalLink size={14} className="text-gray-500" />
+                                    <ArrowSquareOut size={16} className="text-gray-400" />
                                 </button>
                                 <button onClick={() => onOpenLegal && onOpenLegal('privacy')} className="text-sm text-gray-300 hover:text-white transition-colors flex items-center justify-between p-3 bg-[#18181b] rounded-lg border border-white/5 hover:border-white/10">
                                     <span>{t('settings.help.privacy')}</span>
-                                    <ExternalLink size={14} className="text-gray-500" />
+                                    <ArrowSquareOut size={16} className="text-gray-400" />
                                 </button>
                                 <button onClick={() => onOpenLegal && onOpenLegal('cookies')} className="text-sm text-gray-300 hover:text-white transition-colors flex items-center justify-between p-3 bg-[#18181b] rounded-lg border border-white/5 hover:border-white/10">
                                     <span>{t('settings.help.cookie_prefs')}</span>
-                                    <Settings size={14} className="text-gray-500" />
+                                    <Gear size={16} className="text-gray-400" />
                                 </button>
                             </div>
                         </div>

@@ -60,8 +60,9 @@ const TodoWidget: React.FC<{ title: string; items: string[] }> = ({ title, items
       });
 
       if (res.ok) {
+        const createdList = await res.json();
         setSaved(true);
-        setSavedListId(newList.id);
+        setSavedListId(createdList.id);
       }
     } catch (e) {
       console.error('Failed to save to panel:', e);
@@ -226,6 +227,7 @@ const GeneratingImageWidget: React.FC<{ prompt: string }> = ({ prompt }) => {
 const SmartProgressiveWidget: React.FC<{ jobId: string; prompt: string }> = ({ jobId, prompt }) => {
   const [status, setStatus] = React.useState<'idle' | 'generating' | 'ready' | 'error'>('generating');
   const [finalSrc, setFinalSrc] = React.useState<string | undefined>(undefined);
+  const notFoundCount = React.useRef(0);
 
   React.useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -233,7 +235,7 @@ const SmartProgressiveWidget: React.FC<{ jobId: string; prompt: string }> = ({ j
 
     const poll = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/api/images/${jobId}`, {
+        const res = await fetch(`${API_BASE_URL}/api/images/${jobId}?_t=${Date.now()}`, {
            headers: getAuthHeaders(),
            cache: 'no-cache' // Prevent caching
         });
@@ -252,7 +254,15 @@ const SmartProgressiveWidget: React.FC<{ jobId: string; prompt: string }> = ({ j
            }
         } else {
             if (res.status === 404) {
-                 // Job might be expired or invalid
+                 notFoundCount.current += 1;
+                 console.log(`[POLL] Job ${jobId} not found (404), attempt ${notFoundCount.current}/5`);
+                 if (notFoundCount.current >= 5) {
+                     // Job clearly doesn't exist after 5 seconds
+                     setStatus('error');
+                     clearInterval(interval);
+                 }
+            } else {
+                 // Outros erros (500, etc) aborta direto
                  setStatus('error');
                  clearInterval(interval);
             }
@@ -272,6 +282,65 @@ const SmartProgressiveWidget: React.FC<{ jobId: string; prompt: string }> = ({ j
   }, [jobId]);
 
   return <ProgressiveImage status={status} prompt={prompt} finalSrc={finalSrc} />;
+};
+
+const SmartVideoWidget: React.FC<{ jobId: string; prompt: string }> = ({ jobId, prompt }) => {
+  const [status, setStatus] = React.useState<'generating' | 'ready' | 'error'>('generating');
+  const [videoUrl, setVideoUrl] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    let interval: NodeJS.Timeout;
+    const poll = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/images/${jobId}`, { headers: getAuthHeaders() });
+        if (res.ok) {
+           const job = await res.json();
+           if (job.status === 'completed') {
+               setVideoUrl(job.result);
+               setStatus('ready');
+               clearInterval(interval);
+           } else if (job.status === 'failed') {
+               setStatus('error');
+               clearInterval(interval);
+           }
+        }
+      } catch (e) {
+         clearInterval(interval);
+      }
+    };
+    interval = setInterval(poll, 2000);
+    poll();
+    return () => clearInterval(interval);
+  }, [jobId]);
+
+  return (
+    <div className="bg-[#18181b] border border-white/10 rounded-xl overflow-hidden my-4 max-w-md w-full shadow-lg p-4">
+      <div className="flex items-center gap-3 mb-3">
+         <div className="p-2 rounded-lg bg-indigo-500/20 text-indigo-400">
+           <Activity size={18} />
+         </div>
+         <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Geração de Vídeo</span>
+      </div>
+      
+      {status === 'generating' ? (
+        <div className="space-y-3">
+          <div className="text-sm text-gray-300 animate-pulse">Processando quadros para: "{prompt}"...</div>
+          <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+             <motion.div 
+               className="h-full bg-indigo-500"
+               initial={{ width: 0 }}
+               animate={{ width: '100%' }}
+               transition={{ duration: 30, ease: "linear" }}
+             />
+          </div>
+        </div>
+      ) : status === 'ready' ? (
+        <video src={videoUrl!} controls className="w-full rounded-lg border border-white/10" />
+      ) : (
+        <div className="text-sm text-red-400">Falha ao gerar vídeo. Verifique sua cota da API.</div>
+      )}
+    </div>
+  );
 };
 
 // --- Main Renderer ---
@@ -299,6 +368,8 @@ export const ChatWidgetRenderer: React.FC<WidgetRendererProps> = ({ type, data }
       return <GeneratingImageWidget prompt={parsedData.prompt || 'Thinking...'} />;
     case 'progressive_image':
       return <SmartProgressiveWidget jobId={parsedData.jobId} prompt={parsedData.prompt} />;
+    case 'progressive_video':
+      return <SmartVideoWidget jobId={parsedData.jobId} prompt={parsedData.prompt} />;
     default:
       return (
         <div className="p-2 border border-red-500/50 bg-red-500/10 text-red-400 rounded text-xs">

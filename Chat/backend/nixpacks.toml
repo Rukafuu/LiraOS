@@ -2,7 +2,8 @@
 nixPkgs = ["python3", "ffmpeg"]
 
 [phases.install]
-cmds = ["npm ci", "pip install -r requirements.txt"]
+cmds = ["npm ci --prefer-offline", "pip install --no-cache-dir -r requirements.txt"]
+cacheDirectories = ["node_modules", ".prisma"]
 
 [start]
 cmd = "npm start"

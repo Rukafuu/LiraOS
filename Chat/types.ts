@@ -2,7 +2,7 @@ export interface Attachment {
   id: string;
   file?: File;
   previewUrl: string;
-  type: 'image' | 'document' | 'text' | 'script' | 'executable';
+  type: 'image' | 'document' | 'text' | 'script' | 'executable' | 'video';
   name?: string;
   size?: number;
 }

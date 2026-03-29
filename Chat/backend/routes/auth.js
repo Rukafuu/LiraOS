@@ -24,6 +24,16 @@ function buildQuery(params) {
   return usp.toString();
 }
 
+// 🛡️ Secure Redirect Helper: Uses URL Hash (#) instead of Query (?)
+// Fragments are not sent to the server, preventing token leakage in logs/referer headers.
+function sendSecureRedirect(res, baseUrl, oauthType, data) {
+  const params = new URLSearchParams({
+    oauth: oauthType,
+    ...data
+  });
+  res.redirect(`${baseUrl}#${params.toString()}`);
+}
+
 // --- Traditional Auth ---
 
 router.post('/register', async (req, res) => {
@@ -40,6 +50,12 @@ router.post('/register', async (req, res) => {
   if (existing) {
     console.log(`[Register] Email already exists (masked)`);
     return res.status(409).json({ error: 'email_exists' });
+  }
+
+  // Security: Handle Password Confirmation (Backend Validation)
+  const { confirmPassword } = req.body || {};
+  if (confirmPassword && password !== confirmPassword) {
+    return res.status(400).json({ error: 'passwords_do_not_match' });
   }
   
   const created = await createUser(email, username, password);
@@ -107,6 +123,8 @@ router.get('/me', async (req, res) => {
     avatar: u.avatar, 
     loginCount: u.loginCount, 
     lastLogin: u.lastLogin,
+    plan: u.plan,
+    lastProToolUsage: u.lastProToolUsage,
     hasGoogleCalendar: !!u.googleRefreshToken 
   });
 });
@@ -118,13 +136,44 @@ router.put('/me', async (req, res) => {
   if (!payload) return res.status(401).json({ error: 'invalid_token' });
   
   const updates = req.body || {};
+
+  // Security: Handle Password Update with confirmation
+  if (updates.password) {
+      const { confirmPassword, oldPassword } = updates;
+      if (password !== confirmPassword) {
+          return res.status(400).json({ error: 'passwords_do_not_match' });
+      }
+      
+      const u = await getUserById(payload.sub);
+      if (oldPassword && !await verifyPassword(u, oldPassword)) {
+          return res.status(401).json({ error: 'invalid_current_password' });
+      }
+      
+      // Hash new password
+      const bcrypt = await import('bcryptjs').then(m => m.default);
+      updates.passwordHash = await bcrypt.hash(updates.password, 10);
+      delete updates.password;
+      delete updates.confirmPassword;
+      delete updates.oldPassword;
+  }
+
   const ok = await updateUser(payload.sub, updates);
   if (!ok) return res.status(500).json({ error: 'update_failed' });
   
   // Return updated user
   const u = await getUserById(payload.sub);
   if (!u) return res.status(404).json({ error: 'user_not_found' });
-  res.json({ id: u.id, email: u.email, username: u.username, avatar: u.avatar, loginCount: u.loginCount, lastLogin: u.lastLogin });
+  res.json({ 
+    id: u.id, 
+    email: u.email, 
+    username: u.username, 
+    avatar: u.avatar, 
+    loginCount: u.loginCount, 
+    lastLogin: u.lastLogin,
+    plan: u.plan,
+    lastProToolUsage: u.lastProToolUsage,
+    preferences: u.preferences
+  });
 });
 
 // --- OAuth: Google ---
@@ -158,6 +207,11 @@ router.get('/google/callback', async (req, res) => {
     }
     
     // Exchange code for access token
+    const redirectUri = `${OAUTH_REDIRECT_BASE}/api/auth/google/callback`;
+    console.log(`[OAuth Google] Token exchange with redirect_uri: ${redirectUri}`);
+    console.log(`[OAuth Google] Client ID: ${GOOGLE_CLIENT_ID ? GOOGLE_CLIENT_ID.substring(0, 10) + '...' : 'MISSING'}`);
+    console.log(`[OAuth Google] Secret: ${GOOGLE_CLIENT_SECRET ? GOOGLE_CLIENT_SECRET.substring(0, 6) + '...' + GOOGLE_CLIENT_SECRET.slice(-4) : 'MISSING'} (len=${GOOGLE_CLIENT_SECRET?.length || 0})`);
+    
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -165,13 +219,14 @@ router.get('/google/callback', async (req, res) => {
         code,
         client_id: GOOGLE_CLIENT_ID,
         client_secret: GOOGLE_CLIENT_SECRET,
-        redirect_uri: `${OAUTH_REDIRECT_BASE}/api/auth/google/callback`,
+        redirect_uri: redirectUri,
         grant_type: 'authorization_code'
       })
     });
     
     if (!tokenRes.ok) {
-      console.error('[OAuth Google] Token exchange failed');
+      const errBody = await tokenRes.text();
+      console.error('[OAuth Google] Token exchange failed:', tokenRes.status, errBody);
       return res.status(401).send('Token exchange failed');
     }
     
@@ -244,11 +299,15 @@ router.get('/google/callback', async (req, res) => {
       exp: Date.now() + 7 * 24 * 3600 * 1000 
     });
     
-    // Redirect with all necessary data
-    const redirect = `${returnTo}/?oauth=google&token=${encodeURIComponent(token)}&refreshToken=${encodeURIComponent(rt.token)}&email=${encodeURIComponent(finalUser.email)}&name=${encodeURIComponent(finalUser.username)}&uid=${encodeURIComponent(finalUser.id)}`;
-    
+    // Redirect with all necessary data SECURELY using hash
     console.log(`[OAuth Google] Success! Redirecting user ${finalUser.id}`);
-    res.redirect(redirect);
+    sendSecureRedirect(res, returnTo, 'google', {
+      token,
+      refreshToken: rt.token,
+      email: finalUser.email,
+      name: finalUser.username,
+      uid: finalUser.id
+    });
     
   } catch (e) {
     console.error('[OAuth Google] Unexpected error:', e);
@@ -378,11 +437,15 @@ router.get('/github/callback', async (req, res) => {
       exp: Date.now() + 7 * 24 * 3600 * 1000 
     });
     
-    // Redirect with all necessary data
-    const redirect = `${returnTo}/?oauth=github&token=${encodeURIComponent(token)}&refreshToken=${encodeURIComponent(rt.token)}&email=${encodeURIComponent(finalUser.email)}&name=${encodeURIComponent(finalUser.username)}&uid=${encodeURIComponent(finalUser.id)}`;
-    
+    // Redirect with all necessary data SECURELY using hash
     console.log(`[OAuth GitHub] Success! Redirecting user ${finalUser.id}`);
-    res.redirect(redirect);
+    sendSecureRedirect(res, returnTo, 'github', {
+      token,
+      refreshToken: rt.token,
+      email: finalUser.email,
+      name: finalUser.username,
+      uid: finalUser.id
+    });
     
   } catch (e) {
     console.error('[OAuth GitHub] Unexpected error:', e);
@@ -542,11 +605,15 @@ router.get('/patreon/callback', async (req, res) => {
       exp: Date.now() + 7 * 24 * 3600 * 1000 
     });
     
-    // Redirect with all necessary data
-    const redirect = `${returnTo}/?oauth=patreon&token=${encodeURIComponent(token)}&refreshToken=${encodeURIComponent(rt.token)}&email=${encodeURIComponent(finalUser.email)}&name=${encodeURIComponent(finalUser.username)}&uid=${encodeURIComponent(finalUser.id)}`;
-    
+    // Redirect with all necessary data SECURELY using hash
     console.log(`[OAuth Patreon] Success! Redirecting user ${finalUser.id}`);
-    res.redirect(redirect);
+    sendSecureRedirect(res, returnTo, 'patreon', {
+      token,
+      refreshToken: rt.token,
+      email: finalUser.email,
+      name: finalUser.username,
+      uid: finalUser.id
+    });
     
   } catch (e) {
     console.error('[OAuth Patreon] Unexpected error:', e);

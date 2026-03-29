@@ -8,6 +8,11 @@ export interface User {
   createdAt?: number;
   lastLogin?: number;
   loginCount?: number;
+  plan?: string;
+  lastProToolUsage?: number;
+  password?: string;
+  confirmPassword?: string;
+  oldPassword?: string;
   profile?: { // Legacy support, mapped to preferences or flat fields
     bio?: string;
     location?: string;
@@ -63,12 +68,12 @@ export function getAuthHeaders() {
 
 
 
-export const register = async (email: string, username: string, password: string): Promise<{ success: boolean; message: string; user?: User }> => {
+export const register = async (email: string, username: string, password: string, confirmPassword?: string): Promise<{ success: boolean; message: string; user?: User }> => {
   try {
     const res = await fetch(`${API_URL}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, username, password })
+      body: JSON.stringify({ email, username, password, confirmPassword })
     });
     
     const data = await res.json();
@@ -169,7 +174,17 @@ export const isAuthenticated = (): boolean => {
 };
 
 export const handleOAuthCallback = async (): Promise<boolean> => {
-  const params = new URLSearchParams(window.location.search);
+  // Support both new secure hash fragments and legacy query params
+  const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+  const params = new URLSearchParams(hash || window.location.search);
+  
+  // Check for OAuth errors first
+  const error = params.get('error');
+  if (error) {
+    console.error('[OAuth] Backend returned error:', error);
+    return false;
+  }
+
   const oauth = params.get('oauth');
   const token = params.get('token');
   const refreshToken = params.get('refreshToken');
@@ -181,7 +196,7 @@ export const handleOAuthCallback = async (): Promise<boolean> => {
       const session: AuthSession = {
           userId: uid,
           token: token,
-          refreshToken: refreshToken || undefined,
+          refreshToken: refreshToken || '',
           expiresAt: Date.now() + (7 * 24 * 3600 * 1000)
       };
       
@@ -252,10 +267,11 @@ const SETTINGS_API_URL = `${API_BASE_URL}/api/settings`;
 export interface UserSettings {
   temperature?: number;
   systemInstructions?: string;
-  model?: 'flash' | 'pro' | 'mistral';
+  model?: 'flash' | 'pro' | 'mistral' | 'thinking';
+  mode?: 'normal' | 'pro' | 'premium' | 'deep' | 'thinking';
   theme?: string;
   notifications?: boolean;
-  dynamicPersona?: boolean; // Toggle for AI auto-switching personality
+  dynamicPersona?: boolean;
 }
 
 export const getSettings = async (): Promise<UserSettings> => {

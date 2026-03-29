@@ -36,7 +36,7 @@ export const TodoPanel: React.FC<TodoPanelProps> = ({ isOpen, onClose, userTier 
   const [loading, setLoading] = useState(false);
   const { addToast } = useToast();
 
-  const hasAccess = ['Antares', 'Supernova', 'Singularity'].includes(userTier);
+  const hasAccess = ['antares', 'supernova', 'singularity', 'free', 'vega', 'sirius'].includes(userTier?.toLowerCase());
 
   useEffect(() => {
     if (isOpen && hasAccess) {
@@ -84,8 +84,9 @@ export const TodoPanel: React.FC<TodoPanelProps> = ({ isOpen, onClose, userTier 
       });
 
       if (res.ok) {
-        setLists(prev => [newList, ...prev]);
-        setSelectedListId(newList.id);
+        const createdList = await res.json();
+        setLists(prev => [createdList, ...prev]);
+        setSelectedListId(createdList.id);
         setNewListTitle('');
         setIsCreatingList(false);
         addToast('Lista criada!', 'success');
@@ -257,10 +258,10 @@ export const TodoPanel: React.FC<TodoPanelProps> = ({ isOpen, onClose, userTier 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-6xl h-[85vh] bg-[#0c0c0e] border border-white/10 rounded-2xl shadow-premium overflow-hidden flex z-50"
+        className="relative w-full max-w-6xl h-[92dvh] md:h-[85vh] bg-[#0c0c0e] border border-white/10 rounded-2xl shadow-premium overflow-hidden flex flex-col md:flex-row z-50"
       >
         {/* Sidebar - Lists */}
-        <div className="w-64 border-r border-white/10 bg-[#0a0a0a] flex flex-col">
+        <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-white/10 bg-[#0a0a0a] flex flex-col flex-shrink-0 max-h-[40vh] md:max-h-full overflow-y-auto">
           <div className="p-4 border-b border-white/10">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-white flex items-center gap-2">

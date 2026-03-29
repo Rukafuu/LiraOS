@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, MessageSquare, Search, Settings, X, Trash2, Sparkles, Command, LayoutGrid, ShoppingBag, Keyboard, Shield, Video, Crown, Gamepad2, Gift, CheckSquare, Calendar, Heart } from 'lucide-react';
+import { Plus, ChatCircle, MagnifyingGlass, GearSix, X, Trash, Sparkle, Command, SquaresFour, Tote, Keyboard, ShieldCheck, VideoCamera, Crown, GameController, Gift, CheckSquareOffset, CalendarBlank, Heart, Bell } from '@phosphor-icons/react';
 import { ChatSession } from '../types';
 import { LIRA_AVATAR } from '../constants';
 import { getCurrentUser } from '../services/userService';
 import { useTranslation } from 'react-i18next';
 import { FeedbackModal } from './FeedbackModal';
 import { SystemStatus } from './SystemStatus';
+import { useChangelogBadge } from './WhatsNewModal';
+import { useUI } from '../contexts/UIContext';
 
 interface SidebarProps {
     sessions: ChatSession[];
@@ -28,8 +30,8 @@ interface SidebarProps {
     onOpenTodoPanel: () => void;
     onOpenCalendar: () => void;
     onOpenTraePanel: () => void;
-    isOpen: boolean;
-    onCloseMobile: () => void;
+    onOpenPricing: () => void;
+    onOpenWhatsNew: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -52,14 +54,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onOpenTodoPanel,
     onOpenCalendar,
     onOpenTraePanel,
-    isOpen,
-    onCloseMobile
+    onOpenPricing,
+    onOpenWhatsNew
 }) => {
+    const { isSidebarOpen: isOpen, setSidebarOpen: setOpen } = useUI();
     const { t } = useTranslation();
     const [searchTerm, setSearchTerm] = useState('');
     const [isMobile, setIsMobile] = useState(false);
     const [currentUser, setCurrentUser] = useState(getCurrentUser());
     const [showFeedback, setShowFeedback] = useState(false);
+    const { hasNew: hasNewChangelog } = useChangelogBadge();
     /* Footer Auto-Expand Logic */
     const [isFooterExpanded, setIsFooterExpanded] = useState(false);
     const [isItemsExpanded, setIsItemsExpanded] = useState(false);
@@ -104,13 +108,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
         return titleMatch || msgMatch;
     }).sort((a, b) => b.updatedAt - a.updatedAt);
 
-    const sidebarVariants = isMobile ? {
-        open: { x: 0, opacity: 1 },
-        closed: { x: '-100%', opacity: 0 }
-    } : {
-        open: { width: 260, opacity: 1 },
-        closed: { width: 0, opacity: 0 }
-    };
+    const sidebarVariants = {
+        open: { 
+            x: 0, 
+            width: isMobile ? '85vw' : 260,
+            opacity: 1,
+            transition: { type: 'spring', damping: 25, stiffness: 200 } as const
+        },
+        closed: { 
+            x: isMobile ? '-100%' : 0, 
+            width: isMobile ? '85vw' : 0,
+            opacity: isMobile ? 1 : 0,
+            transition: { type: 'spring', damping: 25, stiffness: 200 } as const
+        }
+    } as const;
 
     return (
         <>
@@ -120,19 +131,32 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        onClick={onCloseMobile}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+                        onClick={() => setOpen(false)}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[140]"
                     />
                 )}
             </AnimatePresence>
 
             <motion.aside
-                initial={false}
                 animate={isOpen ? 'open' : 'closed'}
                 variants={sidebarVariants}
-                className={`fixed md:relative z-[100] h-full bg-[#0a0a0a]/95 backdrop-blur-xl border-r border-white/5 flex flex-col overflow-hidden ${isMobile ? 'top-0 left-0 w-[280px]' : ''}`}
+                className={`
+                    fixed md:relative z-[150] h-[100dvh] md:h-full 
+                    bg-[#0a0a0a]/98 backdrop-blur-2xl border-r border-white/5 
+                    flex flex-col overflow-hidden shadow-2xl md:shadow-none
+                    top-0 left-0
+                    ${isMobile ? 'max-w-[320px]' : ''}
+                `}
             >
-                {/* HEADER */}
+                {/* MOBILE CLOSE BUTTON */}
+                {isMobile && (
+                    <button 
+                        onClick={() => setOpen(false)}
+                        className="absolute top-4 right-4 p-2 rounded-full bg-white/5 text-gray-400 z-50 hover:text-white"
+                    >
+                        <X size={20} weight="bold" />
+                    </button>
+                )}
                 <div className="p-4 border-b border-white/5 space-y-4">
 
                     <div className="flex items-center gap-3 px-2">
@@ -144,21 +168,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
                             <span className="text-[10px] text-purple-400 font-mono">v2.0.0-beta</span>
                         </div>
                     </div>
-                    {/* Lira Core (System Status) moved to top */}
-                    <div className="px-1">
-                        <SystemStatus />
-                    </div>
+                    {/* Lira Core (System Status) removed from sidebar - moved to header toggle */}
 
                     <button
-                        onClick={onNewChat}
+                        onClick={() => {
+                            onNewChat();
+                            if (isMobile) setOpen(false);
+                        }}
                         className="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white p-2.5 rounded-xl border border-white/5 hover:border-purple-500/30 transition-all group"
                     >
-                        <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300 text-purple-400" />
+                        <Plus size={18} weight="bold" className="group-hover:rotate-90 transition-transform duration-300 text-purple-400" />
                         <span className="text-sm font-medium">{t('sidebar.new_chat')}</span>
                     </button>
 
                     <div className="relative group">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-400 transition-colors" size={14} />
+                        <MagnifyingGlass weight="bold" className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-400 transition-colors" size={14} />
                         <input
                             type="text"
                             placeholder={t('common.search')}
@@ -170,14 +194,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
 
                 {/* NAVIGATION LINKS */}
-                <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 space-y-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                <div className="flex-1 overflow-y-auto overflow-x-hidden p-2 space-y-4 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
 
                     <div
-                        className="border-y border-white/5 bg-[#080808]/50 transition-all duration-300 ease-in-out"
+                        className="border-y border-white/5 bg-[#080808]/50 transition-all duration-300 ease-in-out rounded-lg overflow-hidden"
                         onMouseEnter={handleItemsEnter}
                         onMouseLeave={handleItemsLeave}
                     >
-                        <div className="p-3">
+                        <div className="p-2 md:p-3">
                             <AnimatePresence mode="wait">
                                 {isItemsExpanded ? (
                                     // EXPANDED VIEW
@@ -192,27 +216,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         <div className="px-3 text-[10px] font-bold text-gray-500 tracking-wider mb-2">{t('sidebar.my_items')}</div>
 
                                         <button onClick={onOpenDashboard} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
-                                            <LayoutGrid size={16} className="text-blue-400 group-hover:scale-110 transition-transform" />
+                                            <SquaresFour size={20} weight="duotone" className="text-blue-400 group-hover:scale-110 transition-transform" />
                                             <span className="text-sm">{t('sidebar.dashboard')}</span>
                                         </button>
 
                                         {/* Iris Button Removed */}
 
                                         <button onClick={onOpenStore} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
-                                            <ShoppingBag size={16} className="text-yellow-400 group-hover:scale-110 transition-transform" />
+                                            <Tote size={20} weight="duotone" className="text-yellow-400 group-hover:scale-110 transition-transform" />
                                             <span className="text-sm">{t('sidebar.store')}</span>
                                         </button>
 
                                         {/* GAME MODULE - ADMIN ONLY */}
                                         {(currentUser?.id === 'user_1734661833589' || currentUser?.username?.toLowerCase().includes('admin')) && (
                                             <button onClick={onOpenGamer} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
-                                                <Gamepad2 size={16} className="text-purple-500 group-hover:scale-110 transition-transform" />
+                                                <GameController size={20} weight="duotone" className="text-purple-500 group-hover:scale-110 transition-transform" />
                                                 <span className="text-sm">{t('sidebar.game')}</span>
                                             </button>
                                         )}
 
                                         <button onClick={onOpenDailyQuests} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
-                                            <Gift size={16} className="text-pink-400 group-hover:scale-110 transition-transform" />
+                                            <Gift size={20} weight="duotone" className="text-pink-400 group-hover:scale-110 transition-transform" />
                                             <span className="text-sm">Missões Diárias</span>
                                         </button>
 
@@ -225,15 +249,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                             <span className="text-sm">{t('sidebar.discord_hub')}</span>
                                         </button>
 
+                                        <button onClick={onOpenWhatsNew} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group relative">
+                                            <Bell size={20} weight="duotone" className="text-cyan-400 group-hover:scale-110 transition-transform" />
+                                            <span className="text-sm">What's New</span>
+                                            {hasNewChangelog && (
+                                                <span className="absolute right-3 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                                            )}
+                                        </button>
+
                                         <button onClick={onOpenSupporters} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group">
-                                            <Heart size={16} className="text-pink-500 group-hover:scale-110 transition-transform" />
+                                            <Heart size={20} weight="duotone" className="text-pink-500 group-hover:scale-110 transition-transform" />
                                             <span className="text-sm">{t('sidebar.supporters')}</span>
+                                        </button>
+
+                                        <button onClick={onOpenPricing} className="w-full flex items-center gap-3 p-2.5 rounded-lg bg-gradient-to-r from-yellow-500/10 to-amber-500/10 hover:from-yellow-500/20 hover:to-amber-500/20 border border-yellow-500/20 hover:border-yellow-500/40 text-yellow-300 hover:text-yellow-200 transition-all group">
+                                            <Crown size={20} weight="duotone" className="text-yellow-400 group-hover:scale-110 transition-transform" />
+                                            <span className="text-sm font-semibold capitalize">{currentUser?.plan === 'singularity' ? 'Singularity (Elite)' : (currentUser?.plan || t('sidebar.premium'))}</span>
+                                            {(!currentUser?.plan || currentUser.plan === 'free') && <span className="ml-auto text-[9px] bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded-full font-bold animate-pulse">UPGRADE</span>}
                                         </button>
 
                                         {/* TRAE MODE - ADMIN ONLY */}
                                         {(currentUser?.id === 'user_1734661833589' || currentUser?.username?.toLowerCase().includes('admin')) && (
                                             <button onClick={onOpenTraePanel} className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors group border border-purple-500/20 hover:border-purple-500/40">
-                                                <Command size={16} className="text-purple-400 group-hover:scale-110 transition-transform" />
+                                                <Command size={20} weight="duotone" className="text-purple-400 group-hover:scale-110 transition-transform" />
                                                 <span className="text-sm font-medium">L.A.P (Admin)</span>
                                                 <span className="ml-auto text-[9px] bg-red-500/20 text-red-300 px-1.5 py-0.5 rounded font-bold">CORE</span>
                                             </button>
@@ -247,22 +285,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         animate={{ opacity: 1 }}
                                         exit={{ opacity: 0 }}
                                         onClick={() => setIsItemsExpanded(true)}
-                                        className="flex items-center justify-around cursor-pointer py-2"
+                                        className="flex items-center justify-around cursor-pointer py-1.5"
                                     >
                                         <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center hover:bg-blue-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenDashboard(); }}>
-                                            <LayoutGrid size={16} className="text-blue-400" />
+                                            <SquaresFour size={20} weight="duotone" className="text-blue-400" />
                                         </div>
                                         {/* Iris Button Removed */}
                                         <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center hover:bg-yellow-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenStore(); }}>
-                                            <ShoppingBag size={16} className="text-yellow-400" />
+                                            <Tote size={20} weight="duotone" className="text-yellow-400" />
                                         </div>
                                         {(currentUser?.id === 'user_1734661833589' || currentUser?.username?.toLowerCase().includes('admin')) && (
                                             <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center hover:bg-purple-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenGamer(); }}>
-                                                <Gamepad2 size={16} className="text-purple-500" />
+                                                <GameController size={20} weight="duotone" className="text-purple-500" />
                                             </div>
                                         )}
                                         <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center hover:bg-pink-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenDailyQuests(); }}>
-                                            <Gift size={16} className="text-pink-400" />
+                                            <Gift size={20} weight="duotone" className="text-pink-400" />
                                         </div>
                                         <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center hover:bg-indigo-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenDiscord(); }}>
                                             <svg viewBox="0 0 127.14 96.36" className="w-4 h-4 fill-indigo-400">
@@ -270,7 +308,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                             </svg>
                                         </div>
                                         <div className="w-8 h-8 rounded-lg bg-pink-500/10 flex items-center justify-center hover:bg-pink-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenSupporters(); }}>
-                                            <Heart size={16} className="text-pink-500" />
+                                            <Heart size={20} weight="duotone" className="text-pink-500" />
+                                        </div>
+                                        <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center hover:bg-yellow-500/20 transition-colors" onClick={(e) => { e.stopPropagation(); onOpenPricing(); }}>
+                                            <Crown size={20} weight="duotone" className="text-yellow-400" />
                                         </div>
                                     </motion.div>
                                 )}
@@ -292,9 +333,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                     ? 'bg-purple-500/10 text-white border border-purple-500/20'
                                     : 'text-gray-400 hover:bg-white/5 hover:text-gray-200 border border-transparent'
                                     }`}
-                                onClick={() => onSelectSession(session.id)}
+                                onClick={() => {
+                                    onSelectSession(session.id);
+                                    if (isMobile) setOpen(false);
+                                }}
                             >
-                                <MessageSquare size={14} className={currentSessionId === session.id ? 'text-purple-400' : 'text-gray-500'} />
+                                <ChatCircle size={18} weight="duotone" className={currentSessionId === session.id ? 'text-purple-400' : 'text-gray-500'} />
                                 <div className="flex-1 overflow-hidden">
                                     <p className="text-sm truncate pr-6">{session.title || 'Untitled Chat'}</p>
                                 </div>
@@ -306,7 +350,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         onDeleteSession(session.id);
                                     }}
                                 >
-                                    <Trash2 size={12} />
+                                    <Trash size={16} weight="duotone" />
                                 </button>
                             </div>
                         ))}
@@ -357,7 +401,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors group"
                                     >
                                         <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                                            <Settings size={16} className="text-blue-400 group-hover:rotate-45 transition-transform duration-500" />
+                                            <GearSix size={20} weight="duotone" className="text-blue-400 group-hover:rotate-45 transition-transform duration-500" />
                                         </div>
                                         <span className="text-[13px] font-medium">{t('sidebar.settings')}</span>
                                     </button>
@@ -367,7 +411,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors"
                                     >
                                         <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
-                                            <Keyboard size={16} className="text-gray-400" />
+                                            <Keyboard size={20} weight="duotone" className="text-gray-400" />
                                         </div>
                                         <span className="text-[13px] font-medium">{t('sidebar.shortcuts_title').split('(')[0]}</span>
                                     </button>
@@ -377,7 +421,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors"
                                     >
                                         <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
-                                            <MessageSquare size={16} className="text-green-400" />
+                                            <ChatCircle size={20} weight="duotone" className="text-green-400" />
                                         </div>
                                         <span className="text-[13px] font-medium">{t('feedback_modal.title')}</span>
                                     </button>
@@ -387,7 +431,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors"
                                     >
                                         <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
-                                            <Shield size={16} className="text-gray-400" />
+                                            <ShieldCheck size={20} weight="duotone" className="text-gray-400" />
                                         </div>
                                         <span className="text-[13px] font-medium">{t('sidebar.legal')}</span>
                                     </button>
@@ -397,7 +441,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors group"
                                     >
                                         <div className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
-                                            <Command size={16} className="text-red-400 group-hover:scale-110 transition-transform" />
+                                            <Command size={20} weight="duotone" className="text-red-400 group-hover:scale-110 transition-transform" />
                                         </div>
                                         <span className="text-[13px] font-medium">Admin Panel</span>
                                     </button>
@@ -407,7 +451,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors group"
                                     >
                                         <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
-                                            <CheckSquare size={16} className="text-purple-400 group-hover:scale-110 transition-transform" />
+                                            <CheckSquareOffset size={20} weight="duotone" className="text-purple-400 group-hover:scale-110 transition-transform" />
                                         </div>
                                         <span className="text-[13px] font-medium">To-Do Lists</span>
                                     </button>
@@ -417,7 +461,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                                         className="w-full flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/5 text-gray-400 hover:text-white transition-colors group"
                                     >
                                         <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center flex-shrink-0">
-                                            <Calendar size={16} className="text-orange-400 group-hover:scale-110 transition-transform" />
+                                            <CalendarBlank size={20} weight="duotone" className="text-orange-400 group-hover:scale-110 transition-transform" />
                                         </div>
                                         <span className="text-[13px] font-medium">Calendar</span>
                                     </button>
@@ -448,10 +492,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
                                     {/* Right: Hint Icons */}
                                     <div className="flex items-center gap-2 text-white/30">
-                                        <Settings size={14} />
-                                        <Keyboard size={14} />
-                                        <MessageSquare size={14} />
-                                        <Shield size={14} />
+                                        <GearSix size={18} weight="duotone" />
+                                        <Keyboard size={18} weight="duotone" />
+                                        <ChatCircle size={18} weight="duotone" />
+                                        <ShieldCheck size={18} weight="duotone" />
                                     </div>
                                 </motion.div>
                             )}

@@ -1,4 +1,6 @@
-import { getMemories, addMemory } from './memoryStore.js';
+import { getMemories, addMemory, getMemoryCount } from './memoryStore.js';
+import { getUserById } from './user_store.js';
+import { getTierLimit } from './services/tierLimits.js';
 
 /**
  * Sistema de Memória Inteligente - Extração e Relevância Automática
@@ -223,6 +225,17 @@ export async function processMessageForMemory(message, userId = 'default') {
     
     // Só salvar se tiver relevância mínima
     if (extracted.importanceScore >= 30 && extracted.categories.length > 0) {
+      // Check tier limits
+      const user = await getUserById(userId);
+      const tier = user?.plan || 'free';
+      const limit = getTierLimit(tier, 'maxMemories');
+      const currentCount = await getMemoryCount(userId);
+
+      if (currentCount >= limit) {
+        console.warn(`[Memory] Limit reached for Tier ${tier} (User: ${userId})`);
+        return null;
+      }
+
       const memoryContent = formatMemoryContent(message, extracted);
       
       const memory = await addMemory(
@@ -232,8 +245,8 @@ export async function processMessageForMemory(message, userId = 'default') {
           `auto_extracted`,
           `score_${extracted.importanceScore}`
         ],
-        'note',
-        'medium',
+        extracted.categories[0] || 'general',
+        extracted.importanceScore > 70 ? 'high' : extracted.importanceScore > 30 ? 'medium' : 'low',
         userId
       );
       
@@ -251,22 +264,14 @@ export async function processMessageForMemory(message, userId = 'default') {
  * Formata o conteúdo da memória de forma otimizada
  */
 function formatMemoryContent(message, extracted) {
-  let formatted = message.content;
-  
-  // Adicionar fatos extraídos
+  // Se extraímos fatos específicos, usamos o primeiro como título/conteúdo principal
+  // Isso torna a memória muito mais "limpa" (ex: "O usuário gosta de pizza" em vez da frase inteira)
   if (extracted.extractedFacts.length > 0) {
-    formatted += `\n\n[Fatos extraídos: ${extracted.extractedFacts.join('; ')}]`;
+    return extracted.extractedFacts[0];
   }
   
-  // Adicionar entidades
-  if (extracted.entities.length > 0) {
-    formatted += `\n[Entidades: ${extracted.entities.join('; ')}]`;
-  }
-  
-  // Adicionar importância
-  formatted += `\n[Importância: ${extracted.importanceScore}/100]`;
-  
-  return formatted;
+  // Caso contrário, apenas retorna a mensagem limpa
+  return message.content.trim();
 }
 
 /**

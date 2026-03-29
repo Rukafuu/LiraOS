@@ -32,7 +32,7 @@ export const LegalModal: React.FC<LegalModalProps> = ({ isOpen, onClose, initial
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="w-full max-w-4xl h-[80vh] bg-[#0A0A0B] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row ring-1 ring-white/5"
+          className="w-full max-w-4xl h-[92dvh] md:h-[80vh] bg-[#0A0A0B] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row ring-1 ring-white/5"
           onClick={e => e.stopPropagation()}
         >
           {/* Sidebar */}

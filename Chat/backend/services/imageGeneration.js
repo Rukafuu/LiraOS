@@ -1,7 +1,10 @@
 import fetch from 'node-fetch';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import dotenv from 'dotenv';
 import { uploadBase64ToS3, isStorageEnabled } from './storageService.js';
+import { uploadToBlob } from './blobService.js';
+import { jobStore } from './jobStore.js';
+import { getTierLimit } from './tierLimits.js';
 
 dotenv.config();
 
@@ -15,15 +18,15 @@ const TIMEOUT_MS = 30000;
  */
 const PROVIDERS = {
     gemini: {
-        name: 'Google Gemini 3',
-        model: 'gemini-3-pro-image-preview',
-        tiers: ['sirius', 'antares', 'supernova', 'singularity', 'vega'],
+        name: 'Google Gemini',
+        model: 'gemini-2.0-flash-exp',
+        tiers: ['free', 'observer', 'vega', 'sirius', 'antares', 'supernova', 'singularity'],
         quality: 'ultra'
     },
     pollinations: {
         name: 'Pollinations.ai',
         model: 'Flux',
-        tiers: ['free', 'observer'],
+        tiers: [],
         quality: 'standard'
     },
     prodia: {
@@ -46,14 +49,11 @@ const PROVIDERS = {
  * @returns {string} Provider name
  */
 export function getProviderForTier(userTier = 'free') {
-    const tier = userTier.toLowerCase();
-    
-    // Premium tiers (and Vega) get Gemini 3
-    if (['sirius', 'antares', 'supernova', 'singularity', 'vega'].includes(tier)) {
+    // Gemini for ALL tiers (free API key)
+    if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
         return 'gemini';
     }
-    
-    // Free/Observer get Pollinations
+    // Fallback to Pollinations only if no Gemini/Google key
     return 'pollinations';
 }
 
@@ -92,30 +92,53 @@ function generateProdiaUrl(prompt, seed = Date.now()) {
 }
 
 /**
- * Generate image using Google Gemini 3
+ * Generate image using Google Gemini (Nano Banana 2 - gemini-3.1-flash-image-preview)
+ * Uses generateContent with native image output modality
  */
 async function generateGeminiImage(prompt, apiKey) {
     if (!apiKey) throw new Error('Gemini API key required');
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    // Use correct Gemini 3 model from list
-    const model = genAI.getGenerativeModel({ model: 'gemini-3-pro-image-preview' });
-
-    console.log(`[GEMINI] Generating image with prompt: "${prompt.substring(0, 50)}..." via gemini-3-pro-image-preview`);
+    const ai = new GoogleGenAI({ apiKey });
     
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
+    // Model priority order: best quality first, fallback to stable
+    const MODELS = [
+        'gemini-3.1-flash-image-preview',  // Nano Banana 2 - recommended
+        'gemini-2.5-flash-preview-04-17',  // Nano Banana stable
+        'gemini-2.0-flash-exp',            // experimental fallback
+    ];
     
-    if (response.candidates && response.candidates[0].content.parts) {
-        const imagePart = response.candidates[0].content.parts.find(p => p.inlineData);
-        if (imagePart) {
-            const base64 = imagePart.inlineData.data;
-            const mimeType = imagePart.inlineData.mimeType || 'image/png';
-            return `data:${mimeType};base64,${base64}`;
+    for (const MODEL of MODELS) {
+        console.log(`[GEMINI] Trying image generation with ${MODEL}...`);
+        try {
+            const response = await ai.models.generateContent({
+                model: MODEL,
+                contents: prompt,
+                config: {
+                    responseModalities: ['IMAGE', 'TEXT'],
+                }
+            });
+            
+            const parts = response.candidates?.[0]?.content?.parts || [];
+            
+            // Look for image data first
+            for (const part of parts) {
+                if (part.inlineData) {
+                    const base64 = part.inlineData.data;
+                    const mimeType = part.inlineData.mimeType || 'image/png';
+                    console.log(`[GEMINI] ✅ Image generated with ${MODEL}! (${mimeType}, ${Math.round(base64.length / 1024)}KB)`);
+                    return `data:${mimeType};base64,${base64}`;
+                }
+            }
+            
+            // Only got text back - log it and try next model
+            const textResponse = parts.map(p => p.text).filter(Boolean).join(' ');
+            console.warn(`[GEMINI] ${MODEL} returned text only: "${textResponse.substring(0, 100)}"`);
+        } catch (err) {
+            console.warn(`[GEMINI] ${MODEL} failed: ${err.message?.substring(0, 120)}`);
         }
     }
     
-    throw new Error('Gemini response did not contain image data. Check logs.');
+    throw new Error('All Gemini models failed to return image data');
 }
 
 /**
@@ -173,11 +196,35 @@ async function generateHuggingFaceImage(prompt, apiKey) {
 /**
  * Generate image based on user tier
  * @param {string} prompt - Image description
+ * @param {string} userId - User ID for limit checking
  * @param {string} userTier - User's subscription tier
  * @param {string} hfApiKey - Hugging Face API key (optional)
  * @returns {Promise<Object>} Generation result with URL and metadata
  */
-export async function generateImage(prompt, userTier = 'free', hfApiKey = null) {
+export async function generateImage(prompt, userId = null, userTier = 'free', hfApiKey = null) {
+    // 1. Check Tier Limits & Content Moderation
+    if (userId) {
+        const { checkModeration } = await import('../utils/moderation.js');
+        const modResult = checkModeration(prompt);
+        if (modResult.flagged) {
+            console.warn(`[IMAGE_GEN] 🚫 Prompt blocked by moderation: "${prompt}" (Category: ${modResult.category})`);
+            return {
+                success: false,
+                error: `Desculpe, não posso gerar imagens desse tipo devido às nossas diretrizes de segurança.`
+            };
+        }
+
+        const limit = getTierLimit(userTier, 'imagesPerDay');
+        const usageToday = await jobStore.countTodayJobs(userId);
+        if (usageToday >= limit) {
+            console.warn(`[IMAGE_GEN] Limit reached for ${userId} (${usageToday}/${limit})`);
+            return {
+                success: false,
+                error: `Você atingiu o limite diário de ${limit} imagens para seu plano.`
+            };
+        }
+    }
+
     const provider = getProviderForTier(userTier);
     const seed = Date.now();
     
@@ -189,8 +236,8 @@ export async function generateImage(prompt, userTier = 'free', hfApiKey = null) 
         
         switch (provider) {
             case 'gemini':
-                const geminiKey = process.env.GEMINI_API_KEY;
-                if (!geminiKey) throw new Error('GEMINI_API_KEY is missing in env');
+                const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+                if (!geminiKey) throw new Error('GEMINI/GOOGLE API KEY is missing in env');
                 imageUrl = await generateGeminiImage(prompt, geminiKey);
                 isBase64 = true;
                 break;
@@ -214,19 +261,24 @@ export async function generateImage(prompt, userTier = 'free', hfApiKey = null) 
                 break;
         }
 
-        // ☁️ S3 UPLOAD INTEGRATION
-        // If we have a Base64 image and Storage is enabled, upload it!
-        if (isBase64 && isStorageEnabled()) {
+        // ☁️ BLOB UPLOAD INTEGRATION
+        // If we have a Base64 image, upload it to Vercel Blob!
+        if (isBase64) {
             try {
-                console.log('[IMAGE_GEN] Uploading generated image to S3...');
-                const s3Url = await uploadBase64ToS3(imageUrl, 'images/gen');
-                if (s3Url) {
-                    imageUrl = s3Url;
+                console.log('[IMAGE_GEN] Uploading generated image to Vercel Blob...');
+                const base64Data = imageUrl.replace(/^data:image\/\w+;base64,/, "");
+                const buffer = Buffer.from(base64Data, 'base64');
+                const ext = imageUrl.includes('jpeg') ? 'jpg' : 'png';
+                const filename = `images/gen-${seed}.${ext}`;
+
+                const blobResult = await uploadToBlob(filename, buffer);
+                if (blobResult && blobResult.url) {
+                    imageUrl = blobResult.url;
                     isBase64 = false; // It's now a reliable URL
-                    console.log('[IMAGE_GEN] S3 Upload Complete:', s3Url);
+                    console.log('[IMAGE_GEN] Blob Upload Complete:', blobResult.url);
                 }
             } catch (uploadErr) {
-                console.error('[IMAGE_GEN] S3 Upload failed (using Base64 fallback):', uploadErr.message);
+                console.error('[IMAGE_GEN] Blob Upload failed (using Base64 fallback):', uploadErr.message);
                 // We keep imageUrl as Base64 so the user still gets their image
             }
         }

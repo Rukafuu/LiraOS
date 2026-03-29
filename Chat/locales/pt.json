@@ -34,7 +34,9 @@
     "discord_hub": "Discord",
     "shortcuts_title": "Atalhos de Teclado (Cmd+/)",
     "legal": "Legal e Privacidade",
-    "supporters": "Patrocinadores"
+    "supporters": "Patrocinadores",
+    "premium": "Premium",
+    "whats_new": "Novidades"
   },
   "common": {
     "search": "Buscar"
@@ -98,7 +100,13 @@
           "notifications_desc": "Receber alertas e atualizações",
           "save_prefs": "Salvar Preferências",
           "toast_success": "Perfil atualizado!",
-          "toast_avatar": "Avatar atualizado com sucesso!"
+          "toast_avatar": "Avatar atualizado com sucesso!",
+          "integrations": "Integrações",
+          "google_calendar": "Google Agenda",
+          "google_calendar_desc": "Conecte para gerenciar eventos",
+          "google_calendar_success": "Google Agenda conectado com sucesso!",
+          "google_calendar_error": "Erro ao iniciar conexão com Google",
+          "connect": "Conectar"
       },
       "security": {
           "title": "Segurança e Login",
@@ -110,7 +118,12 @@
           "two_fa_title": "Autenticação de Dois Fatores",
           "two_fa_desc": "Gerenciado pela política da organização.",
           "status_mismatch": "Não coincidem",
-          "status_saved": "Salvo"
+          "status_saved": "Salvo",
+          "toast_success": "Senha atualizada com sucesso!",
+          "toast_error": "Erro ao atualizar senha",
+          "toast_network_error": "Erro de rede ao atualizar senha",
+          "new_pwd_placeholder": "Nova senha",
+          "confirm_pwd_placeholder": "Confirmar senha"
       },
       "intelligence": {
           "title": "Configuração Neural",
@@ -127,8 +140,10 @@
           "flash_desc": "Respostas super rápidas.",
           "pro_desc": "Raciocínio inteligente.",
           "toast_saved": "Configurações salvas",
+          "toast_save_error": "Falha ao salvar configurações",
           "dynamic_persona_title": "Personalidade Dinâmica",
-          "dynamic_persona_desc": "Alternar automaticamente a personalidade com base no contexto da conversa."
+          "dynamic_persona_desc": "Alternar automaticamente a personalidade com base no contexto da conversa.",
+          "restricted_tier": "Disponível no plano Antares ou superior"
       },
       "memories": {
           "title": "Banco de Memória",
@@ -136,14 +151,14 @@
           "search_placeholder": "Buscar memórias...",
           "all_categories": "Todas categorias",
           "all_priorities": "Todas prioridades",
-          "cat_profile": "Perfil",
-          "cat_contact": "Contato",
-          "cat_location": "Localização",
-          "cat_birthday": "Aniversário",
-          "cat_note": "Nota",
-          "pri_high": "Alta",
-          "pri_medium": "Média",
-          "pri_low": "Baixa",
+          "cat_personal": "Detalhes Pessoais",
+          "cat_prefs": "Preferências",
+          "cat_projects": "Projetos",
+          "cat_dates": "Datas Importantes",
+          "cat_contacts": "Contatos",
+          "cat_learning": "Aprendizado",
+          "cat_general": "Diversos",
+          "no_memories_desc": "A Lira aprenderá sobre você conforme vocês conversam.",
           "no_memories": "Nenhuma memória armazenada ainda.",
           "danger_zone": "Zona de Perigo",
           "danger_desc": "Limpar todas as memórias e sessões de chat.",
@@ -312,5 +327,29 @@
       "disclaimer_text": "A Lira ainda está aprendendo e pode cometer erros. Por isso, é bom checar as respostas.",
       "important_info": "Informações Importantes",
       "cookies": "Preferências de Cookies"
+  },
+  "pricing": {
+    "title": "LiraOS Premium",
+    "subtitle": "Desbloqueie todo o poder da Lira",
+    "current": "Atual",
+    "subscribe": "Assinar",
+    "manage_plan": "Gerenciar Plano",
+    "redirecting": "Redirecionando...",
+    "most_popular": "Mais Popular",
+    "per_month": "/mês",
+    "secure_payment": "Pagamento seguro via Stripe. Cancele a qualquer momento.",
+    "manage_subscription": "Gerenciar sua assinatura",
+    "currency_brl": "R$ BRL",
+    "currency_usd": "$ USD"
+  },
+  "whats_new": {
+    "title": "Novidades",
+    "subtitle": "Últimas atualizações e melhorias",
+    "latest": "Mais Recente",
+    "built_with": "LiraOS • Feito com 💜",
+    "type_feature": "Novo",
+    "type_fix": "Correção",
+    "type_improvement": "Melhoria",
+    "type_security": "Segurança"
   }
 }

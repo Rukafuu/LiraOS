@@ -69,14 +69,16 @@ export const PhotoBooth: React.FC<PhotoBoothProps> = ({ messages }) => {
     if (lastMsg.role !== 'user' && lastMsg.id !== lastSnapshotIdRef.current) {
         
         const selfieRegex = /\[INSTAGRAM_POST:\s*"?(.*?)"?\]/;
+        const manualRegex = /Take a selfie of yourself!/;
+        
         const match = lastMsg.content.match(selfieRegex);
+        const isManual = manualRegex.test(lastMsg.content);
 
-        if (match) {
-            const caption = match[1];
-            console.log(`[PhotoBooth] 📸 Trigger detected via Chat/Discord: "${caption}"`);
+        if (match || isManual) {
+            const caption = match ? match[1] : "Snapshot for User";
+            console.log(`[PhotoBooth] 📸 Trigger detected: ${isManual ? 'Manual' : 'Chat'}`);
             lastSnapshotIdRef.current = lastMsg.id;
-
-            // Execute Snap Routine
+            
             takeSnap(caption);
         }
     }

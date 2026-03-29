@@ -1,6 +1,8 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -32,27 +34,37 @@ import imagesRoutes from './routes/images.js';
 import todosRoutes from './routes/todos.js';
 import googleAuthRoutes from './routes/authGoogle.js';
 import traeRoutes from './routes/trae.js';
+import stripeRoutes from './routes/stripe.js';
 
 // Services & Utils
 import { discordService } from './services/discordService.js';
+import { mcpService } from './services/mcpService.js';
 import { cleanupExpiredBans } from './utils/moderation.js';
 
-dotenv.config();
+console.log('[DEBUG] --- ENV DIAGNOSTICS ---');
+Object.keys(process.env).forEach(key => {
+  if (key.toUpperCase().includes('STRIPE')) {
+    console.log(`[DEBUG] Found Key: "${key}" (Length: ${key.length}) - Value Length: ${process.env[key]?.length || 0}`);
+  }
+});
+console.log('[DEBUG] MINIMAX_API_KEY:', process.env.MINIMAX_API_KEY ? 'Presente' : 'AUSENTE ❌');
+console.log('[DEBUG] ------------------------');
 
-console.log('[DEBUG] MINIMAX_API_KEY:', process.env.MINIMAX_API_KEY ? 'Língua preservada (Presente)' : 'AUSENTE ❌');
-console.log('[DEBUG] MINIMAX_GROUP_ID:', process.env.MINIMAX_GROUP_ID || 'AUSENTE ❌');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 // Middleware
-// Middleware - MANUAL CORS OVERRIDE
+// Middleware - SECURE CORS
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  if (origin) {
+  const allowedOrigins = [FRONTEND_URL, 'https://liraos.xyz', 'https://www.liraos.xyz'];
+  
+  if (origin && allowedOrigins.includes(origin)) {
     res.header("Access-Control-Allow-Origin", origin);
-  } else {
+  } else if (!origin) {
+    // Basic support for non-browser requests (like mobile app or testing)
     res.header("Access-Control-Allow-Origin", "*");
   }
 
@@ -69,6 +81,10 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// Stripe webhook needs raw body (before JSON parser)
+app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
+
 app.use(express.json({ limit: '50mb' }));
 
 // Debug Middleware (Less verbose in Production)
@@ -122,7 +138,6 @@ app.use('/api/moderation', moderationRoutes);
 app.use('/api/iris', irisRoutes);
 app.use('/api/system', systemRoutes);
 app.use('/api/discord', discordRoutes);
-app.use('/api/discord', discordRoutes);
 app.use('/api/patreon', patreonRoutes);
 import copilotRoutes from './routes/copilot.js';
 
@@ -133,6 +148,7 @@ app.use('/api/auth/google', googleAuthRoutes);
 import whatsappHook from './routes/whatsappHook.js';
 app.use('/api/webhook/whatsapp', whatsappHook);
 app.use('/api/trae', traeRoutes);
+app.use('/api/stripe', stripeRoutes);
 
 // Generic fallback (must be last)
 app.use('/api', chatRoutes);
@@ -286,6 +302,53 @@ server.listen(PORT, '0.0.0.0', async () => {
     console.log('[STARTUP] Starting Gaming Service...');
     gamingService.start();
   }).catch(err => console.error('Failed to load Gaming Service:', err));
+
+  // Initialize MCP (Model Context Protocol)
+  console.log('[STARTUP] Initializing MCP Clients...');
+  await mcpService.init().catch(e => console.error('[MCP] Init failed:', e));
+  
+  // Register Tavily Search MCP (FREE for all)
+  if (process.env.TAVILY_API_KEY) {
+      console.log('[MCP] Tavily Search detected. Connecting (Global access)...');
+      mcpService.registerServer('tavily', 'npx', ['-y', 'tavily-mcp'], { TAVILY_API_KEY: process.env.TAVILY_API_KEY });
+  }
+
+  // Register Brave Search MCP (Premium / VEGA+)
+  if (process.env.BRAVE_API_KEY) {
+      console.log('[MCP] Brave Search detected. Connecting (Vega+ exclusive)...');
+      mcpService.registerServer('brave', 'npx', ['-y', '@modelcontextprotocol/server-brave-search'], { BRAVE_API_KEY: process.env.BRAVE_API_KEY });
+  }
+
+  // Register Google Maps MCP
+  if (process.env.GOOGLE_MAPS_API_KEY) {
+      console.log('[MCP] Google Maps detected. Connecting...');
+      mcpService.registerServer('google-maps', 'npx', ['-y', '@modelcontextprotocol/server-google-maps'], { GOOGLE_MAPS_API_KEY: process.env.GOOGLE_MAPS_API_KEY });
+  }
+
+  // Register YouTube MCP (Search)
+  if (process.env.YOUTUBE_API_KEY) {
+      console.log('[MCP] YouTube Search detected. Connecting...');
+      mcpService.registerServer('youtube', 'npx', ['-y', '@modelcontextprotocol/server-youtube'], { YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY });
+  }
+
+  // Register SQLite MCP (Universal Local Memory)
+  console.log('[MCP] Connecting SQLite Persistent Memory...');
+  const dbPath = path.resolve(__dirname, './data/mcp_memory.db');
+  mcpService.registerServer('sqlite', 'npx', ['-y', '@pollinations/mcp-server-sqlite', dbPath]);
+
+  // Register Filesystem MCP (Access to user data)
+  if (process.platform === 'win32' && process.env.USERPROFILE) {
+      const downloads = path.join(process.env.USERPROFILE, 'Downloads');
+      const documents = path.join(process.env.USERPROFILE, 'Documents');
+      console.log(`[MCP] Activating file access: ${downloads}`);
+      mcpService.registerServer('filesystem', 'npx', ['-y', '@modelcontextprotocol/server-filesystem', downloads, documents]);
+  }
+
+  // Register GitHub MCP (Admin Only)
+  if (process.env.GITHUB_PERSONAL_ACCESS_TOKEN) {
+      console.log('[MCP] GitHub Token detected. Connecting (Admin exclusive)...');
+      mcpService.registerServer('github', 'npx', ['-y', '@modelcontextprotocol/server-github'], { GITHUB_PERSONAL_ACCESS_TOKEN: process.env.GITHUB_PERSONAL_ACCESS_TOKEN });
+  }
 
   // Discord Bot
   if (process.env.DISCORD_TOKEN) {

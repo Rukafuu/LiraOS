@@ -33,12 +33,14 @@ export const MemoryGraph: React.FC<MemoryGraphProps> = ({ memories }) => {
     // Initialize Nodes
     useEffect(() => {
         const colors = {
-            'profile': '#3B82F6', // Blue
-            'contact': '#10B981', // Green
-            'location': '#F59E0B', // Amber
-            'birthday': '#EC4899', // Pink
-            'note': '#8B5CF6',     // Violet
-            'default': '#6B7280'   // Gray
+            'personal_info': '#3B82F6', // Blue
+            'preferences': '#EC4899',   // Pink
+            'projects': '#F59E0B',      // Amber
+            'important_dates': '#EF4444', // Red
+            'contacts': '#8B5CF6',      // Purple
+            'learning': '#10B981',      // Green
+            'general': '#6B7280',       // Gray
+            'default': '#6B7280'
         };
 
         nodesRef.current = memories.map(m => ({

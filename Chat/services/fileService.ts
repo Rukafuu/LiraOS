@@ -7,8 +7,9 @@ export interface FileUploadResult {
   base64?: string;
   text?: string;
   imageData?: string;
+  previewUrl?: string;
   error?: string;
-  type: 'image' | 'document' | 'text' | 'script' | 'executable';
+  type: 'image' | 'document' | 'text' | 'script' | 'executable' | 'video';
   name: string;
   size: number;
 }
@@ -16,13 +17,14 @@ export interface FileUploadResult {
 export interface SecurityValidation {
   isSafe: boolean;
   reasons: string[];
-  fileType: 'image' | 'document' | 'text' | 'script' | 'executable';
+  fileType: 'image' | 'document' | 'text' | 'script' | 'executable' | 'video';
 }
 
 // Extensões permitidas
 const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
 const ALLOWED_DOCUMENT_EXTENSIONS = ['.pdf', '.txt', '.doc', '.docx', '.rtf', '.md', '.md'];
 const ALLOWED_CODE_EXTENSIONS = ['.js', '.ts', '.jsx', '.tsx', '.py', '.sh', '.php', '.html', '.css', '.json', '.yaml', '.yml', '.xml', '.sql'];
+const ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg', '.mov', '.avi'];
 const DANGEROUS_EXTENSIONS = ['.exe', '.bat', '.cmd', '.com', '.scr'];
 
 // Tipos MIME permitidos
@@ -41,6 +43,9 @@ const ALLOWED_MIME_TYPES = {
     'text/python', 'text/x-python', 'text/x-php', 'text/html',
     'text/css', 'application/json', 'text/xml', 'text/yaml',
     'application/sql', 'text/sql', 'application/x-sh'
+  ],
+  video: [
+    'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo'
   ]
 };
 
@@ -48,7 +53,7 @@ const ALLOWED_MIME_TYPES = {
 export const validateFileSecurity = (file: File): SecurityValidation => {
   const reasons: string[] = [];
   let isSafe = true;
-  let fileType: 'image' | 'document' | 'text' | 'script' | 'executable' = 'text';
+  let fileType: 'image' | 'document' | 'text' | 'script' | 'executable' | 'video' = 'text';
   
   const extension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
   const mimeType = file.type.toLowerCase();
@@ -68,15 +73,17 @@ export const validateFileSecurity = (file: File): SecurityValidation => {
       fileType = 'image';
     } else if (ALLOWED_DOCUMENT_EXTENSIONS.includes(extension)) {
       fileType = 'document';
+    } else if (ALLOWED_VIDEO_EXTENSIONS.includes(extension)) {
+      fileType = 'video';
     } else if (mimeType.startsWith('text/')) {
       fileType = 'text';
     }
   }
 
-  // Verificar tamanho (máximo 10MB)
-  const maxSize = 10 * 1024 * 1024; // 10MB
+  // Verificar tamanho (máximo 50MB)
+  const maxSize = 50 * 1024 * 1024; // 50MB
   if (file.size > maxSize) {
-    reasons.push(`File size exceeds maximum allowed (10MB)`);
+    reasons.push(`File size exceeds maximum allowed (50MB)`);
     isSafe = false;
   }
 
@@ -215,6 +222,12 @@ export const processFile = async (file: File): Promise<FileUploadResult> => {
         }
         break;
         
+      case 'video':
+        result.base64 = await readImageFile(file); // uses readAsDataURL which handles any blob
+        result.previewUrl = result.base64;
+        result.text = `[Video Attachment: ${file.name}]`;
+        break;
+
       case 'text':
       case 'script':
         result.text = await readTextFile(file);
@@ -262,6 +275,7 @@ export const validateFileForUpload = (file: File): { isValid: boolean; error?: s
   const isAllowedExtension = 
     ALLOWED_IMAGE_EXTENSIONS.includes(extension) ||
     ALLOWED_DOCUMENT_EXTENSIONS.includes(extension) ||
+    ALLOWED_VIDEO_EXTENSIONS.includes(extension) ||
     ALLOWED_CODE_EXTENSIONS.includes(extension);
     
   if (!isAllowedExtension) {
@@ -279,7 +293,7 @@ export const validateFileForUpload = (file: File): { isValid: boolean; error?: s
     'application/sql', 'text/sql', 'application/x-sh'
   ];
   
-  if (!allAllowedMimes.includes(file.type) && !file.type.startsWith('text/')) {
+  if (!allAllowedMimes.includes(file.type) && !file.type.startsWith('text/') && !file.type.startsWith('video/')) {
     return {
       isValid: false,
       error: `MIME type ${file.type} is not supported`
@@ -287,10 +301,10 @@ export const validateFileForUpload = (file: File): { isValid: boolean; error?: s
   }
 
   // Verificar tamanho
-  if (file.size > 10 * 1024 * 1024) { // 10MB
+  if (file.size > 50 * 1024 * 1024) { // 50MB
     return {
       isValid: false,
-      error: 'File size exceeds 10MB limit'
+      error: 'File size exceeds 50MB limit'
     };
   }
 
@@ -313,6 +327,8 @@ export const getFilePreview = (result: FileUploadResult): string => {
       return `📸 Image: ${result.name} (${Math.round(result.size / 1024)}KB)`;
     case 'document':
       return `📄 Document: ${result.name} (${Math.round(result.size / 1024)}KB)`;
+    case 'video':
+      return `🎥 Video: ${result.name} (${Math.round(result.size / 1024)}KB)`;
     case 'text':
       return `📝 Text: ${result.name} (${Math.round(result.size / 1024)}KB)`;
     case 'script':

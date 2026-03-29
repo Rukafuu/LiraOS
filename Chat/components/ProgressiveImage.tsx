@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, RefreshCcw, AlertCircle } from 'lucide-react';
+import { Activity, RefreshCcw, CircleAlert } from 'lucide-react';
 import { useSimulatedProgress } from '../hooks/useSimulatedProgress';
 
 interface ProgressiveImageProps {
@@ -31,12 +31,6 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = React.memo(({
   // Debug Props
   console.log(`[ProgressiveImage] Render. Status: ${status}, FinalSrc: ${finalSrc ? finalSrc.substring(0, 30) + '...' : 'undefined'}`);
 
-  // Disable Overlay for Debugging
-  useEffect(() => {
-    setShowOverlay(false);
-  }, [status, imageLoaded]);
-
-  /*
   useEffect(() => {
     if (status === 'generating' && !hasShownOverlayRef.current) {
       setShowOverlay(true);
@@ -47,7 +41,6 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = React.memo(({
       setShowOverlay(false);
     }
   }, [status, imageLoaded]);
-  */
 
   // Overlay Component for Inline Loading
   const LoadingOverlay = () => (
@@ -130,7 +123,7 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = React.memo(({
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 className="absolute inset-0 flex flex-col items-center justify-center bg-red-500/5 p-6 text-center"
               >
-                <AlertCircle className="text-red-400 mb-3" size={32} />
+                <CircleAlert className="text-red-400 mb-3" size={32} />
                 <p className="text-red-200 text-sm font-medium mb-4">Falha ao gerar imagem</p>
                 {onRetry && (
                   <button onClick={onRetry} className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-300 rounded-lg text-xs transition-colors flex items-center gap-2">

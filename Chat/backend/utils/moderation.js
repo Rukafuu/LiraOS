@@ -7,19 +7,20 @@ const LEVELS = {
   L2: { weight: 5, expireDays: 90, limit: 2, action: 'suspend', duration: 7 * 24 * 60 * 60 * 1000 }, // 7d
   L3: { weight: 10, expireDays: 365, limit: 1, action: 'ban', duration: null } // Perm
 };
-
 const MODERATION_PATTERNS = [
   // L3: Crimes, Violência, Explor.
   { pattern: /\b(matar|assassinar|estuprar|traficar|explodir|bomba|terrorismo|pedofilia|estupro|massacre|tiroteio)\b/i, category: 'violence_severe', level: 'L3' },
   { pattern: /\b(kill|murder|kidnap|rape|drug trafficking|bomb|terrorism|pedophilia|shooting)\b/i, category: 'violence_severe', level: 'L3' },
 
-  // L2: Drogas, Assédio grave, Hate
+  // L2: Drogas, Assédio grave, Hate, Explicit
   { pattern: /\b(vender drogas|comprar drogas|receita de droga|cocaína|heroína|crack)\b/i, category: 'illegal_drugs', level: 'L2' },
   { pattern: /\b(macaco|nigger|preto sujo|retardado|aleijado|baitola|sapatão|chink|kike|faggot)\b/i, category: 'hate_speech', level: 'L2' },
   { pattern: /\b(suicídio|me matar|cortar os pulsos)\b/i, category: 'self_harm', level: 'L2' },
+  { pattern: /\b(pelada|pelado|nua|nu|transando|sexo|pornô|porno|hentai|ecchi|milf|xxx|gangbang|bukake|boob|pussy|penis|dick|vagina)\b/i, category: 'explicit_content', level: 'L2' },
 
-  // L1: Toxicidade leve (exemplo) -> Pode ser expandido
-  { pattern: /\b(seu idiota|burro|inútil)\b/i, category: 'toxicity', level: 'L1' }
+  // L1: Toxicidade leve
+  { pattern: /\b(seu idiota|burro|inútil|lixo|merda|foda-se|porra|vtnc|caralho)\b/i, category: 'toxicity', level: 'L1' },
+  { pattern: /\b(idiot|stupid|useless|piece of shit|fuck you|shitty|motherfucker)\b/i, category: 'toxicity', level: 'L1' }
 ];
 
 // --- REDACTION UTILS ---

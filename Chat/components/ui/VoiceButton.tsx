@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Loader } from 'lucide-react';
+import { Microphone, MicrophoneSlash, CircleNotch } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface VoiceButtonProps {
@@ -17,7 +17,6 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscript }) => {
       setSupported(false);
     }
     
-    // Cleanup on unmount
     return () => {
       if (recognitionRef.current) {
         try {
@@ -42,13 +41,12 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscript }) => {
     try {
       // @ts-ignore
       const recognition = new window.webkitSpeechRecognition();
-      recognition.continuous = true; // Keep listening
-      recognition.interimResults = true; // Get partial results
-      recognition.lang = 'pt-BR'; // Portuguese
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'pt-BR';
       recognition.maxAlternatives = 1;
 
       recognition.onstart = () => {
-        console.log('[VoiceButton] Recognition started');
         setListening(true);
       };
 
@@ -56,17 +54,13 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscript }) => {
         const last = event.results.length - 1;
         const transcript = event.results[last][0].transcript;
         
-        // Only send final results
         if (event.results[last].isFinal) {
-          console.log('[VoiceButton] Final transcript:', transcript);
           onTranscript(transcript);
           stopListening();
         }
       };
 
       recognition.onerror = (event: any) => {
-        console.warn('[VoiceButton] Recognition error:', event.error);
-        // Ignore 'aborted' and 'no-speech' errors
         if (event.error !== 'aborted' && event.error !== 'no-speech') {
           console.error("Speech recognition error", event.error);
         }
@@ -74,9 +68,6 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscript }) => {
       };
 
       recognition.onend = () => {
-        console.log('[VoiceButton] Recognition ended');
-        // Only reset if we're still supposed to be listening
-        // (prevents race condition with manual stop)
         if (recognitionRef.current === recognition) {
           setListening(false);
           recognitionRef.current = null;
@@ -86,7 +77,6 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscript }) => {
       recognitionRef.current = recognition;
       recognition.start();
     } catch (e) {
-      console.error('[VoiceButton] Failed to start:', e);
       setListening(false);
     }
   };
@@ -107,23 +97,28 @@ export const VoiceButton: React.FC<VoiceButtonProps> = ({ onTranscript }) => {
     <button
       onClick={toggleListening}
       className={`
-        relative p-2.5 rounded-xl transition-all duration-300 group
-        ${listening ? 'text-lira-pink bg-lira-pink/10' : 'text-lira-dim hover:text-white hover:bg-white/5'}
+        relative w-9 h-9 md:w-10 md:h-10 flex items-center justify-center rounded-full transition-all duration-300 group
+        ${listening ? 'text-red-400 bg-red-400/10 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'text-gray-400 hover:text-white hover:bg-white/5'}
       `}
       title="Voice Input"
     >
       <AnimatePresence>
         {listening && (
           <motion.div
-            className="absolute inset-0 rounded-xl bg-lira-pink/20"
+            className="absolute inset-0 rounded-full bg-red-400/20"
             initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1.2, opacity: 0 }}
-            transition={{ duration: 1.5, repeat: Infinity }}
+            animate={{ scale: 1.3, opacity: 0 }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: "easeOut" }}
           />
         )}
       </AnimatePresence>
       
-      {listening ? <MicOff size={20} /> : <Mic size={20} className="group-hover:scale-110 transition-transform" />}
+      {listening ? (
+        <MicrophoneSlash size={20} weight="bold" />
+      ) : (
+        <Microphone size={20} weight="bold" className="group-hover:scale-110 transition-transform" />
+      )}
     </button>
   );
 };
+

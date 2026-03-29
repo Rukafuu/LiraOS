@@ -1,20 +1,13 @@
 import express from 'express';
-import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
-import { Resend } from 'resend';
 import { getUserByEmail, createRecoverCode, consumeRecoverCode, setPassword } from '../user_store.js';
 import { requireAuth } from '../middlewares/authMiddleware.js';
+import { sendEmail } from '../services/emailService.js';
 
 dotenv.config();
 
 const router = express.Router();
 
-// SMTP Settings
-const SMTP_HOST = process.env.SMTP_HOST || '';
-const SMTP_PORT = Number(process.env.SMTP_PORT || 587);
-const SMTP_SECURE = process.env.SMTP_SECURE === 'true';
-const SMTP_USER = process.env.SMTP_USER || '';
-const SMTP_PASS = process.env.SMTP_PASS || '';
 
 // POST /api/recovery/init
 router.post(['/init', '/init-new'], async (req, res) => {
@@ -33,82 +26,43 @@ router.post(['/init', '/init-new'], async (req, res) => {
   }
   
   console.log(`[Recovery] User found: ${user.email} (ID: ${user.id})`);
-  const { code } = await createRecoverCode(user.email);
+  const result = await createRecoverCode(user.email);
+  
+  if (!result) {
+    return res.status(500).json({ error: 'failed_to_create_code' });
+  }
+
+  const { code } = result;
   
   const htmlContent = `
-    <div style="font-family: sans-serif; color: #fff; background: #000; padding: 20px; border-radius: 10px;">
-      <h2 style="color: #fff;">Password Recovery</h2>
-      <p style="color: #ccc;">You requested a password reset for LiraOS.</p>
-      <p style="color: #ccc;">Your code is:</p>
-      <h1 style="color: #a855f7; font-size: 32px; letter-spacing: 2px;">${code}</h1>
-      <p style="color: #666; font-size: 12px; margin-top: 20px;">If you didn't request this, please ignore.</p>
+    <div style="font-family: 'Segoe UI', sans-serif; max-width: 500px; margin: 0 auto; background: linear-gradient(135deg, #0a0a0f, #1a1a2e); padding: 40px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1);">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #fff; font-size: 24px; margin: 0;">🔐 LiraOS</h1>
+        <p style="color: #888; font-size: 14px; margin-top: 8px;">Password Recovery</p>
+      </div>
+      <div style="background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 12px; padding: 24px; text-align: center; margin-bottom: 24px;">
+        <p style="color: #ccc; font-size: 14px; margin: 0 0 12px 0;">Your recovery code is:</p>
+        <h1 style="color: #a855f7; font-size: 40px; letter-spacing: 6px; margin: 0; font-family: monospace;">${code}</h1>
+      </div>
+      <p style="color: #666; font-size: 12px; text-align: center;">This code expires in 15 minutes.<br/>If you didn't request this, please ignore this email.</p>
     </div>
   `;
 
-  // 1. Try Resend API (HTTP - Reliable)
-  if (process.env.RESEND_API_KEY) {
-      console.log('[Recovery] Attempting to send via Resend API...');
-      try {
-          const resend = new Resend(process.env.RESEND_API_KEY);
-          const { data, error } = await resend.emails.send({
-              from: process.env.EMAIL_FROM || 'LiraOS <onboarding@resend.dev>',
-              to: email,
-              subject: 'LiraOS Password Recovery',
-              html: htmlContent
-          });
-
-          if (error) {
-              console.error('[Recovery] Resend API Error:', error);
-              throw new Error(error.message);
-          }
-
-          console.log(`[Recovery] Email sent via Resend to ${email} (ID: ${data?.id})`);
-          return res.json({ success: true });
-      } catch (e) {
-          console.error('[Recovery] Resend Failed, falling back to SMTP...', e);
-          // Continue to SMTP fallback below
-      }
-  }
-
-  // 2. SMTP Logic (Legacy/Fallback)
-  // If no SMTP configured, return code in response for DEV purposes
-  if (!SMTP_HOST || !SMTP_USER) {
-    console.log(`[Recovery] No SMTP configured. Dev Code: ${code}`);
-    return res.json({ success: true, devMode: true, code }); 
-  }
-
-  // Force explicit SMTP configuration to bypass 'service: gmail' defaults which might fail in cloud environments
-  const transportConfig = {
-      host: 'smtp.gmail.com',
-      port: 465, // SSL Port (often less blocked than 587)
-      secure: true, // Use SSL
-      auth: { user: SMTP_USER, pass: SMTP_PASS },
-      tls: {
-          rejectUnauthorized: false
-      }
-  };
-
-  const transporter = nodemailer.createTransport({
-      ...transportConfig,
-      connectionTimeout: 5000, // Fail fast (5s) if blocked
-      socketTimeout: 5000
+  // Try sending email
+  const response = await sendEmail({
+    to: email,
+    subject: '🔐 LiraOS — Password Recovery Code',
+    html: htmlContent,
+    text: `Your LiraOS recovery code is: ${code}\n\nThis code expires in 15 minutes.`
   });
 
-  try {
-     await transporter.sendMail({
-       from: `"LiraOS System" <${SMTP_USER}>`,
-       to: email,
-       subject: "LiraOS Password Recovery",
-       text: `Your recovery code is: ${code}\n\nUse this code to reset your password.`,
-       html: htmlContent
-     });
-     console.log(`[Recovery] Email sent via SMTP to ${email}`);
-     res.json({ success: true });
-  } catch (e) {
-     console.error('[Recovery] SMTP Error:', e);
-     // Fallback for dev if delivery fails: return code so user isn't stuck
-     res.status(500).json({ error: 'email_send_failed', devCode: code, details: e.message });
+  if (response.success) {
+      return res.json({ success: true, method: response.method });
   }
+
+  // Dev mode fallback: return code in response
+  console.log(`[Recovery] 📧 No email sent. Dev Code: ${code}`);
+  return res.json({ success: true, devMode: true, code });
 });
 
 // POST /api/recovery/complete
@@ -121,16 +75,14 @@ router.post('/complete', async (req, res) => {
 
   if (await consumeRecoverCode(user.email, code)) {
     await setPassword(user.email, newPassword);
-    console.log(`[Recovery] Password reset success for ${email}`);
+    console.log(`[Recovery] ✅ Password reset success for ${email}`);
     res.json({ success: true });
   } else {
     res.status(400).json({ error: 'invalid_code' });
   }
 });
 
-// POST /api/recovery/import (Legacy/Existing)
-// Note: This route requires auth, but recovery routes above should NOT require auth.
-// So we apply requireAuth ONLY to import.
+// POST /api/recovery/import (Legacy)
 router.post('/import', requireAuth, (req, res) => {
   try {
     const userId = req.userId;

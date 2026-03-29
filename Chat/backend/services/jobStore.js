@@ -52,6 +52,23 @@ export const jobStore = {
              // If record missing, might fail
              return null;
         }
+    },
+
+    async countTodayJobs(userId) {
+        if (!userId) return 0;
+        try {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            return await prisma.imageJob.count({
+                where: {
+                    userId,
+                    createdAt: { gte: BigInt(today.getTime()) }
+                }
+            });
+        } catch (error) {
+            console.error('[JobStore] CountTodayJobs failed:', error);
+            return 0;
+        }
     }
 };
 

@@ -6,10 +6,10 @@ const router = express.Router();
 
 router.use(requireAuth);
 
+
 router.get('/', async (req, res) => {
   try {
     const userId = req.userId;
-    // getOrCreateDefault already calls saveState internally if needed
     const state = (await getState(userId)) || (await getOrCreateDefault(userId));
     res.json(state);
   } catch (e) {
@@ -31,8 +31,8 @@ router.post('/', async (req, res) => {
 router.post('/award', async (req, res) => {
   try {
     const userId = req.userId;
-    const { xp = 0, coins = 0, bond = 0, messageInc = 0 } = req.body || {};
-    const updated = await award(userId, { xp, coins, bond, messageInc });
+    // Pass the entire body to award() so it can handle xp, coins, bond, messages, image, pro, etc.
+    const updated = await award(userId, req.body || {});
     res.json(updated);
   } catch (e) {
     res.status(500).json({ error: e.message });
@@ -44,7 +44,7 @@ router.post('/purchase', async (req, res) => {
     const userId = req.userId;
     const { type, itemId, cost } = req.body || {};
     
-    if (!type || !itemId || !cost) {
+    if (!type || !itemId || cost === undefined) {
       return res.status(400).json({ error: 'Missing required fields: type, itemId, cost' });
     }
     

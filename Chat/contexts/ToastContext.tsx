@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, AlertCircle, Info, X } from 'lucide-react';
+import { Check, CircleAlert, Info, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'info';
 
@@ -62,7 +62,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 const ToastItem: React.FC<{ toast: Toast; onRemove: (id: string) => void }> = ({ toast, onRemove }) => {
   const icons = {
     success: <Check size={16} className="text-lira-secondary" />,
-    error: <AlertCircle size={16} className="text-red-400" />,
+    error: <CircleAlert size={16} className="text-red-400" />,
     info: <Info size={16} className="text-lira-primary" />,
   };
 
