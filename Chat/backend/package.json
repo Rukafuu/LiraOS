@@ -8,8 +8,8 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@aws-sdk/client-polly": "^3.962.0",
-    "@aws-sdk/client-s3": "^3.962.0",
+    "@aws-sdk/client-polly": "^3.1019.0",
+    "@aws-sdk/client-s3": "^3.1019.0",
     "@aws-sdk/lib-storage": "^3.962.0",
     "@discordjs/voice": "^0.19.0",
     "@google/genai": "^1.44.0",
@@ -19,7 +19,7 @@
     "@prisma/adapter-pg": "^5.22.0",
     "@prisma/client": "5.22.0",
     "@vercel/blob": "^2.3.1",
-    "axios": "^1.13.2",
+    "axios": "^1.13.5",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "discord-rpc": "^4.0.1",
