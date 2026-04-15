@@ -3,7 +3,7 @@ node_modules/* linguist-vendored
 vendor/* linguist-vendored
 *.min.js linguist-generated
 *.min.css linguist-generated
-Makefile linguist-vendored
-*.mk linguist-vendored
+Makefile linguist-detectable=false
+*.mk linguist-detectable=false
 package-lock.json linguist-generated
 yarn.lock linguist-generated
