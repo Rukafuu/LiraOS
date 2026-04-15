@@ -1,7 +1,6 @@
 # 🚀 LiraOS Chat - Full Stack AI Chat Application
 
 <div align="center">
-<img width="1200" height="475" alt="LiraOS Banner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 
 [![React](https://img.shields.io/badge/React-19.2-61DAFB?logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript)](https://www.typescriptlang.org/)
