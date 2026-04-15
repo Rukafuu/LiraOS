@@ -5,5 +5,7 @@ vendor/* linguist-vendored
 *.min.css linguist-generated
 Makefile linguist-detectable=false
 *.mk linguist-detectable=false
+*.d linguist-detectable=false
+Chat/src-tauri/target/** linguist-detectable=false
 package-lock.json linguist-generated
 yarn.lock linguist-generated
