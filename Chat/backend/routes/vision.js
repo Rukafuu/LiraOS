@@ -47,7 +47,7 @@ router.post('/tick', async (req, res) => {
                          { type: "image_url", image_url: { url: `data:image/jpeg;base64,${screenshot}` } }
                      ]
                  }],
-                 max_tokens: 100
+                 max_tokens: 1024
              })
         });
 
