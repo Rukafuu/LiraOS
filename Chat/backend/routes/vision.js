@@ -68,19 +68,36 @@ router.post('/tick', async (req, res) => {
     }
 });
 
-async function paddleOCR(b64, mt) {
+async function openRouterOCR(b64, mt) {
   try {
-    const r = await fetch(PADDLE_OCR_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: `data:${mt};base64,${b64}`, lang: PADDLE_OCR_LANG }),
-      signal: AbortSignal.timeout(5000) // 5s timeout
+    if (!process.env.OPENROUTER_API_KEY) return null;
+    
+    const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://github.com/rukafuu/LiraOS",
+          "X-Title": "LiraOS"
+      },
+      body: JSON.stringify({
+          model: "baidu/qianfan-ocr-fast:free",
+          messages: [{
+              role: "user",
+              content: [
+                  { type: "text", text: "Please extract all text from this image accurately." },
+                  { type: "image_url", image_url: { url: `data:${mt};base64,${b64}` } }
+              ]
+          }]
+      }),
+      signal: AbortSignal.timeout(10000)
     });
+    
     if (!r.ok) return null;
     const d = await r.json();
-    return d.text || null;
+    return d.choices?.[0]?.message?.content || null;
   } catch (e) {
-    console.warn('PaddleOCR Error:', e.message);
+    console.warn('OpenRouter OCR Error:', e.message);
     return null;
   }
 }
@@ -142,11 +159,9 @@ router.post('/analyze', async (req, res) => {
     let ocrUsed = false;
 
     // 1. Try PaddleOCR (Local)
-    try {
-        // Only try if configured url is reachable - skipping explicit check for speed, relying on fetch fail
-        if (PADDLE_OCR_URL.includes('127.0.0.1')) { 
-             console.log('🔍 Trying PaddleOCR...');
-             const extracted = await paddleOCR(base64, mimeType);
+        try {
+             console.log('🔍 Trying OpenRouter OCR (Qianfan)...');
+             const extracted = await openRouterOCR(base64, mimeType);
              if (extracted && extracted.trim().length > 5) {
                 console.log('✅ OCR Success. Text length:', extracted.length);
                 ocrUsed = true;
@@ -175,7 +190,6 @@ router.post('/analyze', async (req, res) => {
                     analysisResult = data.choices?.[0]?.message?.content;
                 }
              }
-        }
     } catch (e) {
         console.warn('OCR skipped:', e.message);
     }
