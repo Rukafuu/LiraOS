@@ -48,14 +48,11 @@ router.post('/tick', requireAuth, async (req, res) => {
         // We need to convert Buffer to Base64 for Gemini
         const base64Image = imageBuffer.toString('base64');
         
-        if (!geminiClient) {
-             return res.json({ comment: "Gemini Key missing!", audio: "" });
+        if (!process.env.OPENROUTER_API_KEY) {
+             return res.json({ comment: "OpenRouter Key missing!", audio: "" });
         }
 
-        const model = geminiClient.getGenerativeModel({ 
-            model: "gemini-2.0-flash",
-            systemInstruction: "You are Lira, a funny, cute, and energetic AI Copilot watching the user play games or watch anime. React to what you see. Be brief."
-        });
+        const systemPrompt = "You are Lira, a funny, cute, and energetic AI Copilot watching the user play games or watch anime. React to what you see. Be brief.";
 
         // Prompt engineering for JSON
         const prompt = `
@@ -68,13 +65,32 @@ router.post('/tick', requireAuth, async (req, res) => {
         }
         NO MARKDOWN. ONLY JSON.
         `;
+
+        const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/rukafuu/LiraOS",
+                "X-Title": "LiraOS"
+            },
+            body: JSON.stringify({
+                model: "nvidia/nemotron-3-nano-omni-30B-a3b-reasoning:free",
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: [
+                        { type: "text", text: prompt },
+                        { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
+                    ]}
+                ],
+                response_format: { type: "json_object" }
+            })
+        });
+
+        if (!orRes.ok) throw new Error("OpenRouter error: " + await orRes.text());
+        const result = await orRes.json();
         
-        const result = await model.generateContent([
-            prompt,
-            { inlineData: { data: base64Image, mimeType: 'image/jpeg' } }
-        ]);
-        
-        const responseText = result.response.text().replace(/```json/g, '').replace(/```/g, '').trim();
+        const responseText = (result.choices?.[0]?.message?.content || "").replace(/```json/g, '').replace(/```/g, '').trim();
         let thought = {};
         try {
             thought = JSON.parse(responseText);

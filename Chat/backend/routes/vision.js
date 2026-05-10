@@ -26,22 +26,34 @@ router.post('/tick', async (req, res) => {
         const { screenshot } = req.body; // Base64
         if (!screenshot) return res.status(400).json({ error: 'No screenshot' });
 
-        if (!geminiClient) return res.status(503).json({ error: 'Vision AI unavailable' });
-
-        // Fire and Forget Analysis (to not block client too much, though we should await to not leak memory)
-        // Let's await for Gemini Flash (it's fast)
-        const model = geminiClient.getGenerativeModel({ model: "gemini-2.0-flash-lite-preview-02-05" }); // Or a very fast model. Let's use standard flash for now if lite not avail.
-        // Actually, gemini-2.0-flash is the standard fast one.
+        if (!process.env.OPENROUTER_API_KEY) return res.status(503).json({ error: 'Vision AI unavailable' });
 
         const prompt = "Describe very briefly (1 sentence) what the user is doing on their screen. Focus on active apps, content, or errors. Be concise.";
         
-        const result = await model.generateContent([
-            prompt,
-            { inlineData: { data: screenshot, mimeType: 'image/jpeg' } }
-        ]);
-        
-        const response = await result.response;
-        const description = response.text();
+        const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+             method: "POST",
+             headers: {
+                 "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                 "Content-Type": "application/json",
+                 "HTTP-Referer": "https://github.com/rukafuu/LiraOS",
+                 "X-Title": "LiraOS"
+             },
+             body: JSON.stringify({
+                 model: "nvidia/nemotron-3-nano-omni-30B-a3b-reasoning:free",
+                 messages: [{
+                     role: "user",
+                     content: [
+                         { type: "text", text: prompt },
+                         { type: "image_url", image_url: { url: `data:image/jpeg;base64,${screenshot}` } }
+                     ]
+                 }],
+                 max_tokens: 100
+             })
+        });
+
+        if (!orRes.ok) throw new Error("OpenRouter error: " + await orRes.text());
+        const data = await orRes.json();
+        const description = data.choices?.[0]?.message?.content || "";
 
         globalContext.updateVision(description);
         
@@ -84,29 +96,41 @@ router.post('/analyze', async (req, res) => {
     const mimeType = imageData.mimeType || 'image/jpeg';
     const fullPrompt = prompt || "O que tem nesta imagem?";
 
-    // 0. Priority: Gemini 2.0 Flash Vision (Fastest & Best)
-    if (geminiClient) {
+    // 0. Priority: OpenRouter Vision (Nemotron 3)
+    if (process.env.OPENROUTER_API_KEY) {
         try {
-            console.log('👁️ Using Gemini Vision...');
-            const model = geminiClient.getGenerativeModel({ model: "gemini-2.0-flash" });
-            
-            const result = await model.generateContent([
-                fullPrompt,
-                {
-                    inlineData: {
-                        data: base64,
-                        mimeType: mimeType
-                    }
+            console.log('👁️ Using OpenRouter Vision (Nemotron 3)...');
+            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://github.com/rukafuu/LiraOS",
+                    "X-Title": "LiraOS"
+                },
+                body: JSON.stringify({
+                    model: "nvidia/nemotron-3-nano-omni-30B-a3b-reasoning:free",
+                    messages: [{
+                        role: "user",
+                        content: [
+                            { type: "text", text: fullPrompt },
+                            { type: "image_url", image_url: { url: `data:${mimeType};base64,${base64}` } }
+                        ]
+                    }],
+                    max_tokens: 1024
+                })
+            });
+            if (response.ok) {
+                const data = await response.json();
+                const text = data.choices?.[0]?.message?.content;
+                if (text) {
+                     return res.json({ analysis: text, method: 'nemotron-3' });
                 }
-            ]);
-            const response = await result.response;
-            const text = response.text();
-            
-            if (text) {
-                 return res.json({ analysis: text, method: 'gemini-flash' });
+            } else {
+                console.error("OpenRouter Vision error:", await response.text());
             }
         } catch (e) {
-            console.error('Gemini Vision failed, falling back:', e.message);
+            console.error('OpenRouter Vision failed, falling back:', e.message);
         }
     }
 

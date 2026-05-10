@@ -321,7 +321,7 @@ router.post('/stream', async (req, res) => {
     const lastUserMsg = messages[messages.length - 1].content.toLowerCase();
 
     // ===  MODE & AGENT (Full Autonomy): Use Gemini 2.0 Flash Agent ===
-    if (GEMINI_API_KEY) {
+    if (OPENROUTER_API_KEY) {
       console.log(`[LIRA] 🔐 Agentic Lira Activated (Tier: ${userTier})`);
 
       try {
@@ -678,61 +678,127 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
 
         const geminiCascade = async (body, models = GEMINI_MODELS, useStream = false) => {
           let lastError = null;
-          for (const model of models) {
-            const apiMethod = useStream ? 'streamGenerateContent?alt=sse' : 'generateContent';
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:${apiMethod}&key=${GEMINI_API_KEY}`;
-            
-            // Try each model with 1 retry
-            for (let attempt = 0; attempt < 2; attempt++) {
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 45000);
-              try {
-                console.log(`[ADMIN] Trying ${model}${attempt > 0 ? ` (retry ${attempt})` : ''} [STREAM: ${useStream}]...`);
-                // Correção no URL se for SSE usa &key senao ?key
-                const cleanUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:${useStream ? 'streamGenerateContent?alt=sse&' : 'generateContent?'}key=${GEMINI_API_KEY}`;
-                
-                const res = await fetch(cleanUrl, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(body),
-                  signal: controller.signal
-                });
-                clearTimeout(timeoutId);
-
-                if (res.status === 429) {
-                  console.warn(`[ADMIN] 429 on ${model}. ${attempt === 0 ? 'Retrying in 3s...' : 'Trying next model...'}`);
-                  if (attempt === 0) {
-                    await new Promise(r => setTimeout(r, 3000));
-                    continue;
-                  }
-                  lastError = new Error(`429 on ${model}`);
-                  break; // Move to next model
+          let hasImage = false;
+          let openRouterMessages = [];
+          if (body.system_instruction) {
+             openRouterMessages.push({ role: "system", content: body.system_instruction.parts[0].text });
+          }
+          if (body.contents) {
+             for (const msg of body.contents) {
+                let text = "";
+                let contentArray = [];
+                for (const part of msg.parts) {
+                   if (part.text) {
+                      text += part.text;
+                      contentArray.push({ type: "text", text: part.text });
+                   }
+                   if (part.inlineData) {
+                      hasImage = true;
+                      contentArray.push({ type: "image_url", image_url: { url: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}` } });
+                   }
+                   if (part.functionCall) {
+                      openRouterMessages.push({
+                         role: "assistant",
+                         tool_calls: [{
+                            id: "call_123",
+                            type: "function",
+                            function: {
+                               name: part.functionCall.name,
+                               arguments: JSON.stringify(part.functionCall.args)
+                            }
+                         }]
+                      });
+                      contentArray = null;
+                      break;
+                   }
+                   if (part.functionResponse) {
+                      openRouterMessages.push({
+                         role: "tool",
+                         tool_call_id: "call_123",
+                         name: part.functionResponse.name,
+                         content: JSON.stringify(part.functionResponse.response)
+                      });
+                      contentArray = null;
+                      break;
+                   }
                 }
-                
-                console.log(`[ADMIN] ✅ ${model} responded: ${res.status}`);
-                return res;
-              } catch (e) {
+                if (contentArray !== null) {
+                   openRouterMessages.push({
+                      role: msg.role === "model" ? "assistant" : "user",
+                      content: contentArray.length === 1 && contentArray[0].type === "text" ? contentArray[0].text : contentArray
+                   });
+                }
+             }
+          }
+
+          let openRouterTools = undefined;
+          if (body.tools && body.tools[0] && body.tools[0].function_declarations) {
+             openRouterTools = body.tools[0].function_declarations.map(fn => ({
+                type: "function",
+                function: {
+                   name: fn.name,
+                   description: fn.description,
+                   parameters: fn.parameters || {}
+                }
+             }));
+          }
+
+          const targetModel = hasImage ? "nvidia/nemotron-3-nano-omni-30B-a3b-reasoning:free" : "openrouter/owl-alpha";
+
+          const orBody = {
+             model: targetModel,
+             messages: openRouterMessages,
+             stream: useStream
+          };
+          if (openRouterTools) {
+             orBody.tools = openRouterTools;
+             orBody.tool_choice = "auto";
+          }
+
+          const orUrl = "https://openrouter.ai/api/v1/chat/completions";
+          
+          for (let attempt = 0; attempt < 2; attempt++) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 45000);
+            try {
+              console.log(`[ADMIN] Trying OpenRouter ${targetModel} (attempt ${attempt})...`);
+              const res = await fetch(orUrl, {
+                 method: 'POST',
+                 headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                    'HTTP-Referer': 'https://github.com/rukafuu/LiraOS',
+                    'X-Title': 'LiraOS'
+                 },
+                 body: JSON.stringify(orBody),
+                 signal: controller.signal
+              });
+              clearTimeout(timeoutId);
+              if (res.status === 429) {
+                 if (attempt === 0) { await new Promise(r => setTimeout(r, 3000)); continue; }
+                 lastError = new Error("429 OpenRouter");
+                 break;
+              }
+              return res; 
+            } catch (e) {
                 clearTimeout(timeoutId);
                 lastError = e;
-                if (e.name === 'AbortError') break; // Timeout, skip to next model
-                if (attempt === 0) {
-                  await new Promise(r => setTimeout(r, 2000));
-                  continue;
-                }
+                if (e.name === 'AbortError') break;
+                if (attempt === 0) { await new Promise(r => setTimeout(r, 2000)); continue; }
                 break;
-              }
             }
           }
-          throw lastError || new Error('All Gemini models returned 429');
+          throw lastError || new Error('All OpenRouter models returned 429');
         };
 
-        // Helper para processar stream no server e repassar via res.write
         const processGeminiStream = async (fetchRes) => {
            let foundFunctionCall = null;
            const reader = fetchRes.body?.getReader();
            if (!reader) throw new Error('Unreadable stream');
            const decoder = new TextDecoder();
            let buffer = '';
+           let toolArgsBuffer = '';
+           let currentToolName = null;
 
            while (true) {
                const { done, value } = await reader.read();
@@ -749,24 +815,30 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
                    if (trimmed.startsWith('data: ')) {
                        try {
                            const data = JSON.parse(trimmed.slice(6));
-                           const candidate = data.candidates?.[0];
-                           const parts = candidate?.content?.parts || [];
-                           
-                           // Checa Function Call no chunk (geralmente chega inteiro no Gemini)
-                           const callPart = parts.find(p => p.functionCall);
-                           if (callPart) {
-                               foundFunctionCall = callPart.functionCall;
+                           const delta = data.choices?.[0]?.delta;
+                           if (!delta) continue;
+
+                           if (delta.tool_calls && delta.tool_calls.length > 0) {
+                               const tc = delta.tool_calls[0];
+                               if (tc.function?.name) currentToolName = tc.function.name;
+                               if (tc.function?.arguments) toolArgsBuffer += tc.function.arguments;
                            }
                            
-                           // Checa Texto
-                           const textPart = parts.find(p => p.text);
-                           if (textPart && textPart.text) {
-                               res.write(`data: ${JSON.stringify({ content: textPart.text })}\n\n`);
+                           if (delta.content) {
+                               res.write(`data: ${JSON.stringify({ content: delta.content })}\n\n`);
                            }
-                       } catch (e) {
-                           // parse falhou ou fragmentado
-                       }
+                       } catch (e) {}
                    }
+               }
+           }
+           if (currentToolName) {
+               try {
+                  foundFunctionCall = {
+                      name: currentToolName,
+                      args: JSON.parse(toolArgsBuffer || "{}")
+                  };
+               } catch(e) {
+                  console.error("Failed to parse tool args", toolArgsBuffer);
                }
            }
            return foundFunctionCall;

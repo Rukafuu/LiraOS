@@ -8,7 +8,6 @@ dotenv.config();
 class AgentBrain extends EventEmitter {
     constructor() {
         super();
-        this.gemini = process.env.GEMINI_API_KEY ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY) : null;
         this.lastThoughtTime = 0;
         this.minInterval = 60000; // Mínimo 60s entre pensamentos para não floodar
         this.cooldown = false;
@@ -20,7 +19,7 @@ class AgentBrain extends EventEmitter {
      * @param {string} forcedVision - Visão forçada (opcional)
      */
     async evaluate(triggerSource, forcedVision = null) {
-        if (!this.gemini || this.cooldown) return;
+        if (!process.env.OPENROUTER_API_KEY || this.cooldown) return;
         
         const now = Date.now();
         if (now - this.lastThoughtTime < this.minInterval) return;
@@ -36,8 +35,6 @@ class AgentBrain extends EventEmitter {
             }
 
             console.log(`[BRAIN] 🧠 Thinking... (Trigger: ${triggerSource})`);
-
-            const model = this.gemini.getGenerativeModel({ model: "gemini-1.5-flash-8b" });
             
             const systemPrompt = `
             Você é a mente da Lira, uma assistente virtual fofa, inteligente e um pouco atrevida.
@@ -60,14 +57,34 @@ class AgentBrain extends EventEmitter {
             5. Responda APENAS em JSON: { "should_speak": boolean, "message": "sua frase fofa/útil" }
             `;
 
-            const result = await model.generateContent({
-                contents: [{ role: "user", parts: [{ text: "O que você está pensando agora?" }] }],
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-                generationConfig: { responseMimeType: "application/json" }
+            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://github.com/rukafuu/LiraOS",
+                    "X-Title": "LiraOS"
+                },
+                body: JSON.stringify({
+                    model: "openrouter/owl-alpha",
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        { role: "user", content: "O que você está pensando agora?" }
+                    ],
+                    response_format: { type: "json_object" }
+                })
             });
 
-            const response = result.response.text();
-            let decision = JSON.parse(response);
+            if (!response.ok) throw new Error("OpenRouter error: " + await response.text());
+            const result = await response.json();
+            const textResponse = result.choices?.[0]?.message?.content;
+            
+            let decision = { should_speak: false };
+            try {
+                if (textResponse) decision = JSON.parse(textResponse);
+            } catch(e) {
+                console.error("[BRAIN] Failed to parse JSON:", textResponse);
+            }
 
             if (decision.should_speak && decision.message) {
                 console.log(`[BRAIN] 💡 Idea: "${decision.message}"`);

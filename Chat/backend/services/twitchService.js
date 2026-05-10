@@ -70,7 +70,7 @@ class TwitchService {
         console.log(`[Twitch] ${username}: ${message}`);
         this.writeToObs(username, message);
 
-        if (!genAI) return;
+        if (!process.env.OPENROUTER_API_KEY) return;
 
         // --- Streamer Logic (Auto-Reply) ---
         const now = Date.now();
@@ -89,14 +89,12 @@ class TwitchService {
         this.lastReplyTime = now;
 
         try {
-            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
-
             let userContext = "Viewer";
             if (isSub) userContext = "Subscriber";
             if (isMod) userContext = "Moderator";
             if (bits > 0) userContext = `Supporter (${bits} bits)`;
 
-            const prompt = `
+            const systemPrompt = `
             [SYSTEM]
             You are Lira, a virtual streamer on Twitch.
             User: ${username} (${userContext})
@@ -110,8 +108,27 @@ class TwitchService {
             Response (Text only):
             `;
 
-            const result = await model.generateContent(prompt);
-            const response = result.response.text();
+            const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://github.com/rukafuu/LiraOS",
+                    "X-Title": "LiraOS"
+                },
+                body: JSON.stringify({
+                    model: "openrouter/owl-alpha",
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        { role: "user", content: message }
+                    ],
+                    max_tokens: 150
+                })
+            });
+
+            if (!orRes.ok) throw new Error("OpenRouter error: " + await orRes.text());
+            const data = await orRes.json();
+            const response = data.choices?.[0]?.message?.content || "";
 
             await this.speak(response);
 

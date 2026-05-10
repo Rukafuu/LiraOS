@@ -858,18 +858,14 @@ class DiscordService {
     }
 
     async generateResponse(text, userId, userContext = "", imageParts = [], isOwner = false) {
-        if (!geminiClient) return "Sem conexão com Gemini. (Verifique GEMINI_API_KEY)";
+        if (!process.env.OPENROUTER_API_KEY) return "Sem conexão com OpenRouter. (Verifique OPENROUTER_API_KEY)";
 
         try {
             const promptWithContext = userContext ? `${text}\n${userContext}` : text;
             if (userContext) console.log(`[DISCORD] 🎮 Prompt Context Added`);
 
-            const parts = [{ text: promptWithContext }];
-            if (imageParts.length > 0) {
-                console.log(`[DISCORD] 👁️ Analisando ${imageParts.length} imagem(ns)...`);
-                parts.push(...imageParts);
-            }
-
+            let openRouterMessages = [];
+            
             // INJECT SELF CORE HERE
             let systemPrompt = `You are Lira, a highly intelligent, friendly, and witty personal assistant with a Gamer personality.
             
@@ -892,34 +888,54 @@ class DiscordService {
             }
 
             systemPrompt = LIRA_SELF_CONTENT + "\n\n" + systemPrompt;
+            openRouterMessages.push({ role: "system", content: systemPrompt });
 
-            const result = await geminiClient.models.generateContent({
-                model: 'gemini-2.0-flash',
-                contents: [{ role: 'user', parts: parts }],
-                tools: [{ functionDeclarations: LIRA_TOOLS }],
-                config: {
-                    systemInstruction: systemPrompt
+            let contentArray = [{ type: "text", text: promptWithContext }];
+            if (imageParts.length > 0) {
+                console.log(`[DISCORD] 👁️ Analisando ${imageParts.length} imagem(ns)...`);
+                for (const img of imageParts) {
+                    contentArray.push({ type: "image_url", image_url: { url: `data:${img.inlineData.mimeType};base64,${img.inlineData.data}` } });
                 }
+            }
+            openRouterMessages.push({ role: "user", content: contentArray.length === 1 ? contentArray[0].text : contentArray });
+
+            const targetModel = imageParts.length > 0 ? "nvidia/nemotron-3-nano-omni-30B-a3b-reasoning:free" : "openrouter/owl-alpha";
+
+            const orBody = {
+                model: targetModel,
+                messages: openRouterMessages,
+                tools: LIRA_TOOLS.map(fn => ({ type: "function", function: fn })),
+                tool_choice: "auto"
+            };
+
+            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://github.com/rukafuu/LiraOS",
+                    "X-Title": "LiraOS"
+                },
+                body: JSON.stringify(orBody)
             });
 
-            const candidates = result.response?.candidates || result.candidates;
-            if (!candidates || candidates.length === 0) {
-                 return "Hmm, não consegui processar isso. (Sem resposta da IA)";
-            }
+            if (!response.ok) throw new Error("OpenRouter error: " + await response.text());
+            const data = await response.json();
+            const messageObj = data.choices?.[0]?.message;
 
-            const candidate = candidates[0];
-            const part = candidate.content.parts[0];
+            if (!messageObj) return "Hmm, não consegui processar isso. (Sem resposta da IA)";
 
             // Handle Function Call
-            if (part && part.functionCall) {
-                const fc = part.functionCall;
-                console.log(`[DISCORD] 🛠️ Executing Tool: ${fc.name}`, fc.args);
+            if (messageObj.tool_calls && messageObj.tool_calls.length > 0) {
+                const tc = messageObj.tool_calls[0];
+                const fc = tc.function;
+                const args = JSON.parse(fc.arguments || "{}");
+                console.log(`[DISCORD] 🛠️ Executing Tool: ${fc.name}`, args);
 
                 if (fc.name === 'execute_system_command') {
                      if (!isOwner) {
                          return "⛔ Apenas meu mestre (Dono do PC) pode executar comandos de sistema. Mas posso gerar imagens ou conversar com você! 🎨";
                      }
-                     const args = fc.args;
                      let cmdResult = "";
                      if (args.command === 'open') cmdResult = await pcController.handleOpen(args.target);
                      else if (args.command === 'search') cmdResult = await pcController.handleSearch(`search ${args.target}`);
@@ -929,7 +945,7 @@ class DiscordService {
                 }
 
                 if (fc.name === 'generate_image') {
-                    const prompt = fc.args.prompt;
+                    const prompt = args.prompt;
                     const encodedPrompt = encodeURIComponent(prompt);
                     // Using Pollinations.ai for instant, free keyless generation
                     const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}`;
@@ -939,7 +955,7 @@ class DiscordService {
                 if (fc.name === 'game_control') {
                     if (!isOwner) return "⛔ Apenas meu mestre pode me fazer jogar!";
                     
-                    const { action, game } = fc.args;
+                    const { action, game } = args;
                     if (game === 'osu') {
                          if (action === 'start_bot') return await pcController.activateOsuBot();
                          if (action === 'stop_bot') return await pcController.stopOsuBot();
@@ -949,10 +965,8 @@ class DiscordService {
             }
 
             // Handle Text
-            if (result.response && typeof result.response.text === 'function') {
-                return result.response.text();
-            } else if (part && part.text) {
-                return part.text;
+            if (messageObj.content) {
+                return messageObj.content;
             }
             
             return "Recebi uma resposta vazia.";
