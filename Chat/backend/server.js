@@ -289,8 +289,16 @@ server.listen(PORT, '0.0.0.0', async () => {
   console.log(`[SYSTEM] Frontend URL: ${FRONTEND_URL}`);
 
   // Jobs
-  // TODO: Migrate cleanupExpiredBans to support PostgreSQL
-  // cleanupExpiredBans();
+  console.log('[STARTUP] Initializing scheduled jobs...');
+  cleanupExpiredBans().then(count => {
+    if (count > 0) console.log(`[JOBS] Cleaned up ${count} expired bans.`);
+  });
+
+  // Run cleanup every 12 hours
+  setInterval(async () => {
+    const count = await cleanupExpiredBans();
+    if (count > 0) console.log(`[JOBS] Periodic cleanup: Removed ${count} expired bans.`);
+  }, 12 * 60 * 60 * 1000);
 
   // Start PC Controller Service
   import('./services/pcControllerService.js').then(service => {

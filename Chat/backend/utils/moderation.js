@@ -259,17 +259,24 @@ export async function resolveAppeal(appealId, status, adminNote) {
 
 /**
  * Cron: Cleanup
+ * Removes bans that have reached their expiration date.
  */
 export async function cleanupExpiredBans() {
-  const now = Date.now();
-  const info = await prisma.ban.deleteMany({
+  try {
+    const now = BigInt(Date.now());
+    const info = await prisma.ban.deleteMany({
       where: {
-          until: { not: null, lt: now } // Check if 'not: null' is valid in prisma? Yes. But schema defines optional.
-          // BigInt vs Int conflict might happen if 'until' in DB is BigInt.
-          // I pass 'now' (number/double). Prisma usually handles mapping if schema is BigInt.
+        until: {
+          not: null,
+          lt: now
+        }
       }
-  });
-  return info.count;
+    });
+    return info.count;
+  } catch (e) {
+    console.error('[MODERATION] cleanupExpiredBans error:', e);
+    return 0;
+  }
 }
 
 export async function getModerationLogs() {
