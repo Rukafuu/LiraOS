@@ -37,6 +37,15 @@ async function saveLists(userId, lists) {
   await fs.writeFile(todoPath, JSON.stringify(lists, null, 2));
 }
 
+function createItemObject(text, index = 0) {
+  return {
+    id: `item_${Date.now()}_${index}`,
+    text,
+    completed: false,
+    createdAt: Date.now()
+  };
+}
+
 export const todoService = {
   getLists: async (userId) => {
     return loadLists(userId);
@@ -53,10 +62,14 @@ export const todoService = {
       throw new Error(`Limite de ${limit} listas atingido para seu plano.`);
     }
 
+    const items = Array.isArray(initialItems)
+      ? initialItems.map((text, idx) => typeof text === 'string' ? createItemObject(text, idx) : text)
+      : [];
+
     const newList = {
       id: `list_${Date.now()}`,
       title,
-      items: initialItems,
+      items,
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
@@ -88,17 +101,18 @@ export const todoService = {
   
   // New granular methods for AI
   addItem: async (userId, listId, text) => {
+      return (await todoService.addItems(userId, listId, [text]))[0];
+  },
+
+  addItems: async (userId, listId, texts) => {
+      if (!texts || !Array.isArray(texts) || texts.length === 0) return [];
+
       const lists = await loadLists(userId);
-      const listIndex = lists.findIndex(l => l.id === listId);
+      let listIndex = lists.findIndex(l => l.id === listId);
       
-      // If listId not found, maybe listId is title? AI can be dumb.
-      // Let's try to find by title if ID fail? No, force strict ID for now or first list.
-      let targetIndex = listIndex;
-      if (targetIndex === -1 && lists.length > 0) {
-          // Fallback: Add to first list
-          targetIndex = 0;
-      } else if (targetIndex === -1 && lists.length === 0) {
-          // Create default list
+      if (listIndex === -1 && lists.length > 0) {
+          listIndex = 0;
+      } else if (listIndex === -1 && lists.length === 0) {
           const newList = {
               id: `list_${Date.now()}`,
               title: "Tarefas",
@@ -107,19 +121,14 @@ export const todoService = {
               updatedAt: Date.now()
           };
           lists.push(newList);
-          targetIndex = 0;
+          listIndex = 0;
       }
       
-      const newItem = {
-          id: `item_${Date.now()}`,
-          text,
-          completed: false,
-          createdAt: Date.now()
-      };
+      const newItems = texts.map((text, idx) => createItemObject(text, idx));
       
-      lists[targetIndex].items.push(newItem);
-      lists[targetIndex].updatedAt = Date.now();
+      lists[listIndex].items.push(...newItems);
+      lists[listIndex].updatedAt = Date.now();
       await saveLists(userId, lists);
-      return newItem;
+      return newItems;
   }
 };

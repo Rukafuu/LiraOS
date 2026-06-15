@@ -1174,13 +1174,7 @@ Na dúvida sobre um arquivo, DIGA QUE NÃO SABE e use uma ferramenta para descob
             case 'create_todo_list':
               try {
                 const { title, items } = functionCall.args;
-                const newList = await todoService.createList(userId, title);
-
-                if (items && Array.isArray(items)) {
-                  for (const itemText of items) {
-                    await todoService.addItem(userId, newList.id, itemText);
-                  }
-                }
+                const newList = await todoService.createList(userId, title, items);
 
                 functionResult = {
                   success: true,
@@ -1737,10 +1731,7 @@ IMPORTANT: ALWAYS respond in the SAME LANGUAGE as the user. If the user speaks P
              } else if (name === 'get_system_stats') {
                 functionResult = await pcController.getSystemStats();
              } else if (name === 'create_todo_list') {
-                const newList = await todoService.createList(userId, args.title);
-                if (args.items) {
-                   for (const item of args.items) await todoService.addItem(userId, newList.id, item);
-                }
+                const newList = await todoService.createList(userId, args.title, args.items);
                 functionResult = { success: true, listId: newList.id };
              }
 
