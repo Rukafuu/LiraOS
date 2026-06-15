@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { encrypt, decrypt } from '../utils/encryption.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,7 +54,17 @@ class CredentialStore {
      */
     get(userId) {
         if (!this.cache) this.load();
-        return this.cache[userId] || {};
+        const credentials = this.cache[userId] || {};
+
+        // Decrypt token if it exists
+        if (credentials.githubToken) {
+            return {
+                ...credentials,
+                githubToken: decrypt(credentials.githubToken)
+            };
+        }
+
+        return credentials;
     }
 
     /**
@@ -65,7 +76,14 @@ class CredentialStore {
         if (!this.cache) this.load();
         
         const current = this.cache[userId] || {};
-        this.cache[userId] = { ...current, ...data };
+
+        // Encrypt token if it's being updated
+        const dataToSave = { ...data };
+        if (dataToSave.githubToken) {
+            dataToSave.githubToken = encrypt(dataToSave.githubToken);
+        }
+
+        this.cache[userId] = { ...current, ...dataToSave };
         
         this.save();
         console.log(`[CREDENTIALS] Updated credentials for user ${userId} in ${CREDENTIALS_FILE}`);

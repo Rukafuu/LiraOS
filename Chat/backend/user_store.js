@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import prisma from './prismaClient.js';
+import { encrypt, decrypt } from './utils/encryption.js';
 
 // Helper to convert BigInt to Number
 const toInt = (n) => Number(n || 0);
@@ -20,7 +21,7 @@ function mapUser(user) {
     preferences: safeParseJSON(user.preferencesStr, {}),
     plan: user.plan || 'free',
     discordId: user.discordId,
-    githubToken: user.githubToken,
+    githubToken: decrypt(user.githubToken),
     githubOwner: user.githubOwner,
     githubRepo: user.githubRepo,
     stripeCustomerId: user.stripeCustomerId,
@@ -139,7 +140,7 @@ export async function updateUser(userId, updates) {
     if (updates.avatar !== undefined) prismaData.avatar = updates.avatar;
     if (updates.plan !== undefined) prismaData.plan = updates.plan;
     if (updates.discordId !== undefined) prismaData.discordId = updates.discordId;
-    if (updates.githubToken !== undefined) prismaData.githubToken = updates.githubToken;
+    if (updates.githubToken !== undefined) prismaData.githubToken = encrypt(updates.githubToken);
     if (updates.githubOwner !== undefined) prismaData.githubOwner = updates.githubOwner;
     if (updates.githubRepo !== undefined) prismaData.githubRepo = updates.githubRepo;
     if (updates.googleRefreshToken !== undefined) prismaData.googleRefreshToken = updates.googleRefreshToken;
