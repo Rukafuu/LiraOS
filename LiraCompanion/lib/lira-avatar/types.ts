@@ -11,6 +11,7 @@ export interface Live2DModelType {
     on: (event: string, callback: (hitAreas: string[]) => void) => void;
     motion: (group: string, index?: number, priority?: number) => void;
     expression: (name: string) => void;
+    visible: boolean;
     internalModel: {
         coreModel: {
             setParameterValueById: (id: string, value: number) => void;
@@ -34,20 +35,28 @@ export interface Live2DModelType {
 // Minimal Pixi Application interface we use
 export interface PixiApp {
     view: HTMLCanvasElement;
+    resizeTo: HTMLElement | Window | null;
     stage: {
         addChild: (child: any) => void;
+        removeChild: (child: any) => void;
+        removeChildren: () => void;
     };
     screen: {
         width: number;
         height: number;
     };
     ticker: {
+        start: () => void;
+        stop: () => void;
         add: (fn: (delta: number) => void) => void;
         remove: (fn: (delta: number) => void) => void;
         elapsedMS: number;
     };
+    start: () => void;
+    stop: () => void;
     destroy: (removeView?: boolean, stageOptions?: any) => void;
     renderer: {
+        resize: (width: number, height: number) => void;
         plugins: {
             interaction: {
                 on: (event: string, fn: (e: any) => void) => void;
@@ -65,6 +74,7 @@ declare global {
                 Live2DModel: {
                     from: (url: string, options?: any) => Promise<Live2DModelType>;
                     registerTicker: (ticker: any) => void;
+                    prototype: any;
                 };
             };
             Ticker: {
