@@ -42,6 +42,21 @@ class LocalGameDetection {
                 requiresWindowCheck: true // Precisa verificar título da janela
             }
         };
+
+        this._buildInvertedIndex();
+    }
+
+    /**
+     * Constrói índice invertido para busca rápida O(1)
+     * processName -> gameId
+     */
+    _buildInvertedIndex() {
+        this.processToGameIdMap = new Map();
+        for (const [gameId, profile] of Object.entries(this.gameProfiles)) {
+            for (const processName of profile.processNames) {
+                this.processToGameIdMap.set(processName.toLowerCase(), gameId);
+            }
+        }
     }
 
     /**
@@ -83,26 +98,39 @@ class LocalGameDetection {
         try {
             // Windows: usar tasklist para obter processos
             const { stdout } = await execAsync('tasklist /FO CSV /NH');
-            const processes = stdout.split('\n').map(line => {
-                const match = line.match(/"([^"]+)"/);
-                return match ? match[1] : '';
-            });
 
-            // Verificar cada perfil de jogo
+            // O(P) para processar lista de processos
+            const runningProcessesSet = new Set();
+            const lines = stdout.split('\n');
+            for (const line of lines) {
+                const match = line.match(/"([^"]+)"/);
+                if (match) {
+                    runningProcessesSet.add(match[1].toLowerCase());
+                }
+            }
+
+            // Identificar todos os games rodando via lookup O(1)
+            const detectedGameIds = new Set();
+            for (const processName of runningProcessesSet) {
+                const gameId = this.processToGameIdMap.get(processName);
+                if (gameId) {
+                    detectedGameIds.add(gameId);
+                }
+            }
+
+            // Verificar cada perfil de jogo mantendo a ordem de prioridade definida em gameProfiles
             for (const [gameId, profile] of Object.entries(this.gameProfiles)) {
-                for (const processName of profile.processNames) {
-                    if (processes.some(p => p.toLowerCase() === processName.toLowerCase())) {
-                        // Se é corinthians-watch, precisa verificar janela
-                        if (profile.requiresWindowCheck) {
-                            const isFootball = await this.checkForFootballWindow();
-                            if (isFootball) {
-                                await this.handleGameDetected(gameId, profile);
-                                return;
-                            }
-                        } else {
+                if (detectedGameIds.has(gameId)) {
+                    // Se é corinthians-watch, precisa verificar janela
+                    if (profile.requiresWindowCheck) {
+                        const isFootball = await this.checkForFootballWindow();
+                        if (isFootball) {
                             await this.handleGameDetected(gameId, profile);
                             return;
                         }
+                    } else {
+                        await this.handleGameDetected(gameId, profile);
+                        return;
                     }
                 }
             }
