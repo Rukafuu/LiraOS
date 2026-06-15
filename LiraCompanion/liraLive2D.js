@@ -48,6 +48,7 @@ class LiraLive2D {
             this.model.y = 50;
             
             // Add to stage
+            this.app.stage.removeChildren();
             this.app.stage.addChild(this.model);
             
             console.log('[Live2D] Model loaded successfully!');
