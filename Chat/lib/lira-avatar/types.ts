@@ -36,6 +36,7 @@ export interface PixiApp {
     view: HTMLCanvasElement;
     stage: {
         addChild: (child: any) => void;
+        removeChildren: () => void;
     };
     screen: {
         width: number;
@@ -47,7 +48,9 @@ export interface PixiApp {
         elapsedMS: number;
     };
     destroy: (removeView?: boolean, stageOptions?: any) => void;
+    resizeTo: HTMLElement | null;
     renderer: {
+        resize: (width: number, height: number) => void;
         plugins: {
             interaction: {
                 on: (event: string, fn: (e: any) => void) => void;
