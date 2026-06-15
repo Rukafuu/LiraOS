@@ -12,6 +12,9 @@ export function normalizeBaileysEvent(msg, botId) {
                  msg.message.extendedTextMessage?.text || 
                  msg.message.imageMessage?.caption || 
                  msg.message.videoMessage?.caption || 
+                 msg.message.buttonsResponseMessage?.selectedDisplayText ||
+                 msg.message.listResponseMessage?.title ||
+                 msg.message.templateButtonReplyMessage?.selectedId ||
                  '';
 
     // Mentions
@@ -25,11 +28,12 @@ export function normalizeBaileysEvent(msg, botId) {
     return {
         source: SourceTypes.BAILEYS,
         groupId: msg.key.remoteJid,
-        userId: msg.key.participant,
+        userId: msg.key.participant || msg.key.remoteJid,
         timestamp: msg.messageTimestamp, // Baileys gives this as seconds usually? Check docs. Assuming seconds.
         type: EventTypes.MESSAGE,
         message: {
             text,
+            pushName: msg.pushName,
             hasMention,
             replyToLira,
             media: getMediaInfo(msg.message)
