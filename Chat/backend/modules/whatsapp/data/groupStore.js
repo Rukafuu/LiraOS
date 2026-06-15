@@ -62,5 +62,26 @@ export const groupStore = {
             db[groupId] = { ...db[groupId], ...updates };
             await save(db);
         }
+    },
+
+    async updateStats(groupId, type) {
+        await init();
+        let db = await load();
+        if (!db[groupId]) {
+            await this.initGroup(groupId);
+            db = await load();
+        }
+
+        const group = db[groupId];
+        if (group) {
+            if (!group.stats) group.stats = { msg: 0, image: 0, sticker: 0, cmd: 0 };
+
+            if (type === 'message') group.stats.msg++;
+            else if (type === 'image') group.stats.image++;
+            else if (type === 'sticker') group.stats.sticker++;
+            else if (type === 'command') group.stats.cmd++;
+
+            await save(db);
+        }
     }
 };
