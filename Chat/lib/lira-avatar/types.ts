@@ -2,6 +2,7 @@
 // This ensures TypeScript knows about the window-attached libraries
 
 export interface Live2DModelType {
+    visible: boolean;
     x: number;
     y: number;
     width: number;
@@ -36,6 +37,8 @@ export interface PixiApp {
     view: HTMLCanvasElement;
     stage: {
         addChild: (child: any) => void;
+        removeChildren: () => void;
+        removeChild: (child: any) => void;
     };
     screen: {
         width: number;
@@ -45,16 +48,22 @@ export interface PixiApp {
         add: (fn: (delta: number) => void) => void;
         remove: (fn: (delta: number) => void) => void;
         elapsedMS: number;
+        stop: () => void;
+        start: () => void;
     };
     destroy: (removeView?: boolean, stageOptions?: any) => void;
     renderer: {
+        resize: (width: number, height: number) => void;
         plugins: {
             interaction: {
                 on: (event: string, fn: (e: any) => void) => void;
                 off: (event: string, fn: (e: any) => void) => void;
             }
         }
-    }
+    };
+    start: () => void;
+    stop: () => void;
+    resizeTo?: any;
 }
 
 declare global {
