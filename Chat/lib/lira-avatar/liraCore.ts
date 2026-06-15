@@ -54,7 +54,6 @@ export class LiraCore {
                 autoStart: true,
                 sharedTicker: true, // Back to shared, easier for singleton
                 backgroundAlpha: 0,
-                resizeTo: this.container, // Initial resize target
                 antialias: true,
                 autoDensity: true,
                 resolution: window.devicePixelRatio || 1
@@ -63,6 +62,14 @@ export class LiraCore {
             globalCanvas = this.canvas;
             this.app = globalApp;
             globalApp.ticker.stop(); // Wait for model
+
+            // FIX: Force immediate renderer resize to fix "Disappearing Head" (Masking)
+            // Ensure we NEVER resize to 0x0. Use safe defaults if container is collapsing.
+            if (this.app.renderer) {
+                const safeW = Math.max(this.container.clientWidth, 250);
+                const safeH = Math.max(this.container.clientHeight, 250);
+                this.app.renderer.resize(safeW, safeH);
+            }
         } else {
             console.log("[LiraCore] Reusing Global Singleton Context (Resurrection)");
             this.app = globalApp;
@@ -224,8 +231,8 @@ export class LiraCore {
             if (!this.model || !this.app || !this.app.renderer) return;
 
             // 1. Force App/Renderer Resize
-            const w = this.container.clientWidth;
-            const h = this.container.clientHeight;
+            const w = Math.max(this.container.clientWidth, 250);
+            const h = Math.max(this.container.clientHeight, 250);
             this.app.renderer.resize(w, h);
 
             const screenW = this.app.screen.width;
