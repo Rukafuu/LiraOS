@@ -257,14 +257,7 @@ export const processFile = async (file: File): Promise<FileUploadResult> => {
 
 // Múltiplos arquivos
 export const processMultipleFiles = async (files: File[]): Promise<FileUploadResult[]> => {
-  const results: FileUploadResult[] = [];
-  
-  for (const file of files) {
-    const result = await processFile(file);
-    results.push(result);
-  }
-  
-  return results;
+  return Promise.all(files.map(file => processFile(file)));
 };
 
 // Validar arquivo antes do upload

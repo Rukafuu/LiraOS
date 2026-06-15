@@ -127,40 +127,57 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   }, [input]);
 
   const attachFiles = async (files: FileList | File[]) => {
-    const newAttachments: Attachment[] = [];
+    const fileArray = Array.from(files);
     const errors: string[] = [];
-    for (const file of Array.from(files)) {
-      const validation = validateFileForUpload(file);
-      if (!validation.isValid) {
-        errors.push(`${file.name}: ${validation.error}`);
-        continue;
-      }
-      try {
-        const result = await processFile(file);
-        logFileProcessing(result);
-        if (result.success) {
-          const previewUrl = result.imageData || result.text || result.base64 || '';
-          newAttachments.push({
-            id: uuidv4(),
-            file,
-            previewUrl,
-            type: result.type,
-            name: result.name,
-            size: result.size
-          });
-        } else {
-          errors.push(`${file.name}: ${result.error}`);
+
+    const processingResults = await Promise.all(
+      fileArray.map(async (file) => {
+        const validation = validateFileForUpload(file);
+        if (!validation.isValid) {
+          return { success: false, error: validation.error, fileName: file.name };
         }
-      } catch {
-        errors.push(`${file.name}: Failed to process file`);
+
+        try {
+          const result = await processFile(file);
+          logFileProcessing(result);
+          if (result.success) {
+            const previewUrl = result.imageData || result.text || result.base64 || '';
+            return {
+              success: true,
+              attachment: {
+                id: uuidv4(),
+                file,
+                previewUrl,
+                type: result.type,
+                name: result.name,
+                size: result.size
+              }
+            };
+          } else {
+            return { success: false, error: result.error, fileName: file.name };
+          }
+        } catch {
+          return { success: false, error: 'Failed to process file', fileName: file.name };
+        }
+      })
+    );
+
+    const newAttachments: Attachment[] = [];
+    processingResults.forEach((res) => {
+      if (res.success && res.attachment) {
+        newAttachments.push(res.attachment);
+      } else if (!res.success) {
+        errors.push(`${res.fileName}: ${res.error}`);
       }
-    }
+    });
+
     if (errors.length > 0) {
       setFileErrors(errors);
       errors.forEach(error => addToast(error, 'error'));
     } else {
       setFileErrors([]);
     }
+
     if (newAttachments.length > 0) {
       setAttachments(prev => [...prev, ...newAttachments]);
       addToast(t('chat_input.toast_attached', { count: newAttachments.length }), 'success');
