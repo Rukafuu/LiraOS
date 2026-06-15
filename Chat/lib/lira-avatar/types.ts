@@ -6,6 +6,10 @@ export interface Live2DModelType {
     y: number;
     width: number;
     height: number;
+    visible: boolean;
+    interactive: boolean;
+    autoUpdate: boolean;
+    blendMode: number;
     scale: { x: number, y: number, set: (x: number, y?: number) => void };
     anchor: { set: (x: number, y?: number) => void };
     on: (event: string, callback: (hitAreas: string[]) => void) => void;
@@ -36,6 +40,8 @@ export interface PixiApp {
     view: HTMLCanvasElement;
     stage: {
         addChild: (child: any) => void;
+        removeChild: (child: any) => void;
+        removeChildren: () => void;
     };
     screen: {
         width: number;
@@ -44,10 +50,15 @@ export interface PixiApp {
     ticker: {
         add: (fn: (delta: number) => void) => void;
         remove: (fn: (delta: number) => void) => void;
+        stop: () => void;
         elapsedMS: number;
     };
+    start: () => void;
+    stop: () => void;
+    resizeTo?: any;
     destroy: (removeView?: boolean, stageOptions?: any) => void;
     renderer: {
+        resize: (width: number, height: number) => void;
         plugins: {
             interaction: {
                 on: (event: string, fn: (e: any) => void) => void;
@@ -65,10 +76,15 @@ declare global {
                 Live2DModel: {
                     from: (url: string, options?: any) => Promise<Live2DModelType>;
                     registerTicker: (ticker: any) => void;
+                    prototype: any;
                 };
             };
             Ticker: {
                 shared: any;
+            };
+            BLEND_MODES: {
+                NORMAL: number;
+                [key: string]: number;
             };
         };
     }

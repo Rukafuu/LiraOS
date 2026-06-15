@@ -26,7 +26,6 @@ export class LiraCore {
         this.isDancing = enabled;
         if (this.model) {
             if (enabled) {
-                // @ts-ignore
                 this.model.motion('Dance', undefined, 3);
             } else {
                 this.model.scale.set(this.originalScale);
@@ -38,7 +37,6 @@ export class LiraCore {
         this.container = document.getElementById(containerId) as HTMLElement;
         if (!this.container) throw new Error(`Container ${containerId} not found`);
 
-        // @ts-ignore
         if (!window.PIXI) throw new Error('PIXI not found');
 
         // SINGLETON INIT LOGIC
@@ -48,7 +46,6 @@ export class LiraCore {
             this.canvas = document.createElement('canvas');
             this.canvas.id = 'lira-canvas';
 
-            // @ts-ignore
             globalApp = new window.PIXI.Application({
                 view: this.canvas,
                 autoStart: true,
@@ -96,14 +93,11 @@ export class LiraCore {
 
     public initLive2D() {
         // Init logic only needs to run once globally, but checking doesn't hurt
-        // @ts-ignore
         const live2d = window.PIXI.live2d;
         if (!live2d) return false;
 
         // Ensure shared ticker exists (Polyfill)
-        // @ts-ignore
         if (!window.PIXI.Ticker.shared) {
-            // @ts-ignore
             window.PIXI.Ticker.shared = this.app.ticker;
         }
         return true;
@@ -123,7 +117,6 @@ export class LiraCore {
 
         try {
             console.log(`[LiraCore] Loading Fresh Model: ${modelPath}`);
-            // @ts-ignore
             const Live2DModel = window.PIXI.live2d.Live2DModel;
 
             // MONKEY PATCH (Keep it, it's safe)
@@ -139,11 +132,9 @@ export class LiraCore {
             this.model = await Live2DModel.from(modelPath);
 
             if (this.model) {
-                // @ts-ignore
                 this.model.autoUpdate = false;
 
                 // FIX: Clear previous models to prevent duplication
-                // @ts-ignore
                 this.app.stage.removeChildren();
                 this.app.stage.addChild(this.model);
 
@@ -151,7 +142,6 @@ export class LiraCore {
                 // globalModel = this.model;
 
                 // Simple Setup
-                // @ts-ignore
                 this.model.blendMode = window.PIXI.BLEND_MODES.NORMAL;
 
                 // 🚫 Remove Watermark (Restored)
@@ -159,9 +149,7 @@ export class LiraCore {
                     // Try generic parameter set
                     this.setParameter('Param', 1);
                     // Try direct core model set (Nuclear option)
-                    // @ts-ignore
                     if (this.model.internalModel?.coreModel) {
-                        // @ts-ignore
                         this.model.internalModel.coreModel.setParameterValueById('Param', 1);
                     }
                 } catch (e) {
@@ -169,7 +157,6 @@ export class LiraCore {
                 }
 
                 // Setup Interaction
-                // @ts-ignore
                 this.model.interactive = true;
                 this.model.on('hit', (hitAreas: any) => {
                     if (hitAreas.includes('Body')) this.model?.motion('TapBody');
@@ -233,7 +220,6 @@ export class LiraCore {
 
             // 2. SAFE FIT SCALING
             // Attempt to get the real model height, fallback to 4000px if unknown
-            // @ts-ignore
             const baseHeight = this.model.internalModel?.originalHeight || 4000;
             const baseWidth = this.model.internalModel?.originalWidth || 4000;
 
@@ -267,7 +253,6 @@ export class LiraCore {
     updateMouth(volume: number) {
         if (!this.model) return;
         try {
-            // @ts-ignore
             const core = this.model.internalModel.coreModel;
             core.setParameterValueById('ParamMouthOpenY', volume);
         } catch (e) { }
@@ -305,7 +290,6 @@ export class LiraCore {
     setParameter(paramId: string, value: number) {
         if (this.model && this.model.internalModel && this.model.internalModel.coreModel) {
             try {
-                // @ts-ignore
                 this.model.internalModel.coreModel.setParameterValueById(paramId, value);
             } catch (e) {
                 console.warn(`[LiraCore] Failed to set parameter ${paramId}:`, e);
