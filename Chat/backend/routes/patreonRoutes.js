@@ -1,5 +1,6 @@
 import express from 'express';
 import { patreonService } from '../services/patreonService.js';
+import { discordService } from '../services/discordService.js';
 
 const router = express.Router();
 
@@ -125,8 +126,7 @@ router.post('/refresh-tokens', async (req, res) => {
  */
 router.post('/sync-discord', async (req, res) => {
     try {
-        // TODO: Passar discordService quando implementar
-        const results = await patreonService.syncWithDiscord(null);
+        const results = await patreonService.syncWithDiscord(discordService);
         
         res.json({
             success: true,

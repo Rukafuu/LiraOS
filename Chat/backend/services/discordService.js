@@ -857,6 +857,76 @@ class DiscordService {
         });
     }
 
+    /**
+     * Atribuir uma role a um usuário e remover outras roles de tier
+     */
+    async addRoleToUser(discordId, roleName) {
+        if (!this.client.isReady()) {
+            console.warn('[DISCORD] Bot não está pronto, impossível atribuir role');
+            return false;
+        }
+
+        try {
+            const guildId = process.env.DISCORD_GUILD_ID;
+            let guild;
+
+            if (guildId) {
+                guild = await this.client.guilds.fetch(guildId);
+            } else {
+                guild = this.client.guilds.cache.first();
+            }
+
+            if (!guild) {
+                console.error('[DISCORD] Servidor não encontrado');
+                return false;
+            }
+
+            const member = await guild.members.fetch(discordId).catch(() => null);
+            if (!member) {
+                console.warn(`[DISCORD] Membro ${discordId} não encontrado no servidor ${guild.name}`);
+                return false;
+            }
+
+            // Fetch roles to ensure we have latest data
+            const allRoles = await guild.roles.fetch();
+            const role = allRoles.find(r => r.name === roleName);
+
+            if (!role) {
+                console.error(`[DISCORD] Role "${roleName}" não encontrada no servidor ${guild.name}`);
+                return false;
+            }
+
+            // Roles de tier do Patreon para limpar (evitar roles duplicadas)
+            const patreonRolesNames = [
+                '🌌 Vega Nebula',
+                '🌠 Sirius Blue',
+                '🔴 Antares Red',
+                '🏆 Supernova',
+                'Observer'
+            ];
+
+            const rolesToRemoveNames = patreonRolesNames.filter(name => name !== roleName);
+
+            for (const rName of rolesToRemoveNames) {
+                const r = allRoles.find(roleObj => roleObj.name === rName);
+                if (r && member.roles.cache.has(r.id)) {
+                    await member.roles.remove(r);
+                    console.log(`[DISCORD] [PATREON-SYNC] Removida role ${rName} de ${member.user.tag}`);
+                }
+            }
+
+            if (!member.roles.cache.has(role.id)) {
+                await member.roles.add(role);
+                console.log(`[DISCORD] [PATREON-SYNC] Adicionada role ${roleName} para ${member.user.tag}`);
+            }
+
+            return true;
+        } catch (error) {
+            console.error(`[DISCORD] Erro ao adicionar role ${roleName} ao usuário ${discordId}:`, error.message);
+            return false;
+        }
+    }
+
     async generateResponse(text, userId, userContext = "", imageParts = [], isOwner = false) {
         if (!process.env.OPENROUTER_API_KEY) return "Sem conexão com OpenRouter. (Verifique OPENROUTER_API_KEY)";
 
