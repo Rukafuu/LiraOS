@@ -118,14 +118,23 @@ export async function listDirectory(dirPath) {
         const items = await Promise.all(
             entries.map(async (entry) => {
                 const itemPath = path.join(fullPath, entry.name);
-                const stats = await fs.stat(itemPath);
+                const isDir = entry.isDirectory();
+
+                let stats = null;
+                if (!isDir) {
+                    try {
+                        stats = await fs.stat(itemPath);
+                    } catch (e) {
+                        // Ignore stat errors for broken symlinks or permission issues
+                    }
+                }
                 
                 return {
                     name: entry.name,
                     path: path.relative(WORKSPACE_ROOT, itemPath),
-                    type: entry.isDirectory() ? 'directory' : 'file',
-                    size: entry.isFile() ? stats.size : undefined,
-                    modified: stats.mtime
+                    type: isDir ? 'directory' : 'file',
+                    size: stats ? stats.size : undefined,
+                    modified: stats ? stats.mtime : undefined
                 };
             })
         );
