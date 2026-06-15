@@ -142,47 +142,43 @@ router.post('/execute-batch', async (req, res) => {
             return res.status(400).json({ error: 'Operations array is required' });
         }
         
-        const results = [];
-        
-        for (const op of operations) {
+        const results = await Promise.all(operations.map(async (op) => {
             const { tool, args = [] } = op;
             
             if (!tool) {
-                results.push({
+                return {
                     success: false,
                     tool: null,
                     error: 'Tool name is required'
-                });
-                continue;
+                };
             }
             
             const toolFunction = tools[tool];
             
             if (!toolFunction) {
-                results.push({
+                return {
                     success: false,
                     tool,
                     error: `Tool '${tool}' not found`
-                });
-                continue;
+                };
             }
             
             try {
                 console.log(`[TRAE] Batch executing: ${tool}`);
                 const result = await toolFunction(...args);
-                results.push({
+                return {
                     success: true,
                     tool,
                     result
-                });
+                };
             } catch (e) {
-                results.push({
+                return {
                     success: false,
                     tool,
                     error: e.message
-                });
+                };
             }
-        }
+        }));
         
         res.json({
             success: true,
