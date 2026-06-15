@@ -252,7 +252,6 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             if (mapped.level >= 50) isAlreadyAdmin = true;
             
             setStats(mapped);
-            setStats(mapped);
             
             // Only update/insert self in leaderboard if NOT admin
             if (mapped.level < 50) {
@@ -301,7 +300,18 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
               const localLevel = ls?.level || 1;
               const isSuspiciousData = localLevel >= 10 || (ls?.coins || 0) > 5000;
 
-              if (serverIsDefault && (ls || lq || lt || lp || ap) && !isSuspiciousData) {
+              const clearLocalGamification = () => {
+                localStorage.removeItem('lira_stats');
+                localStorage.removeItem('lira_quests');
+                localStorage.removeItem('lira_unlocked_themes');
+                localStorage.removeItem('lira_unlocked_personas');
+                localStorage.removeItem('lira_active_persona');
+              };
+
+              if (isSuspiciousData) {
+                console.warn('[Gamification] Suspicious local data detected. Clearing.');
+                clearLocalGamification();
+              } else if (serverIsDefault && (ls || lq || lt || lp || ap)) {
                 await fetch(`${backendUrl}/api/recovery/import`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
@@ -326,6 +336,10 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
                   if (Array.isArray(data2?.unlockedPersonas)) setUnlockedPersonas(data2.unlockedPersonas);
                   if (data2?.activePersonaId) setActivePersonaId(data2.activePersonaId as PersonaId);
                 }
+                clearLocalGamification();
+              } else if (!serverIsDefault) {
+                // If server has data, local is redundant or from another session
+                clearLocalGamification();
               }
             } catch { } // End recovery try
           } // End if (r.ok)
@@ -369,12 +383,27 @@ export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         const savedStats = localStorage.getItem('lira_stats');
         if (savedStats) {
           const parsed = JSON.parse(savedStats);
-          setStats(parsed);
-          setLeaderboard(prev => prev.map(u =>
-            u.isCurrentUser
-              ? { ...u, xp: parsed.currentXp, username: parsed.username }
-              : u
-          ).sort((a, b) => b.xp - a.xp).map((u, i) => ({ ...u, rank: i + 1 })));
+
+          // SECURITY FIX: Prevent guest inheritance of Admin/High-level stats
+          const localLevel = parsed?.level || 1;
+          const isSuspiciousData = localLevel >= 10 || (parsed?.coins || 0) > 5000;
+
+          if (isSuspiciousData) {
+            console.warn('[Gamification] Suspicious guest data detected. Clearing.');
+            localStorage.removeItem('lira_stats');
+            localStorage.removeItem('lira_quests');
+            localStorage.removeItem('lira_unlocked_themes');
+            localStorage.removeItem('lira_unlocked_personas');
+            localStorage.removeItem('lira_active_persona');
+            setStats(INITIAL_STATS);
+          } else {
+            setStats(parsed);
+            setLeaderboard(prev => prev.map(u =>
+              u.isCurrentUser
+                ? { ...u, xp: parsed.currentXp, username: parsed.username }
+                : u
+            ).sort((a, b) => b.xp - a.xp).map((u, i) => ({ ...u, rank: i + 1 })));
+          }
         }
         const savedQuests = localStorage.getItem('lira_quests');
         if (savedQuests) setQuests(JSON.parse(savedQuests));
