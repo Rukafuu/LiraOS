@@ -1,270 +1,477 @@
-# 💜 LIRA OS - AI Companion Ecosystem
+<div align="center">
 
-**Gaming Copilot Edition** | Versão 2.0  
-**Deploy**: https://liraos-production.up.railway.app
+# LIRA OS
 
----
+### AI COMPANION ECOSYSTEM
 
-## 🎯 O QUE É O LIRA OS?
+**Gaming Copilot Edition — Version 2.0**
 
-Um ecossistema completo de AI companion com:
+<br>
 
-### **🎮 Lira Companion** (Desktop App)
+# PROJETO PAUSADO POR TEMPO INDEFINIDO
 
-Aplicação Electron com:
+### O desenvolvimento, a manutenção e o deploy público do Lira OS estão suspensos.
 
-- Detecção automática de jogos (LOL, Valorant, osu!, Minecraft, CS2)
-- Modo Corinthians (torcedora de futebol) ⚽🖤🤍
-- Vision analysis (Gemini 2.0)
-- TTS Premium (ElevenLabs + Minimax)
-- Live2D avatar
-- RPA desktop cleaner
+O código permanece disponível como registro histórico, referência técnica e base para uma possível retomada futura.
 
-### **💬 Lira Chat** (Web App)
+Não existe atualmente uma previsão para o retorno do projeto.
 
-Interface web com:
-
-- Chat conversacional
-- Memória inteligente (Firestore)
-- Gamificação (níveis, conquistas)
-- Modo Trae (AI planner)
-- Multi-idioma (i18n)
-- Voice chat
-
-### **🤖 Lira Backend** (Node.js API)
-
-API REST + WebSocket com:
-
-- Gaming Service (perfis de jogos)
-- Vision API (Gemini)
-- TTS API (3-tier fallback)
-- Discord bot integration
-- WhatsApp integration
+<br>
 
 ---
 
-## 🚀 LINKS RÁPIDOS
+`STATUS: INDEFINITE HIATUS`
 
-| Projeto       | README                              | Deploy                                                                       |
-| ------------- | ----------------------------------- | ---------------------------------------------------------------------------- |
-| **Companion** | [README](./LiraCompanion/README.md) | Download .exe                                                                |
-| **Chat Web**  | [README](./Chat/README.md)          | [liraos-production.up.railway.app](https://liraos-production.up.railway.app) |
-| **Backend**   | [README](./Chat/backend/README.md)  | Railway auto-deploy                                                          |
+`MAINTENANCE: SUSPENDED`
+
+`PUBLIC DEPLOY: NOT MAINTAINED`
 
 ---
 
-## 📦 ESTRUTURA DO REPOSITÓRIO
+</div>
 
-```
+## Sobre o projeto
+
+O **Lira OS** é um ecossistema experimental de AI companion criado para explorar interações entre inteligência artificial, jogos, automação de desktop, visão computacional, síntese de voz e avatares virtuais.
+
+O projeto foi dividido em três componentes principais:
+
+* **Lira Companion**, uma aplicação desktop voltada para jogos e automações.
+* **Lira Chat**, uma interface conversacional web e desktop.
+* **Lira Backend**, responsável pelos serviços de IA, integrações e persistência.
+
+Durante seu desenvolvimento, o Lira OS serviu como laboratório para testar arquiteturas de agentes, memória conversacional, percepção visual, TTS, integrações externas e experiências de companion baseadas em contexto.
+
+---
+
+## Componentes
+
+### Lira Companion
+
+Aplicação desktop construída com Electron.
+
+Principais recursos:
+
+* Detecção automática de jogos.
+* Perfis para League of Legends, Valorant, osu!, Minecraft e Counter-Strike 2.
+* Modo Corinthians para acompanhamento e comentários sobre futebol.
+* Análise visual utilizando Gemini.
+* Síntese de voz com ElevenLabs e Minimax.
+* Avatar Live2D.
+* Automações de desktop.
+* Ferramentas experimentais de limpeza e organização por RPA.
+
+### Lira Chat
+
+Interface conversacional web e desktop.
+
+Principais recursos:
+
+* Chat com respostas contextuais.
+* Persistência de conversas e memória com Firestore.
+* Sistema de níveis, experiência e conquistas.
+* Modo Trae para planejamento assistido por IA.
+* Internacionalização.
+* Interação por voz.
+* Build desktop utilizando Tauri.
+
+### Lira Backend
+
+API construída com Node.js.
+
+Principais responsabilidades:
+
+* API REST.
+* Comunicação em tempo real com WebSocket.
+* Gerenciamento de perfis de jogos.
+* Integração com Gemini Vision.
+* Pipeline de TTS com múltiplos fallbacks.
+* Persistência de dados.
+* Integração com Discord.
+* Integração com WhatsApp.
+* Serviços compartilhados entre o Chat e o Companion.
+
+---
+
+## Estado atual
+
+| Área                  | Estado                                 |
+| --------------------- | -------------------------------------- |
+| Desenvolvimento       | Pausado por tempo indefinido           |
+| Manutenção            | Suspensa                               |
+| Novas funcionalidades | Não planejadas                         |
+| Correções de bugs     | Não garantidas                         |
+| Pull Requests         | Podem não ser revisados                |
+| Deploy público        | Não mantido                            |
+| Dados de produção     | Não devem ser considerados permanentes |
+| Retomada              | Sem previsão                           |
+
+O repositório pode conter dependências desatualizadas, funcionalidades incompletas, integrações desativadas e configurações que não representam mais os serviços originalmente utilizados em produção.
+
+---
+
+## Estrutura do repositório
+
+```text
 Lira/
-├── Chat/                      # Web app (Vite + React + Tauri)
-│   ├── backend/              # API Node.js
+├── Chat/
+│   ├── backend/              # API e serviços Node.js
 │   ├── src/                  # Frontend React
-│   └── src-tauri/            # Desktop build (Tauri)
+│   └── src-tauri/            # Build desktop com Tauri
 │
-├── LiraCompanion/            # Desktop companion (Electron)
-│   ├── gameDetection.js      # Auto-detect jogos
-│   ├── index.html            # UI + Live2D
-│   └── main.js               # Electron main
+├── LiraCompanion/
+│   ├── gameDetection.js      # Detecção automática de jogos
+│   ├── index.html            # Interface e integração Live2D
+│   └── main.js               # Processo principal do Electron
 │
-├── LiraGamer/                # [Deprecated] Bot de jogos antigo
+├── LiraGamer/                # Implementação antiga e descontinuada
 │
-└── docs/                     # Documentação geral
+└── docs/                     # Documentação técnica e arquitetural
 ```
 
 ---
 
-## 🛠️ DESENVOLVIMENTO
+## Tecnologias
 
-### **Setup Completo**:
+### Frontend
+
+* React
+* Vite
+* Tauri
+* Electron
+* Live2D
+
+### Backend
+
+* Node.js
+* Express
+* WebSocket
+* Firebase
+* Firestore
+
+### Inteligência artificial
+
+* Gemini Vision
+* ElevenLabs
+* Minimax
+* Sistemas experimentais de memória conversacional
+* Planejamento assistido por agentes
+
+### Integrações
+
+* Discord
+* WhatsApp
+* Railway
+* GitHub Actions
+
+---
+
+## Funcionalidades implementadas
+
+* [x] Gaming Copilot.
+* [x] Detecção automática de jogos.
+* [x] Perfis contextuais por jogo.
+* [x] Modo Corinthians.
+* [x] TTS com ElevenLabs e Minimax.
+* [x] Pipeline de fallback para síntese de voz.
+* [x] Análise visual com Gemini.
+* [x] Avatar Live2D.
+* [x] Automações de desktop.
+* [x] Memória conversacional com Firestore.
+* [x] Sistema de níveis e experiência.
+* [x] Conquistas.
+* [x] Internacionalização.
+* [x] Integração com Discord.
+* [x] Integração com WhatsApp.
+* [x] Comunicação em tempo real com WebSocket.
+
+---
+
+## Roadmap congelado
+
+As funcionalidades abaixo foram planejadas, mas não serão desenvolvidas enquanto o projeto permanecer pausado.
+
+* [ ] Detecção de eventos por OCR.
+* [ ] Identificação de kills, mortes e eventos durante partidas.
+* [ ] Integração com OBS.
+* [ ] Criação automática de clipes.
+* [ ] Hotkeys globais.
+* [ ] Comandos de voz.
+* [ ] Suporte aprimorado para múltiplos monitores.
+* [ ] Aplicativo mobile.
+* [ ] Expansão do sistema de memória.
+* [ ] Maior autonomia do companion durante jogos.
+
+---
+
+## Execução local
+
+> Atenção: as instruções abaixo representam o ambiente utilizado durante o desenvolvimento. Algumas dependências, APIs ou integrações podem não funcionar sem ajustes.
+
+### Clonando o repositório
 
 ```bash
-# Clone
 git clone https://github.com/Rukafuu/LiraOS
 cd Lira
+```
 
-# Backend
+### Backend
+
+```bash
 cd Chat/backend
 npm install
 cp .env.example .env
-# Configure .env
 npm run dev
+```
 
-# Frontend Web (outra aba)
-cd ../
+Configure as variáveis de ambiente antes de iniciar o servidor.
+
+### Frontend web
+
+Em outro terminal:
+
+```bash
+cd Chat
 npm install
 npm run dev
+```
 
-# Companion (outra aba)
+### Lira Companion
+
+Em outro terminal:
+
+```bash
 cd LiraCompanion
 npm install
 npm start
 ```
 
-### **Build Produção**:
+---
+
+## Build
+
+### Companion para Windows
 
 ```bash
-# Companion (Electron)
 cd LiraCompanion
 npm run build:win
-# → dist/Lira Companion Setup 1.0.0.exe
+```
 
-# Chat Desktop (Tauri)
+Saída esperada:
+
+```text
+dist/Lira Companion Setup 1.0.0.exe
+```
+
+### Aplicação desktop com Tauri
+
+```bash
 cd Chat
 npm run tauri build
-# → src-tauri/target/release/
+```
 
-# Chat Web
+Saída esperada:
+
+```text
+src-tauri/target/release/
+```
+
+### Aplicação web
+
+```bash
+cd Chat
 npm run build
-# → dist/
+```
+
+Saída esperada:
+
+```text
+dist/
 ```
 
 ---
 
-## 🌐 DEPLOY
+## Variáveis de ambiente
 
-### **Railway** (Backend + Web):
+Exemplo das principais variáveis utilizadas pelo projeto:
+
+```env
+GEMINI_API_KEY=
+ELEVENLABS_API_KEY=
+MINIMAX_API_KEY=
+FIREBASE_SERVICE_ACCOUNT_JSON=
+```
+
+Nunca publique chaves reais, tokens, credenciais ou arquivos de service account no repositório.
+
+Algumas integrações podem exigir variáveis adicionais descritas nos READMEs internos de cada componente.
+
+---
+
+## Deploy legado
+
+O projeto utilizava Railway para hospedar o backend e a aplicação web.
 
 ```bash
 git push origin main
-# Auto-deploy via Railway
 ```
 
-**Variáveis necessárias**:
+O push para a branch principal acionava o processo de deploy automático configurado no Railway.
 
-```env
-GEMINI_API_KEY=...
-ELEVENLABS_API_KEY=...
-MINIMAX_API_KEY=...
-FIREBASE_SERVICE_ACCOUNT_JSON=...
+Durante a pausa:
+
+* O ambiente de produção não é mantido.
+* O endereço público pode ficar indisponível.
+* Serviços externos podem ter sido removidos ou desativados.
+* Não existe garantia de preservação dos dados armazenados no ambiente.
+* O deploy não deve ser utilizado como ambiente confiável de produção.
+
+Deploy legado:
+
+```text
+https://liraos-production.up.railway.app
 ```
 
-### **Companion** (Distribuição):
+---
 
-- Build: `npm run build:win`
-- Upload: GitHub Releases
-- Usuários: Download .exe
+## Documentação
+
+### Interfaces
+
+* [Lira Companion](./LiraCompanion/README.md)
+* [Lira Chat](./Chat/README.md)
+* [Troubleshooting](./Chat/docs/TROUBLESHOOTING.md)
+
+### Desenvolvimento
+
+* [Backend API](./Chat/backend/README.md)
+* [Detecção automática](./LiraCompanion/AUTO_DETECTION.md)
+* [Configuração de TTS](./Chat/backend/TTS_SETUP_GUIDE.md)
+* [Ideias de arquitetura](./docs/ARCHITECTURE_IDEAS.md)
+
+### Infraestrutura
+
+* [Guia de deploy](./DEPLOY_GUIDE.md)
+* [Checklist do Railway](./RAILWAY_VERIFICATION.md)
+
+Parte da documentação pode estar desatualizada em relação ao estado final do código.
 
 ---
 
-## 📚 DOCUMENTAÇÃO
+## Custos históricos
 
-### **Usuários**:
+Estimativa dos custos mensais durante a operação do projeto:
 
-- [Companion Guide](./LiraCompanion/README.md) - Como usar
-- [Chat Guide](./Chat/README.md) - Interface web
-- [Troubleshooting](./Chat/docs/TROUBLESHOOTING.md) - Resolução de problemas
+| Serviço        |             Custo estimado |
+| -------------- | -------------------------: |
+| Railway        |                      US$ 5 |
+| Gemini Vision  | Gratuito dentro das quotas |
+| ElevenLabs     |             US$ 5 a US$ 22 |
+| Firestore      | Gratuito dentro das quotas |
+| Total estimado |            US$ 10 a US$ 30 |
 
-### **Desenvolvedores**:
-
-- [Backend API](./Chat/backend/README.md) - Endpoints
-- [Auto Detection](./LiraCompanion/AUTO_DETECTION.md) - Como funciona detecção
-- [TTS Setup](./Chat/backend/TTS_SETUP_GUIDE.md) - Configurar vozes
-- [Architecture](./docs/ARCHITECTURE_IDEAS.md) - Visão geral
-
-### **Admin**:
-
-- [Deploy Guide](./DEPLOY_GUIDE.md) - Deploy Railway
-- [Railway Verification](./RAILWAY_VERIFICATION.md) - Checklist
+Esses valores são apenas registros históricos e podem não representar os preços atuais dos serviços.
 
 ---
 
-## 🎯 FEATURES PRINCIPAIS
+## Contribuições
 
-### ✅ **Implementado**:
+O repositório continua disponível para estudo, forks e experimentação.
 
-- [x] Gaming Copilot (detecção automática)
-- [x] Modo Corinthians (futebol)
-- [x] TTS Premium (ElevenLabs + Minimax)
-- [x] Vision Analysis (Gemini 2.0)
-- [x] Live2D Avatar
-- [x] RPA Desktop Cleaner
-- [x] Memória Inteligente (Firestore)
-- [x] Gamificação (níveis, XP)
-- [x] Multi-idioma (i18n)
-- [x] Discord Integration
-- [x] WhatsApp Integration
+Fluxo convencional de contribuição:
 
-### 🚧 **Roadmap**:
+```bash
+git checkout -b feature/nova-feature
+git add .
+git commit -m "Add: nova feature"
+git push origin feature/nova-feature
+```
 
-- [ ] OCR Event Detection (kills, deaths)
-- [ ] OBS Integration (auto-clip)
-- [ ] Hotkeys Globais
-- [ ] Voice Commands
-- [ ] Multi-monitor Support
-- [ ] Mobile App
+Depois disso, abra um Pull Request no GitHub.
+
+Como o projeto está pausado por tempo indefinido:
+
+* Pull Requests podem não ser analisados.
+* Issues podem permanecer sem resposta.
+* Não existe compromisso com releases futuras.
+* Forks independentes são bem-vindos.
+* O repositório original pode não acompanhar atualizações feitas pela comunidade.
 
 ---
 
-## 💰 CUSTOS (Produção)
+## Histórico de versões
 
-| Serviço               | Custo           |
-| --------------------- | --------------- |
-| **Railway** (Hosting) | $5/mês          |
-| **Gemini** (Vision)   | Grátis\*        |
-| **ElevenLabs** (TTS)  | $5-22/mês       |
-| **Firestore**         | Grátis\*        |
-| **Total**             | **~$10-30/mês** |
+### Version 2.0 — Gaming Copilot Edition
 
-\*Com quotas grátis suficientes para uso moderado
+Lançada em 18 de janeiro de 2026.
 
----
+* Detecção automática de jogos.
+* Modo Corinthians.
+* TTS com múltiplos provedores.
+* Análise visual baseada em contexto.
+* Deploy utilizando Railway.
+* Expansão das integrações externas.
 
-## 🤝 CONTRIBUINDO
+### Version 1.5 — Desktop Companion
 
-1. Fork o repositório
-2. Crie uma branch: `git checkout -b feature/nova-feature`
-3. Commit: `git commit -m 'Add: nova feature'`
-4. Push: `git push origin feature/nova-feature`
-5. Abra um Pull Request
+Lançada em dezembro de 2025.
 
----
+* Aplicação Electron.
+* Avatar Live2D.
+* Automações de desktop.
+* Ferramentas experimentais de RPA.
 
-## 📝 CHANGELOG
+### Version 1.0 — Core
 
-### **v2.0 - Gaming Copilot Edition** (18/01/2026)
+Lançada em novembro de 2025.
 
-- ✨ Detecção automática de jogos
-- ⚽ Modo Corinthians
-- 🎙️ TTS Premium (3-tier)
-- 👁️ Vision context-aware
-- 🌐 Railway deployment
-
-### **v1.5 - Desktop Companion** (Dez 2025)
-
-- 🖥️ Electron app
-- 🎨 Live2D avatar
-- 🧹 RPA cleaner
-
-### **v1.0 - Core** (Nov 2025)
-
-- 💬 Chat básico
-- 🤖 Gemini integration
-- 🗄️ Firestore
+* Chat conversacional.
+* Integração inicial com Gemini.
+* Persistência utilizando Firestore.
+* Primeira arquitetura do companion.
 
 ---
 
-## 📜 LICENÇA
+## Por que o projeto foi pausado?
 
-MIT License - Uso livre para fins pessoais e educacionais.
+O Lira OS cresceu como um projeto experimental, acumulando diferentes interfaces, provedores de IA, integrações, arquiteturas e ideias de produto.
 
----
+Manter toda essa infraestrutura exige tempo, custos operacionais e dedicação contínua. Por esse motivo, o desenvolvimento foi interrompido sem uma data definida para retorno.
 
-## 💜 CRÉDITOS
+A pausa não apaga o que foi construído.
 
-**Desenvolvido por**: Rukafuu  
-**Time do Coração**: Sport Club Corinthians Paulista 🖤🤍
+O repositório permanece como registro de uma fase importante de experimentação com companions de inteligência artificial, agentes, visão computacional, voz, jogos e interação humano-máquina.
 
-**Tecnologias**:
+Talvez a Lira volte algum dia em uma arquitetura diferente.
 
-- React + Vite + Tauri
-- Electron + Live2D
-- Node.js + Express
-- Gemini Vision 2.0
-- ElevenLabs + Minimax
-- Firestore
+Por enquanto, ela descansa.
 
 ---
 
-**VAI CORINTHIANS! 🖤🤍⚽**  
-**Bora jogar com a Lira! 🎮💜**
+## Licença
+
+Este projeto é distribuído sob a licença MIT.
+
+O código pode ser utilizado, modificado e distribuído para fins pessoais, educacionais e comerciais, respeitando os termos presentes no arquivo de licença.
+
+APIs, modelos, personagens, marcas, assets e serviços de terceiros permanecem sujeitos às suas próprias licenças e termos de uso.
+
+---
+
+## Autor
+
+Desenvolvido por **Rukafuu**.
+
+Tecnologias, arquitetura, experimentos de IA, integrações e conceito original do Lira OS.
+
+---
+
+<div align="center">
+
+# PROJETO PAUSADO POR TEMPO INDEFINIDO
+
+**Sem manutenção ativa. Sem previsão de retorno.**
+
+`LIRA OS — 2025 / 2026`
+
+</div>
