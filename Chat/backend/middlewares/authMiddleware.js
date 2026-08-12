@@ -7,7 +7,11 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
-const AUTH_SECRET = process.env.AUTH_SECRET || 'dev-secret';
+const AUTH_SECRET = process.env.AUTH_SECRET;
+
+if (!AUTH_SECRET && process.env.NODE_ENV !== 'test') {
+  throw new Error('AUTH_SECRET must be configured before starting the server');
+}
 
 // Helper: Verify Token
 export function verifyToken(token) {
