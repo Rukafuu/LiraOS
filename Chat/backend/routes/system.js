@@ -1,9 +1,13 @@
 import express from 'express';
-// import { requireAuth } from '../middlewares/authMiddleware.js'; 
+import { requireAuth } from '../middlewares/authMiddleware.js';
 import { pcController } from '../services/pcControllerService.js';
 import os from 'os';
 
 const router = express.Router();
+
+// These routes can issue commands to a connected desktop client, so they must
+// never be reachable anonymously.
+router.use(requireAuth);
 
 /**
  * SSE Endpoint for Local PC Agent (Lira Link)
