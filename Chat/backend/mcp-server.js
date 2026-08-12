@@ -12,6 +12,20 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROJECT_ROOT = path.join(__dirname, '..');
 
+function resolveProjectPath(relativePath = '') {
+  if (typeof relativePath !== 'string') {
+    throw new Error('Path must be a string');
+  }
+
+  const resolvedPath = path.resolve(PROJECT_ROOT, relativePath);
+  const relativeToRoot = path.relative(PROJECT_ROOT, resolvedPath);
+  if (relativeToRoot.startsWith('..') || path.isAbsolute(relativeToRoot)) {
+    throw new Error('Path must stay within the project root');
+  }
+
+  return resolvedPath;
+}
+
 // Create MCP server
 const server = new Server(
   {
@@ -100,7 +114,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     switch (name) {
       case 'read_file': {
-        const filePath = path.join(PROJECT_ROOT, args.path);
+        const filePath = resolveProjectPath(args.path);
         const content = await fs.readFile(filePath, 'utf-8');
         return {
           content: [
@@ -113,7 +127,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'list_directory': {
-        const dirPath = path.join(PROJECT_ROOT, args.path || '');
+        const dirPath = resolveProjectPath(args.path || '');
         const entries = await fs.readdir(dirPath, { withFileTypes: true });
         const list = entries.map(entry => ({
           name: entry.name,
@@ -175,7 +189,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'get_file_info': {
-        const filePath = path.join(PROJECT_ROOT, args.path);
+        const filePath = resolveProjectPath(args.path);
         const stats = await fs.stat(filePath);
         return {
           content: [
