@@ -31,7 +31,7 @@
     "react-markdown": "9",
     "react-virtuoso": "^4.17.0",
     "screenshot-desktop": "^1.15.3",
-    "systeminformation": "^5.29.1",
+    "systeminformation": "^5.30.8",
     "tailwind-merge": "^2.2.1",
     "uuid": "^13.0.0"
   },
