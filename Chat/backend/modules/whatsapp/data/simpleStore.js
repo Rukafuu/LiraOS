@@ -78,13 +78,12 @@ export const simpleStore = {
 
     async updateStats(userId, type) {
         await init();
-        const db = await load();
+        let db = await load();
         if (!db.users[userId]) {
             // Create phantom user if not exists
-            this.createUser(userId, 'Unknown');
+            await this.createUser(userId, 'Unknown');
              // Reload to get the ref
-             const reloaded = await load();
-             if (reloaded.users[userId]) db.users[userId] = reloaded.users[userId];
+             db = await load();
         }
 
         if (db.users[userId]) {
