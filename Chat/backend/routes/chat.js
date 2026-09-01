@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getSessions, upsertSession, deleteSession, deleteSessionsByUser, updateSessionTitle, getSessionById } from '../chatStore.js';
+import { getSessions, upsertSession, upsertSessions, deleteSession, deleteSessionsByUser, updateSessionTitle, getSessionById } from '../chatStore.js';
 import { getMemories } from '../memoryStore.js';
 import { processMessageForMemory } from '../intelligentMemory.js';
 import { requireAuth, verifyToken } from '../middlewares/authMiddleware.js';
@@ -122,9 +122,7 @@ router.put('/sessions', async (req, res) => {
     const userId = req.userId;
     if (!Array.isArray(sessions)) return res.status(400).json({ error: 'sessions array required' });
 
-    for (const session of sessions) {
-      await upsertSession({ ...session, userId });
-    }
+    await upsertSessions(sessions.map(s => ({ ...s, userId })));
     res.json({ success: true });
   } catch (e) {
     res.status(500).json({ error: e.message });

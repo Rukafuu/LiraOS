@@ -25,38 +25,51 @@ export async function getSessions(userId) {
   }
 }
 
+function mapSessionToPrisma(session, now) {
+  const { id, userId, title, personaId, createdAt, updatedAt, messages } = session;
+  const messagesStr = messages !== undefined ? JSON.stringify(messages) : undefined;
+
+  return {
+    where: { id },
+    update: {
+      title,
+      personaId,
+      updatedAt: updatedAt || now,
+      ...(messagesStr !== undefined && { messagesStr })
+    },
+    create: {
+      id,
+      userId: userId || 'unknown',
+      title: title || 'New Chat',
+      personaId,
+      createdAt: createdAt || now,
+      updatedAt: updatedAt || now,
+      messagesStr: messagesStr || '[]'
+    }
+  };
+}
+
 export async function upsertSession(session) {
   if (!session.id) return null;
-  
-  const { id, userId, title, personaId, createdAt, updatedAt, messages } = session;
   const now = Date.now();
-  
   try {
-    const messagesStr = JSON.stringify(messages || []);
-
-    await prisma.session.upsert({
-      where: { id },
-      update: {
-        title,
-        personaId,
-        updatedAt: updatedAt || now,
-        messagesStr
-      },
-      create: {
-        id,
-        userId: userId || 'unknown',
-        title: title || 'New Chat',
-        personaId,
-        createdAt: createdAt || now,
-        updatedAt: updatedAt || now,
-        messagesStr
-      }
-    });
-
+    await prisma.session.upsert(mapSessionToPrisma(session, now));
     return session;
   } catch (e) {
     console.error('upsertSession error:', e);
-    return null;
+    throw e;
+  }
+}
+
+export async function upsertSessions(sessions) {
+  if (!Array.isArray(sessions) || sessions.length === 0) return;
+  const now = Date.now();
+  const operations = sessions.map(session => prisma.session.upsert(mapSessionToPrisma(session, now)));
+  try {
+    await prisma.$transaction(operations);
+  } catch (e) {
+    console.error('upsertSessions error:', e);
+    throw e;
   }
 }
 
