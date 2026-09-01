@@ -54,7 +54,6 @@ export class LiraCore {
                 autoStart: true,
                 sharedTicker: true, // Back to shared, easier for singleton
                 backgroundAlpha: 0,
-                resizeTo: this.container, // Initial resize target
                 antialias: true,
                 autoDensity: true,
                 resolution: window.devicePixelRatio || 1
