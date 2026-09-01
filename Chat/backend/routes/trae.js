@@ -5,6 +5,49 @@ import { tools, getAllTools, getToolCategories } from '../services/traeMode/inde
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import githubService from '../services/githubService.js';
 import { credentialStore } from '../services/credentialStore.js';
+
+/**
+ * Ensure GitHub service is initialized for the current user
+ */
+async function ensureGitHubInitialized(userId) {
+    // If already initialized with a token, we're good
+    if (githubService.octokit) return true;
+
+    try {
+        // Try to get from Credential Store first (JSON)
+        let creds = credentialStore.get(userId);
+
+        // If not in JSON store, try DB
+        if (!creds || !creds.githubToken) {
+            const { getUserById } = await import('../user_store.js');
+            const user = await getUserById(userId);
+            if (user && user.githubToken) {
+                creds = {
+                    githubToken: user.githubToken,
+                    githubOwner: user.githubOwner,
+                    githubRepo: user.githubRepo
+                };
+                // Cache it in JSON store for future use
+                credentialStore.set(userId, creds);
+            }
+        }
+
+        if (creds && creds.githubToken) {
+            console.log(`[GITHUB] Auto-initializing for user ${userId}`);
+            const result = await githubService.initialize(
+                creds.githubToken,
+                creds.githubOwner,
+                creds.githubRepo
+            );
+            return result.success;
+        }
+
+        return false;
+    } catch (e) {
+        console.error('[GITHUB] Auto-initialization failed:', e.message);
+        return false;
+    }
+}
 import { Octokit } from "@octokit/rest";
 
 const router = express.Router();
@@ -110,6 +153,7 @@ router.post('/github/connect', requireAuth, async (req, res) => {
 
         // Also try to update DB for consistency if columns exist (Optional/Best Effort)
         try {
+            const { updateUser } = await import('../user_store.js');
             await updateUser(req.userId, {
                 githubToken: token,
                 githubOwner: owner || user.data.login,
@@ -463,10 +507,10 @@ router.post('/github/connect', async (req, res) => {
         const result = await githubService.initialize(token, owner, repo);
         
         if (result.success) {
-            // Save credentials to database (encrypted in production)
-            const { updateUser } = await import('../authStore.js');
+            // Save credentials to database (automatically encrypted by updateUser)
+            const { updateUser } = await import('../user_store.js');
             await updateUser(userId, {
-                githubToken: token, // TODO: Encrypt this in production
+                githubToken: token,
                 githubOwner: owner,
                 githubRepo: repo
             });
@@ -485,7 +529,7 @@ router.post('/github/connect', async (req, res) => {
 router.get('/github/credentials', async (req, res) => {
     try {
         const userId = req.userId;
-        const { getUserById } = await import('../authStore.js');
+        const { getUserById } = await import('../user_store.js');
         const user = await getUserById(userId);
         
         let hasToken = false;
@@ -515,6 +559,7 @@ router.get('/github/credentials', async (req, res) => {
 // List files in GitHub repo
 router.get('/github/files', async (req, res) => {
     try {
+        await ensureGitHubInitialized(req.userId);
         const { path = '' } = req.query;
         const result = await githubService.listFiles(path);
         res.json(result);
@@ -526,6 +571,7 @@ router.get('/github/files', async (req, res) => {
 // Read file from GitHub
 router.get('/github/file', async (req, res) => {
     try {
+        await ensureGitHubInitialized(req.userId);
         const { path } = req.query;
         if (!path) {
             return res.status(400).json({ error: 'path is required' });
@@ -541,6 +587,7 @@ router.get('/github/file', async (req, res) => {
 // Write file to GitHub
 router.post('/github/file', async (req, res) => {
     try {
+        await ensureGitHubInitialized(req.userId);
         const { path, content, message, sha } = req.body;
         
         if (!path || !content || !message) {
@@ -559,6 +606,7 @@ router.post('/github/file', async (req, res) => {
 // Get repository tree
 router.get('/github/tree', async (req, res) => {
     try {
+        await ensureGitHubInitialized(req.userId);
         const { branch = 'main' } = req.query;
         const result = await githubService.getTree(branch);
         res.json(result);
@@ -570,6 +618,7 @@ router.get('/github/tree', async (req, res) => {
 // Search code in GitHub repo
 router.get('/github/search', async (req, res) => {
     try {
+        await ensureGitHubInitialized(req.userId);
         const { q } = req.query;
         if (!q) {
             return res.status(400).json({ error: 'query (q) is required' });
@@ -585,6 +634,7 @@ router.get('/github/search', async (req, res) => {
 // Get recent commits
 router.get('/github/commits', async (req, res) => {
     try {
+        await ensureGitHubInitialized(req.userId);
         const { limit = 10 } = req.query;
         const result = await githubService.getCommits(parseInt(limit));
         res.json(result);
