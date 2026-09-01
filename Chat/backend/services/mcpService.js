@@ -141,10 +141,13 @@ class MCPService {
     _refreshToolList() {
         const allTools = [];
         for (const server of this.servers.values()) {
-            allTools.push(...server.tools.map(t => ({
-                ...t,
-                _server: server.name // internal tracking
-            })));
+            const serverName = server.name;
+            for (const tool of server.tools) {
+                allTools.push({
+                    ...tool,
+                    _server: serverName // internal tracking
+                });
+            }
         }
         this.tools = allTools;
     }
