@@ -54,8 +54,8 @@ router.post('/', async (req, res) => {
             
             if (shouldSummon(event)) {
                console.log('[Debug] Summoned!');
-               // Fix: Normalized event puts text in event.message.text
-               const rawText = event.message.text || event.message.conversation || event.message.extendedTextMessage?.text || event.message.imageMessage?.caption || '';
+               // Use normalized text from event.message.text, with safety fallbacks
+               const rawText = event.message.text || '';
                const text = rawText.trim();
                const cmd = text.toLowerCase();
                const isCommand = text.startsWith('/');
@@ -143,7 +143,8 @@ ${PAYMENT?.pix_key || 'Configure no arquivo json'}
                console.log('[Debug] Identifying User...');
                let waUser = await simpleStore.getUser(event.userId);
                if (!waUser) {
-                   waUser = await simpleStore.createUser(event.userId, event.message.pushName);
+                   const pushName = event.message.pushName || 'Guest';
+                   waUser = await simpleStore.createUser(event.userId, pushName);
                }
                console.log(`[Debug] User: ${waUser.name} (Reg: ${waUser.registered})`);
 

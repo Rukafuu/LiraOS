@@ -22,6 +22,9 @@ export function normalizeBaileysEvent(msg, botId) {
                  msg.message.extendedTextMessage?.text || 
                  msg.message.imageMessage?.caption || 
                  msg.message.videoMessage?.caption || 
+                 msg.message.buttonsResponseMessage?.selectedDisplayText ||
+                 msg.message.listResponseMessage?.title ||
+                 msg.message.templateButtonReplyMessage?.selectedId ||
                  '';
 
     // Mentions (JID or Text Fallback)
@@ -53,6 +56,7 @@ export function normalizeBaileysEvent(msg, botId) {
         type: EventTypes.MESSAGE,
         message: {
             text,
+            pushName: msg.pushName,
             hasMention,
             mentions, // Pass the array of JIDs
             replyToLira,
