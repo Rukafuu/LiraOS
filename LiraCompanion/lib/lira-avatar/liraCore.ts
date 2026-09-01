@@ -78,7 +78,7 @@ export class LiraCore {
 
             // FIX: Disable Pixi auto-resize which might catch the container at 0x0 during animation
             // and corrupt the mask buffers. We handle resize manually via Observer.
-            this.app.resizeTo = null as any;
+            this.app.resizeTo = null;
 
             // FIX: Force immediate renderer resize to fix "Disappearing Head" (Masking)
             // Ensure we NEVER resize to 0x0. Use safe defaults if container is collapsing.
@@ -150,7 +150,6 @@ export class LiraCore {
                 this.model.autoUpdate = false;
 
                 // FIX: Clear previous models to prevent duplication
-                // @ts-ignore
                 this.app.stage.removeChildren();
                 this.app.stage.addChild(this.model);
 

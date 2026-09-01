@@ -16,15 +16,25 @@ class LiraLive2D {
 
             // Create PIXI Application
             const canvas = document.getElementById(this.canvasId);
+            const container = canvas?.parentElement;
+            const safeW = Math.max(container?.clientWidth || 300, 250);
+            const safeH = Math.max(container?.clientHeight || 400, 250);
+
+            // FIX: Use safe minimum defaults (250x250)
             this.app = new PIXI.Application({
                 view: canvas,
-                width: 300,
-                height: 400,
+                width: safeW,
+                height: safeH,
                 backgroundAlpha: 0,
                 antialias: true,
                 resolution: window.devicePixelRatio || 1,
                 autoDensity: true
             });
+
+            // Force initial resize to fix masking bug
+            if (this.app.renderer) {
+                this.app.renderer.resize(safeW, safeH);
+            }
 
             console.log('[Live2D] PIXI initialized');
             return true;
