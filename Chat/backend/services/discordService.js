@@ -508,22 +508,28 @@ class DiscordService {
             if (!userMessage && message.attachments.size === 0) return;
 
             // Handle Attachments (Vision)
-            const imageParts = [];
+            let imageParts = [];
             if (message.attachments.size > 0) {
-                for (const [key, attachment] of message.attachments) {
-                    if (attachment.contentType && attachment.contentType.startsWith('image/')) {
+                const downloadPromises = Array.from(message.attachments.values())
+                    .filter(attachment => attachment.contentType && attachment.contentType.startsWith('image/'))
+                    .map(async (attachment) => {
                         try {
                             const imageBase64 = await this.downloadAttachment(attachment.url);
-                            imageParts.push({
+                            return {
                                 inlineData: {
                                     mimeType: attachment.contentType,
                                     data: imageBase64
                                 }
-                            });
+                            };
                         } catch (err) {
                             console.error('Error downloading image:', err);
+                            return null;
                         }
-                    }
+                    });
+
+                if (downloadPromises.length > 0) {
+                    const results = await Promise.all(downloadPromises);
+                    imageParts = results.filter(part => part !== null);
                 }
             }
 
