@@ -76,15 +76,24 @@ export async function startBaileys(config) {
                         const gData = JSON.parse(fs.readFileSync(groupsPath, 'utf8'));
                         const gIds = Object.keys(gData).filter(k => k.endsWith('@g.us'));
                         
-                        let count = 0;
-                        for (const gid of gIds) {
-                            // Small delay to prevent rate limit (500ms per msg)
-                            await new Promise(r => setTimeout(r, 500)); 
-                            await sock.sendMessage(gid, { text: "⚡ *Lira Online!*\nDigite */menu* para ver as novidades." });
-                            count++;
-                        }
-                        logger.info(`Broadcasted to ${count} groups.`);
-                        fs.writeFileSync(BCAST_FILE, NOW.toString());
+                        // Process groups asynchronously in background to prevent blocking
+                        (async () => {
+                            let count = 0;
+                            for (const gid of gIds) {
+                                try {
+                                    // Small delay to prevent rate limit (500ms per msg)
+                                    await new Promise(r => setTimeout(r, 500));
+                                    await sock.sendMessage(gid, { text: "⚡ *Lira Online!*\nDigite */menu* para ver as novidades." });
+                                    count++;
+                                } catch (err) {
+                                    logger.error(`Failed to broadcast to group ${gid}`, err);
+                                }
+                            }
+                            logger.info(`Broadcasted to ${count} groups.`);
+                            fs.writeFileSync(BCAST_FILE, NOW.toString());
+                        })().catch(err => {
+                            logger.error('Background broadcast task failed', err);
+                        });
                     }
                 } catch (e) {
                     logger.error('Broadcast failed', e);
