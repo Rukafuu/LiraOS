@@ -1,5 +1,6 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
+import { getUserByEmail } from '../user_store.js';
 
 dotenv.config();
 
@@ -247,14 +248,27 @@ class PatreonService {
 
                     const discordRole = this.getDiscordRole(tier);
                     
-                    // Aqui você precisaria ter um sistema de link entre email do Patreon e Discord ID
-                    // Por enquanto, vamos apenas logar
-                    console.log(`[PATREON] 📋 ${patron.fullName} (${patron.email}): ${discordRole}`);
+                    // Buscar usuário no sistema pelo email
+                    const user = await getUserByEmail(patron.email);
                     
-                    // TODO: Implementar lógica de atribuição de role no Discord
-                    // Isso requer um sistema de link entre contas Patreon e Discord
-                    
-                    syncResults.success++;
+                    if (user && user.discordId) {
+                        console.log(`[PATREON] 📋 Vinculando ${patron.fullName} (${patron.email}) -> Discord: ${user.discordId} (Role: ${discordRole})`);
+
+                        if (discordService) {
+                            const success = await discordService.addRoleToUser(user.discordId, discordRole);
+                            if (success) {
+                                syncResults.success++;
+                            } else {
+                                syncResults.failed++;
+                            }
+                        } else {
+                            console.warn('[PATREON] ⚠️ DiscordService não fornecido, pulando atribuição de role');
+                            syncResults.success++; // Contamos como sucesso de processamento, mas com aviso
+                        }
+                    } else {
+                        console.log(`[PATREON] 📋 ${patron.fullName} (${patron.email}): Usuário não vinculado ao Discord`);
+                        syncResults.notLinked++;
+                    }
 
                 } catch (error) {
                     console.error(`[PATREON] ❌ Erro ao processar ${patron.fullName}:`, error.message);
