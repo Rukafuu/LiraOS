@@ -132,16 +132,65 @@ router.post('/github/connect', requireAuth, async (req, res) => {
 });
 
 /**
- * Execute multiple tools in sequence
+ * Safe tools that can be executed in parallel
+ */
+const SAFE_TOOLS = [
+    'readFile', 'listDirectory', 'exists', 'getFileInfo',
+    'gitStatus', 'gitDiff', 'getCurrentBranch', 'gitLog', 'getRepoInfo',
+    'searchCode', 'findFiles', 'getFileOutline', 'analyzeError', 'getProjectStructure',
+    'think'
+];
+
+/**
+ * Execute multiple tools
+ * If all tools are safe, they are executed in parallel.
+ * Otherwise, they are executed in sequence.
  */
 router.post('/execute-batch', async (req, res) => {
     try {
-        const { operations = [] } = req.body;
+        const { operations = [], parallel = false } = req.body;
         
         if (!Array.isArray(operations) || operations.length === 0) {
             return res.status(400).json({ error: 'Operations array is required' });
         }
+
+        // Check if we can/should run in parallel
+        // Explicit parallel flag or auto-detect if all tools are safe
+        const canRunParallel = parallel || operations.every(op => SAFE_TOOLS.includes(op.tool));
+
+        if (canRunParallel) {
+            console.log(`[TRAE] Executing batch of ${operations.length} operations in PARALLEL`);
+
+            const promises = operations.map(async (op) => {
+                const { tool, args = [] } = op;
+
+                if (!tool) return { success: false, tool: null, error: 'Tool name is required' };
+
+                const toolFunction = tools[tool];
+                if (!toolFunction) return { success: false, tool, error: `Tool '${tool}' not found` };
+
+                try {
+                    const result = await toolFunction(...args);
+                    return { success: true, tool, result };
+                } catch (e) {
+                    return { success: false, tool, error: e.message };
+                }
+            });
+
+            const results = await Promise.all(promises);
+
+            return res.json({
+                success: true,
+                parallel: true,
+                results,
+                total: operations.length,
+                succeeded: results.filter(r => r.success).length,
+                failed: results.filter(r => !r.success).length
+            });
+        }
         
+        // Sequential Execution (Default/Fallback)
+        console.log(`[TRAE] Executing batch of ${operations.length} operations in SEQUENCE`);
         const results = [];
         
         for (const op of operations) {
@@ -181,11 +230,14 @@ router.post('/execute-batch', async (req, res) => {
                     tool,
                     error: e.message
                 });
+                // Stop sequential execution on error if it's not a "safe" batch
+                break;
             }
         }
         
         res.json({
             success: true,
+            parallel: false,
             results,
             total: operations.length,
             succeeded: results.filter(r => r.success).length,
