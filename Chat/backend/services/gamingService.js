@@ -22,6 +22,7 @@ class GamingService {
         this.currentGame = null;
         this.isGaming = false;
         this.gameProfiles = {};
+        this._profileProcessCache = new Map(); // gameId -> Set(processNamesLower)
         this.monitorInterval = null;
         this.visionFrequency = 30000; // Default: 30s (idle)
         
@@ -37,12 +38,28 @@ class GamingService {
         try {
             const data = await fs.readFile(profilesPath, 'utf-8');
             this.gameProfiles = JSON.parse(data);
+            this._refreshProcessCache();
             console.log('[GAMING] ✅ Loaded game profiles:', Object.keys(this.gameProfiles));
         } catch (err) {
             console.warn('[GAMING] ⚠️ No game profiles found, using defaults');
             this.gameProfiles = this.getDefaultProfiles();
+            this._refreshProcessCache();
             // Criar arquivo de perfis padrão
             await this.saveDefaultProfiles(profilesPath);
+        }
+    }
+
+    /**
+     * Atualiza o cache de nomes de processo para busca rápida
+     * @private
+     */
+    _refreshProcessCache() {
+        this._profileProcessCache.clear();
+        for (const [gameId, profile] of Object.entries(this.gameProfiles)) {
+            if (profile.processNames && Array.isArray(profile.processNames)) {
+                const lowerNames = new Set(profile.processNames.map(name => name.toLowerCase()));
+                this._profileProcessCache.set(gameId, lowerNames);
+            }
         }
     }
 
@@ -222,18 +239,33 @@ class GamingService {
         try {
             // Windows: usar tasklist para obter processos
             const { stdout } = await execAsync('tasklist /FO CSV /NH');
-            const processes = stdout.split('\n').map(line => {
-                const match = line.match(/"([^"]+)"/);
-                return match ? match[1] : '';
-            });
 
-            // Verificar cada perfil de jogo
+            // Criar Set de processos rodando (lowercase) para busca O(1)
+            const runningProcesses = new Set(
+                stdout.split('\n')
+                    .map(line => {
+                        const match = line.match(/"([^"]+)"/);
+                        return match ? match[1].toLowerCase() : '';
+                    })
+                    .filter(name => name !== '')
+            );
+
+            // Verificar cada perfil de jogo (mantendo a ordem de prioridade dos perfis)
             for (const [gameId, profile] of Object.entries(this.gameProfiles)) {
-                for (const processName of profile.processNames) {
-                    if (processes.some(p => p.toLowerCase() === processName.toLowerCase())) {
-                        await this.onGameDetected(gameId, profile);
-                        return;
+                const lowerNames = this._profileProcessCache.get(gameId);
+                if (!lowerNames) continue;
+
+                let hasGameRunning = false;
+                for (const name of lowerNames) {
+                    if (runningProcesses.has(name)) {
+                        hasGameRunning = true;
+                        break;
                     }
+                }
+
+                if (hasGameRunning) {
+                    await this.onGameDetected(gameId, profile);
+                    return;
                 }
             }
 
@@ -350,6 +382,7 @@ class GamingService {
      */
     async addGameProfile(gameId, profile) {
         this.gameProfiles[gameId] = profile;
+        this._refreshProcessCache();
         
         const profilesPath = path.join(__dirname, '../config/gameProfiles.json');
         await fs.writeFile(profilesPath, JSON.stringify(this.gameProfiles, null, 2));
