@@ -146,6 +146,14 @@ export const logout = async () => {
   } finally {
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem(CURRENT_USER_KEY);
+
+    // Clear gamification stats
+    localStorage.removeItem('lira_stats');
+    localStorage.removeItem('lira_quests');
+    localStorage.removeItem('lira_unlocked_themes');
+    localStorage.removeItem('lira_unlocked_personas');
+    localStorage.removeItem('lira_active_persona');
+
     // Optional: Reload page or redirect
     window.location.href = '/login';
   }
